@@ -40,7 +40,7 @@ auscult/
 ├─ README.md      本文件
 ├─ CHANGELOG.md   变更日志（以验证项 / 里程碑为粒度）
 ├─ requirements.txt  Python 依赖锁（版本唯一来源 docs/version-lock.md）
-├─ plan/          6 份阶段开发计划（Phase 0 D1–D10 / 任务总结 / Phase 1 / M02 混合形态 / V1 schema v2 复审 / V1 破局路径方案对比）
+├─ plan/          7 份阶段开发计划（Phase 0 D1–D10 / 任务总结 / Phase 1 / M02 混合形态 / V1 schema v2 复审 / V1 破局路径方案对比 / H15 拒止前置门架构解耦设计）
 ├─ docs/          15 份治理与规范文档（范围/判据/风险/版本/缺陷/移交…）
 ├─ reports/       12 份报告 + daily/（README + D1-status）：
 │                 v1-report / v1-review-v2 / v1-review-v3 / v2-report / v3-auth / v4b-report / v5-report
