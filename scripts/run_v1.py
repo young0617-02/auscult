@@ -24,6 +24,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -359,6 +360,18 @@ def git_commit() -> str:
     return f"dirty-{commit}" if dirty else commit
 
 
+def file_sha256(path: Path | None) -> str | None:
+    """实验输入的**内容指纹**（ISS-034 / ISS-033）。
+
+    动机：`prompt_version` / `cases` 只记录**路径**，一旦文件被改名、覆盖或替换，
+    事后**无法自证实验当时的输入是什么**（2026-10-06 的 `ISS-033` 命名事故即因此暴露）。
+    故对提示词 / 用例集 / Schema 一律落盘 sha256，事后可逐字节校验。
+    """
+    if path is None or not Path(path).exists():
+        return None
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
 def write_meta(meta_path: Path, meta: dict[str, Any]) -> None:
     meta_path.parent.mkdir(parents=True, exist_ok=True)
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -657,6 +670,13 @@ def main(argv: list[str] | None = None) -> int:
                                 if args.prompt_step else None),
         "step_chain_cases": sum(1 for c in cases if c.get("execution_mode") == "step_chain"),
         "schema_version": args.schema.stem,  # 记录实际使用的 schema 文件名（如 tools_v1 / tools_v2），不再写死
+        # ISS-034：实验输入的内容指纹（路径之外的权威标识）—— 改名/覆盖后仍可逐字节自证
+        "input_sha256": {
+            "prompt": file_sha256(args.prompt),
+            "prompt_step": file_sha256(args.prompt_step),
+            "cases": file_sha256(args.cases),
+            "schema": file_sha256(args.schema),
+        },
         "code_commit": git_commit(),
         "python": platform.python_version(),
         "platform": platform.platform(),

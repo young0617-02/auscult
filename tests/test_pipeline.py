@@ -130,6 +130,40 @@ def test_history_of_returns_none_without_context():
     assert run_v1.history_of({"context": []}) is None
 
 
+def test_file_sha256_matches_hashlib(tmp_path):
+    """ISS-034：输入指纹须等于 hashlib.sha256，且缺失文件返回 None（不抛错）。"""
+    import hashlib
+
+    f = tmp_path / "x.md"
+    f.write_bytes("中文内容\n第二行\n".encode())
+    assert run_v1.file_sha256(f) == hashlib.sha256(f.read_bytes()).hexdigest()
+    assert run_v1.file_sha256(tmp_path / "missing.md") is None
+    assert run_v1.file_sha256(None) is None
+
+
+def test_meta_records_input_fingerprints():
+    """ISS-034 回归：实验 meta 必须落盘 prompt/cases/schema 的内容指纹，且与当前文件一致。
+
+    动机：`prompt_version` 等字段只记**路径**。2026-10-06 的 `ISS-033` 命名事故中，
+    同名路径的内容被替换 → 事后**无法自证实验输入**。指纹字段是这类场景的唯一权威标识。
+    """
+    import hashlib
+    import json
+
+    meta_path = ROOT / "experiments" / "v1" / "raw" / "EXP-M02-023.meta.json"
+    if not meta_path.exists():
+        pytest.skip("缺少带指纹的 meta 样本（EXP-M02-023）")
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    fp = meta.get("input_sha256")
+    assert isinstance(fp, dict), "meta 缺少 input_sha256 字段"
+    assert set(fp) == {"prompt", "prompt_step", "cases", "schema"}
+    for key, rel in (("prompt", meta["prompt_version"]),
+                     ("cases", meta["cases"]),
+                     ("schema", "schemas/%s.json" % meta["schema_version"])):
+        actual = hashlib.sha256((ROOT / str(rel).replace("\\", "/")).read_bytes()).hexdigest()
+        assert fp[key] == actual, f"{key} 指纹与实际文件不一致：{rel}"
+
+
 def test_done_groups_resume_logic(tmp_path):
     """resume：已完成的 (case, model, repeat) 组须被识别，避免重复调用。"""
     raw = tmp_path / "r.jsonl"
