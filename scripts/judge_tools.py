@@ -287,7 +287,14 @@ def _aggregation_over_limit_equivalent(a: Any, b: Any) -> bool:
     仅当期望值、实测值均为超限类语义（`count_over_limit`/`count`/`over_limit`/`exceed_count`）
     才判等价；非超限聚合（avg/max/min/trend/raw）保持精确匹配，不做别名映射（中性归一化，
     见复审风险 R-1）。
+
+    ISS-031（2026-10-06）：模型可能把枚举值包成**对象**（实测 `qwen2.5:7b` 返回
+    `{"type": "count_over_limit", "limit": 500}`）或数组。`in <set>` 对 dict/list 会抛
+    `TypeError: unhashable type`，使**判分器整体崩溃**（非判为参数值错）。故先做类型守卫：
+    **非字符串一律不算等价**，交由后续精确比对判「参数值错」。对字符串输入行为完全不变。
     """
+    if not isinstance(a, str) or not isinstance(b, str):
+        return False
     return a in OVER_LIMIT_ALIAS and b in OVER_LIMIT_ALIAS
 
 
@@ -295,7 +302,10 @@ def _aggregation_canonical(value: Any) -> Any:
     """把 `aggregation` 超限类别名归一为服务端 canonical `count_over_limit`（保持中性）。
 
     仅当值本身属于超限类别名表时替换；非超限聚合（avg/max/min/trend/raw）原样返回。
+    ISS-031：非字符串（对象/数组/None）**原样返回**，不得因归一而崩溃。
     """
+    if not isinstance(value, str):
+        return value
     if value in OVER_LIMIT_ALIAS:
         return "count_over_limit"
     return value

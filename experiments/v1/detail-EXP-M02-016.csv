@@ -1,0 +1,61 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,True,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,True,,False,False,False,False,参数值错,7109.074,95,,usage
+v1-001,单工具,易,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,True,,False,False,False,False,参数值错,2324.292,95,,usage
+v1-001,单工具,易,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,True,,False,False,False,False,参数值错,2296.646,95,,usage
+v1-002,单工具,易,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,3666.602,105,,usage
+v1-002,单工具,易,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2410.976,99,,usage
+v1-002,单工具,易,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2422.64,99,,usage
+v1-003,单工具,易,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2757.322,73,,usage
+v1-003,单工具,易,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1751.781,73,,usage
+v1-003,单工具,易,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1775.085,73,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,False,True,,True,,False,False,False,True,,2365.784,52,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,False,True,,True,,False,False,False,True,,1330.348,52,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,False,True,,True,,False,False,False,True,,1377.688,52,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1855.412,68,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1795.299,68,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1699.973,68,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小允许流量 问题',False,False,False,False,参数值错,3020.249,81,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小允许流量 问题',False,False,False,False,参数值错,1975.063,81,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小允许流量 问题',False,False,False,False,参数值错,2082.394,81,,usage
+v1-007,多工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,3958.243,120,,usage
+v1-007,多工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2901.675,120,,usage
+v1-007,多工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2855.368,120,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType; $.get_maintenance_history.time_range.end: 类型应为 string，实际 NoneType,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['驱动端', '振动']",False,False,False,False,参数值错,4656.432,150,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType; $.get_maintenance_history.time_range.end: 类型应为 string，实际 NoneType,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['驱动端', '振动']",False,False,False,False,参数值错,3639.499,150,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType; $.get_maintenance_history.time_range.end: 类型应为 string，实际 NoneType,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['驱动端', '振动']",False,False,False,False,参数值错,3595.501,150,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,3818.827,113,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2910.19,120,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2892.028,120,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['vib_x', 'vib_y', 'vib_z', 'temp_bearing_de']",False,False,False,False,参数值错,3678.14,108,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['vib_x', 'vib_y', 'vib_z', 'temp_bearing_de']",False,False,False,False,参数值错,2613.554,108,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['vib_x', 'vib_y', 'vib_z', 'temp_bearing_de']",False,False,False,False,参数值错,2529.931,108,,usage
+v1-011,参数校验,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,True,,False,False,False,False,参数值错,3112.868,87,,usage
+v1-011,参数校验,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,True,,False,False,False,False,参数值错,2092.218,87,,usage
+v1-011,参数校验,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,True,,False,False,False,False,参数值错,2142.294,87,,usage
+v1-012,参数校验,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,True,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType; $.query_sensor.aggregation: 类型应为 string，实际 dict,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x']，实际 ['vib_x', 'vib_y', 'vib_z']; 参数值错：aggregation 期望 'count_over_limit'，实际 {'limit': 500, 'type': 'count_over_limit'}",False,False,False,False,参数值错,2007.716,83,,usage
+v1-012,参数校验,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType; $.query_sensor.aggregation: 类型应为 string，实际 dict,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x']，实际 ['vib_x', 'vib_y', 'vib_z']; 参数值错：aggregation 期望 'count_over_limit'，实际 {'limit': 500, 'type': 'count_over_limit'}",False,False,False,False,参数值错,2005.141,83,,usage
+v1-012,参数校验,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,False,$.query_sensor.aggregation: 类型应为 string，实际 dict; $.query_sensor.time_range.end: 类型应为 string，实际 NoneType,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x']，实际 ['vib_x', 'vib_y', 'vib_z']; 参数值错：aggregation 期望 'count_over_limit'，实际 {'limit': 500, 'type': 'count_over_limit'}",False,False,False,False,参数值错,1998.624,83,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,3856.099,124,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2889.952,124,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,2984.847,124,,usage
+v1-014,参数校验,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1163.86,42,,usage
+v1-014,参数校验,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1063.129,42,,usage
+v1-014,参数校验,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,True,True,True,,True,,False,False,False,True,,1081.573,42,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,2528.426,62,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,1504.683,62,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,1480.59,62,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,1491.273,16,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,444.779,16,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,479.432,16,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,4508.361,151,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,1674.604,71,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,False,True,False,,True,,False,False,False,True,,1662.762,71,,usage
+v1-018,多轮,中,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,1674.466,23,,usage
+v1-018,多轮,中,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,648.189,23,,usage
+v1-018,多轮,中,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,634.478,23,,usage
+v1-019,多轮,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 generate_report,False,True,True,False,格式退化,1815.014,65,,usage
+v1-019,多轮,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 generate_report,False,True,True,False,格式退化,1679.583,65,,usage
+v1-019,多轮,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 generate_report,False,True,True,False,格式退化,1652.082,65,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,1,1,m02-h9-local-qwen,False,False,False,False,,False,工具缺失：未调用 get_maintenance_history,False,True,True,False,格式退化,4274.174,140,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,1,2,m02-h9-local-qwen,False,False,False,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,2312.547,92,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,1,3,m02-h9-local-qwen,False,False,False,False,$.query_sensor.time_range.end: 类型应为 string，实际 NoneType,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,2315.141,92,,usage

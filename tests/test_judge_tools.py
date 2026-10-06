@@ -91,6 +91,49 @@ def test_aggregation_non_alias_fails(act):
     assert not ok
 
 
+# ---------------------------------------------------------------- ISS-031：非字符串不得令判据崩溃
+@pytest.mark.parametrize("bad", [
+    {"type": "count_over_limit", "limit": 500},   # 实测 qwen2.5:7b 的真实返回形态
+    {"value": "avg"},
+    ["avg"],
+    5,
+    True,
+    None,
+])
+def test_aggregation_non_string_does_not_crash(bad):
+    """ISS-031 回归：模型把枚举包成对象/数组时，判据须判「参数值错」，**不得抛 TypeError**。
+
+    原实现 `b in OVER_LIMIT_ALIAS` 对 dict/list 抛 `unhashable type`，导致判分器整体崩溃
+    （该缺陷未被 `--selftest` 或既有测试覆盖，由 H9 实跑暴露）。
+    """
+    ok, issues = jt.compare_arguments("query_sensor", _qs(),
+                                      expected={"aggregation": "count_over_limit"},
+                                      actual={"aggregation": bad})
+    assert ok is False and issues, f"actual={bad!r} 应判参数值错"
+    assert jt._aggregation_over_limit_equivalent("count_over_limit", bad) is False
+    assert jt._aggregation_over_limit_equivalent(bad, "count_over_limit") is False
+    assert jt._aggregation_canonical(bad) == bad, "非字符串须原样返回，不得崩溃或篡改"
+
+
+@pytest.mark.parametrize("value,expect", [
+    ("count", "count_over_limit"), ("over_limit", "count_over_limit"),
+    ("exceed_count", "count_over_limit"), ("count_over_limit", "count_over_limit"),
+    ("avg", "avg"), ("trend", "trend"),
+])
+def test_aggregation_canonical_string_behaviour_unchanged(value, expect):
+    """ISS-031 修复的边界：**字符串输入的归一行径必须与修复前完全一致**（零口径变更）。"""
+    assert jt._aggregation_canonical(value) == expect
+    assert jt._aggregation_over_limit_equivalent("count_over_limit", value) is (expect == "count_over_limit")
+
+
+def test_aggregation_string_behaviour_fully_preserved():
+    """对全部枚举值，等价判定结果须与「纯字符串语义」一致（证明修复未改动既有判据）。"""
+    for a in ["avg", "max", "min", "trend", "raw", "count_over_limit", "count"]:
+        for b in ["avg", "max", "min", "trend", "raw", "count_over_limit", "count"]:
+            expected = (a in jt.OVER_LIMIT_ALIAS) and (b in jt.OVER_LIMIT_ALIAS)
+            assert jt._aggregation_over_limit_equivalent(a, b) is expected, (a, b)
+
+
 # ---------------------------------------------------------------- 维度2：超集 / time_range
 def test_array_superset_accepted():
     """数组参数走超集口径（多给项可接受，少给即失败）。"""

@@ -51,7 +51,7 @@ auscult/
 ├─ configs/       decoder_schema_mapping.json / mosquitto.conf / redis.conf
 ├─ docker/        compose.base.yml / compose.ingest.yml / compose.v2.yml / compose.v4b-iso.yml / Dockerfile.decoder
 ├─ scripts/       18 个 Python 执行器 + 2 个 PowerShell（其中 12 个含 --selftest）
-├─ tests/         回归测试（pytest，106 用例；离线运行，见 ISS-030）
+├─ tests/         回归测试（pytest，119 用例；离线运行，见 ISS-030 / ISS-031）
 ├─ evals/         golden_set_v1(50) / v1_cases(20) / v2_cases(25) / v3_cases(25) / r4_cases(20) / corpora_v1/corpus_100
 ├─ experiments/   v1 / v2 / v3 / v4b / v5 / r4 原始实测数据（raw/，只增不改）+ plans/（P1 专项计划）
 ├─ env/           env-baseline-v2.md（+v1 留档）/ hardware.json（+v1 留档）/ ports.md / cloud.json
@@ -75,8 +75,8 @@ foreach ($s in 'llm_adapter','judge_tools','gbnf_grammar','param_normalizer','ru
     python "scripts/$s.py" --selftest
 }
 
-# 3) 回归测试（离线、秒级；106 用例：llm_adapter / judge_tools / param_normalizer / run_v5 /
-#    run_v1 / 用例集完整性。防「已修复缺陷复发」，见 docs/known-issues.md ISS-030）
+# 3) 回归测试（离线、秒级；119 用例：llm_adapter / judge_tools / param_normalizer / run_v5 /
+#    run_v1 / 用例集完整性。防「已修复缺陷复发」，见 docs/known-issues.md ISS-030 / ISS-031）
 python -m pytest tests/ -q
 
 # 4) 基础设施（注意：compose.base.yml 与 compose.ingest.yml 端口冲突，不得同时启动）
