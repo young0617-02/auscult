@@ -1,0 +1,20 @@
+用例总数,81
+结构可解析率,0.9629629629629629
+根因正确率,0.9259259259259259
+引用忠实率,1.0
+幻觉率[红线],0.0
+证据覆盖率,0.9629629629629629
+severity匹配率,0.8888888888888888
+建议动作非空率,0.9629629629629629
+首次成功率,0.7407407407407407
+重试后成功率,1.0
+平均延迟_ms,3960.4834197530863
+P95延迟_ms,5080.979
+失败分布,{"根因错": 6, "success": 60, "severity错": 9, "证据漏引": 3, "结构退化": 3}
+structure_parseable_档位,Pass
+hallucination_rate_档位,Pass
+coverage_rate_档位,Pass
+root_cause_rate_档位,Pass
+severity_rate_档位,Pass
+actions_rate_档位,Pass
+overall_档位,Pass

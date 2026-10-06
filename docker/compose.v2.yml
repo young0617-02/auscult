@@ -1,0 +1,102 @@
+# V2 检索验证独立编排栈（不进入 compose.base.yml）
+#
+# 目的：V2（混合检索质量对比）所需检索依赖，独立实例避免与宿主其他项目
+# （kbrag_milvus 占用 19530/9091、iotao postgres 占用 5432）冲突。
+#
+# 端口差异（相对 env/ports.md 冻结基线，因被其他项目占用而偏移）：
+#   Milvus gRPC   19531   （基线 19530，已由 kbrag_milvus 占用）
+#   Milvus metrics 9092   （基线 9091，已占用）
+#   PostgreSQL     5927   （本项目 PG；基线 5432 已由 iotao 占用）
+#                  注：5927 现又被宿主其他项目 smart-doc-db 占用，K-V2-1 排障临时改 5433。
+#
+# PG 采用 ParadeDB 官方镜像（digest 锚定，PG18.6 + pgvector + pg_search 真BM25，
+# 满足 V2 路线 A；见 docs/version-lock.md）。
+#
+# 启动：  docker compose -f docker/compose.v2.yml up -d
+# 停止：  docker compose -f docker/compose.v2.yml down -v
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.25@sha256:52f17f7e56e4f7239f0320dbfcbcc24721163d7d78ae710b466af3254ccf6366
+    container_name: auscult-v2-etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - etd-data:/etcd
+    networks:
+      - auscult-v2-net
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z@sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3
+    container_name: auscult-v2-minio
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: minio server /minio_data --console-address ":9001"
+    volumes:
+      - minio-data:/minio_data
+    networks:
+      - auscult-v2-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  milvus:
+    image: milvusdb/milvus:v3.0.0@sha256:49371c30af46b1013e4d3e0b980e691d81376d69cdbe1b372725baf1d7255862
+    container_name: auscult-v2-milvus
+    command: ["milvus", "run", "standalone"]
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+    volumes:
+      - milvus-data:/var/lib/milvus
+    ports:
+      - "19531:19530"   # 容器内 Milvus gRPC 默认 19530；宿主映射 19531（基线 19530 被 kbrag 占用）
+      - "9092:9091"     # metrics（基线 9091 被 kbrag 占用，偏移）
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - auscult-v2-net
+
+  pg:
+    image: paradedb/paradedb@sha256:188591a0bc317beb2c6d6d3f9ef0cb3e859d09ecc15a71dda5e9a027876686cf
+    container_name: auscult-v2-pg
+    environment:
+      - POSTGRES_USER=root
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=auscult_v2
+    volumes:
+      - pg-data:/var/lib/postgresql
+    ports:
+      - "5433:5432"     # 本项目 PG（含 pgvector + pg_search）；5927 被 smart-doc-db 占用改 5433
+    networks:
+      - auscult-v2-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d auscult_v2"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  etd-data:
+  minio-data:
+  milvus-data:
+  pg-data:
+
+networks:
+  auscult-v2-net:
+    driver: bridge

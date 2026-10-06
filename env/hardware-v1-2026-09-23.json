@@ -1,0 +1,189 @@
+{
+    "_meta":  {
+                  "script":  "scripts/collect_env.ps1",
+                  "collected_at":  "2026-09-23T20:59:50+08:00",
+                  "purpose":  "T1.2 hardware collection / V4a physical constraint input",
+                  "hostname":  "<WORKSTATION>",
+                  "note":  "Reports citing this file must also cite env-baseline-v2.md version"
+              },
+    "os":  {
+               "hostname":  "<WORKSTATION>",
+               "build":  "26200",
+               "product_name":  "Windows 10 Pro",
+               "display_version":  "25H2"
+           },
+    "cpu":  {
+                "logical_processors":  20,
+                "name":  "13th Gen Intel(R) Core(TM) i7-13650HX",
+                "identifier":  "Intel64 Family 6 Model 183 Stepping 1"
+            },
+    "memory":  {
+                   "total_gb":  32,
+                   "total_bytes":  34359738368
+               },
+    "gpu":  null,
+    "disk":  [
+                 {
+                     "used_gb":  106.6,
+                     "drive":  "C",
+                     "free_gb":  94.3
+                 },
+                 {
+                     "used_gb":  71.2,
+                     "drive":  "D",
+                     "free_gb":  429.8
+                 },
+                 {
+                     "used_gb":  188.5,
+                     "drive":  "E",
+                     "free_gb":  62.5
+                 }
+             ],
+    "cuda":  {
+                 "versions":  {
+
+                              },
+                 "toolkit_installed_in_default_path":  false,
+                 "toolkit_path_checked":  "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA"
+             },
+    "wsl":  {
+                "wslconfig_path":  "<USER_HOME>\\.wslconfig",
+                "wslconfig_present":  false,
+                "version_raw":  "W\u0000S\u0000L\u0000 \u0000Hr,g:\u0000 \u00002\u0000.\u00007\u0000.\u00001\u00001\u0000.\u00000\u0000\n\u0000\n\u0000�Q8hHr,g:\u0000 \u00006\u0000.\u00001\u00008\u0000.\u00003\u00003\u0000.\u00002\u0000-\u00002\u0000\n\u0000\n\u0000W\u0000S\u0000L\u0000g\u0000 \u0000Hr,g:\u0000 \u00001\u0000.\u00000\u0000.\u00007\u00003\u0000.\u00002\u0000\n\u0000\n\u0000M\u0000S\u0000R\u0000D\u0000C\u0000 \u0000Hr,g:\u0000 \u00001\u0000.\u00002\u0000.\u00007\u00002\u00001\u00004\u0000\n\u0000\n\u0000D\u0000i\u0000r\u0000e\u0000c\u0000t\u00003\u0000D\u0000 \u0000Hr,g:\u0000 \u00001\u0000.\u00006\u00001\u00001\u0000.\u00001\u0000-\u00008\u00001\u00005\u00002\u00008\u00005\u00001\u00001\u0000\n\u0000\n\u0000D\u0000X\u0000C\u0000o\u0000r\u0000e\u0000 \u0000Hr,g:\u0000 \u00001\u00000\u0000.\u00000\u0000.\u00002\u00006\u00001\u00000\u00000\u0000.\u00001\u0000-\u00002\u00004\u00000\u00003\u00003\u00001\u0000-\u00001\u00004\u00003\u00005\u0000.\u0000g\u0000e\u0000-\u0000r\u0000e\u0000l\u0000e\u0000a\u0000s\u0000e\u0000\n\u0000\n\u0000W\u0000i\u0000n\u0000d\u0000o\u0000w\u0000s\u0000:\u0000 \u00001\u00000\u0000.\u00000\u0000.\u00002\u00006\u00002\u00000\u00000\u0000.\u00007\u00001\u00007\u00001\u0000\n\u0000\n\u0000",
+                "distros_raw":  "  NAME              STATE           VERSION\n\n* docker-desktop    Running         2\n\n",
+                "live_raw":  "20 | Mem:          15885        2333       13055          26         497       13328",
+                "gpu_passthrough_in_wsl":  "UNVERIFIED: /bin/sh: nvidia-smi: not found"
+            },
+    "docker":  {
+                   "engine_version":  "29.6.2",
+                   "compose_version":  "5.3.1",
+                   "os":  "Docker Desktop",
+                   "ncpu":  "20",
+                   "mem_total_bytes":  "16656285696",
+                   "mem_total_gb":  15.51,
+                   "images":  [
+                                  "mongodb/mongodb-atlas-local:8.0|sha256:33de960ef58be32fddba97edaea2dc6976dc10caf11b4e38b32c3c67ade96c91|2.02GB",
+                                  "nacos/nacos-server:latest|sha256:1c191c30c8cd5ff2a72bf576555dbaa57a616378c55168651a74aefadedf7708|2.09GB",
+                                  "redis:8|sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5|212MB",
+                                  "postgres:18|sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280|650MB",
+                                  "milvusdb/milvus:v3.0.0|sha256:49371c30af46b1013e4d3e0b980e691d81376d69cdbe1b372725baf1d7255862|3.93GB",
+                                  "mysql:8.4|sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb|1.12GB",
+                                  "quay.io/coreos/etcd:v3.5.25|sha256:52f17f7e56e4f7239f0320dbfcbcc24721163d7d78ae710b466af3254ccf6366|93.8MB",
+                                  "minio/minio:RELEASE.2024-12-18T13-15-44Z|sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3|244MB"
+                              ],
+                   "running_containers":  [
+                                              "nacos-standalone|nacos/nacos-server:latest|Up 45 minutes|0.0.0.0:8080-\u003e8080/tcp, [::]:8080-\u003e8080/tcp, 0.0.0.0:8848-\u003e8848/tcp, [::]:8848-\u003e8848/tcp, 0.0.0.0:9848-\u003e9848/tcp, [::]:9848-\u003e9848/tcp"
+                                          ]
+               },
+    "toolchain":  {
+                      "python":  {
+                                     "version":  "Python 3.12.8",
+                                     "path":  "D:\\Python312\\python.exe"
+                                 },
+                      "node":  {
+                                   "version":  "v24.19.0",
+                                   "path":  "C:\\Program Files\\nodejs\\node.exe"
+                               },
+                      "git":  {
+                                  "version":  "git version 2.45.1.windows.1",
+                                  "path":  "C:\\Program Files\\Git\\cmd\\git.exe"
+                              },
+                      "ollama":  {
+                                     "version":  "ollama version is 0.34.2",
+                                     "path":  "<USER_HOME>\\AppData\\Local\\Programs\\Ollama\\ollama.exe"
+                                 },
+                      "docker":  {
+                                     "version":  "",
+                                     "path":  "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"
+                                 },
+                      "wsl":  {
+                                  "version":  "",
+                                  "path":  "C:\\WINDOWS\\system32\\wsl.exe"
+                              },
+                      "nvidia-smi":  {
+                                         "version":  "",
+                                         "path":  "C:\\WINDOWS\\system32\\nvidia-smi.exe"
+                                     }
+                  },
+    "models":  [
+                   {
+                       "manifest_path":  "D:\\.ollama\\models\\manifests\\registry.ollama.ai\\library\\deepseek-r1\\7b",
+                       "model_layer_digest":  "sha256:96c415656d377afbff962f6cdb2394ab092ccbcbaab4b82525bc4ca800fe8a49",
+                       "model":  "deepseek-r1:7b",
+                       "manifest_config_digest":  "sha256:40fb844194b25e429204e5163fb379ab462978a262b86aadd73d8944445c09fd",
+                       "model_layer_size":  4683073184
+                   },
+                   {
+                       "manifest_path":  "D:\\.ollama\\models\\manifests\\registry.ollama.ai\\library\\qwen2.5\\7b",
+                       "model_layer_digest":  "sha256:2bada8a7450677000f678be90653b85d364de7db25eb5ea54136ada5f3933730",
+                       "model":  "qwen2.5:7b",
+                       "manifest_config_digest":  "sha256:2f15b3218f0552c60647ce60ada83632d2c09755b16259b13e3e4458e9ae419d",
+                       "model_layer_size":  4683073952
+                   }
+               ],
+    "ports":  [
+                  {
+                      "port":  19530,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  9091,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  7474,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  7687,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  6030,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  6041,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  5432,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  6379,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  11434,
+                      "status":  "OCCUPIED",
+                      "owner":  "ollama (PID 80484)"
+                  },
+                  {
+                      "port":  1883,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  8000,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  3000,
+                      "status":  "free",
+                      "owner":  null
+                  }
+              ],
+    "warnings":  [
+                     "GPU collection failed: Exception setting \"driver_version_nvidia\": \"The property \u0027driver_version_nvidia\u0027 cannot be found on this object. Verify that the property exists and can be set.\""
+                 ]
+}

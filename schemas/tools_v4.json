@@ -1,0 +1,277 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://auscult.local/schemas/tools_v4.json",
+  "title": "工业 IoT 诊断 Agent 工具 Schema — v4",
+  "version": "v4",
+  "frozen_at": "2026-09-30",
+  "frozen_by": "V1 复审 v3 · F2（任务条件补齐：测点目录）",
+  "status": "FROZEN",
+  "change_policy": "升版原因：V1 复审 v3 的 F2 —— EXP-M02-001 失败归因确认 v1-005/v1-010/v1-013 属「任务信息不足」（schema 只给单例 PUMP-A-01.vib_x，无测点目录、无轴向/驱动端映射），模型无从推断而系统性写错测点名。本次**仅扩写 query_sensor.sensor_ids 的 description**（内嵌测点目录），**未改动任何 items / enum / required / 结构**，判分语义不变。原 v2 冻结快照保留不删（schemas/tools_v2.json）；v3 为 P5 Schema 简化实验版（负结果已回退，保留供审计）。本文件冻结后任何修改须升版为 v5 并同步更新 version-lock.md。",
+  "consumers": [
+    "V1 LLM 工具调用能力对比（D2–D3）",
+    "Phase 1 工具实现（照此实现，不得自行改字段）",
+    "scripts/judge_tools.py（判分依据）",
+    "V1 复审 v3 · F2 重测（EXP-M02-002）"
+  ],
+  "conventions": {
+    "time_format": "ISO 8601 本地时间，如 2026-09-23T20:51:00+08:00；也接受相对时间 '24h' / '7d'",
+    "time_range_equivalence": "±10% 视为语义等价（判分规则）",
+    "time_range_abs_equivalence": "ISO8601 绝对时间即刻等价（统一归一到 UTC 比对），时区差异不判错",
+    "duration_unit_equivalence": "时间单位变体（15m/15min/900s）量纲等价",
+    "agglomeration_over_limit_alias": "count_over_limit 的语义别名 count/over_limit/exceed_count 视为等价",
+    "device_id_format": "大写字母+连字符+数字，如 PUMP-A-01、MOTOR-B-03",
+    "sensor_id_format": "device_id + '.' + metric 短名，如 PUMP-A-01.vib_x",
+    "language": "参数值一律使用中文或标准标识符，不使用自然语言长句"
+  },
+  "tools": [
+    {
+      "name": "query_sensor",
+      "type": "read_only",
+      "in_graph": true,
+      "description": "查询指定设备测点在给定时间范围内的时序数据，返回统计聚合结果（均值/最大/最小/趋势/超限次数）。用于振动、温度、电流等运行参数分析。",
+      "when_to_use": "用户询问某台设备某个参数在某段时间的数值、趋势、是否超标、变化情况时",
+      "when_not_to_use": "用户询问设备结构、维修历史、故障原因或需要出报告时",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9-]{2,31}$",
+            "description": "设备编号，如 PUMP-A-01"
+          },
+          "sensor_ids": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "description": "测点标识，格式为 <device_id>.<metric>，如 PUMP-A-01.vib_x"
+            },
+            "description": "要查询的测点列表；不填表示该设备全部测点。测点标识格式为 <device_id>.<metric>。本系统仅登记以下 5 个规范测点，必须原样使用下列短名，不得自行发明别名（如 temp / temp_drive / temp_bearing / bearing_temp 等）：① vib_x = 径向-水平振动速度有效值（mm/s）；② vib_y = 径向-垂直振动速度有效值（mm/s）；③ vib_z = 轴向振动速度有效值（mm/s）——用户说「轴向」时用 vib_z，不要用 vib_x/vib_y；④ temp_bearing_de = 驱动端轴承温度（degC）——「驱动端」对应后缀 de；⑤ temp_bearing_nde = 非驱动端轴承温度（degC）——「非驱动端」对应后缀 nde。示例：[\"PUMP-A-01.vib_z\", \"PUMP-A-01.temp_bearing_de\"]"
+          },
+          "time_range": {
+            "type": "object",
+            "properties": {
+              "start": { "type": "string", "description": "开始时间，ISO8601 或相对时间" },
+              "end": { "type": "string", "description": "结束时间，ISO8601 或相对时间；不填表示到现在" }
+            },
+            "required": ["start"],
+            "description": "查询时间范围"
+          },
+          "aggregation": {
+            "type": "string",
+            "enum": ["avg", "max", "min", "trend", "count_over_limit", "raw"],
+            "description": "聚合方式，默认 avg"
+          },
+          "window": {
+            "type": "string",
+            "enum": ["1m", "5m", "15m", "1h", "1d"],
+            "description": "聚合窗口大小，默认 5m"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000,
+            "description": "返回点数上限，默认 500"
+          }
+        },
+        "required": ["device_id", "time_range"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "search_knowledge",
+      "type": "read_only",
+      "in_graph": true,
+      "description": "在设备手册、维护规程、标准规范、历史案例等知识库中做混合检索（向量 + BM25），返回最相关的文档片段。",
+      "when_to_use": "用户询问标准限值、操作规程、故障原因、处理方法等需要文档依据的问题时",
+      "when_not_to_use": "用户询问实时运行数据或具体某台设备的维修记录时",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 300,
+            "description": "检索语义查询串，中文"
+          },
+          "top_k": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "返回片段数，默认 5"
+          },
+          "category_filter": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["设备手册", "故障诊断", "维护规程", "传感器与测量", "振动标准", "历史工单", "安全规范"]
+            },
+            "description": "限定文档类别；不填表示全库检索"
+          },
+          "device_model": {
+            "type": "string",
+            "description": "设备型号，用于优先匹配对应手册"
+          }
+        },
+        "required": ["query"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "query_graph",
+      "type": "read_only",
+      "in_graph": true,
+      "description": "查询设备拓扑与知识图谱，返回设备之间的连接/从属关系、影响链路、以及故障与部件的关联关系。",
+      "when_to_use": "用户询问设备之间关系、上下游影响、故障可能波及范围、部件构成时",
+      "when_not_to_use": "用户只问单个设备的数值或文档内容时",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "start_node": {
+            "type": "string",
+            "description": "起始节点标识，设备号或部件名，如 PUMP-A-01"
+          },
+          "relation_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["CONNECTS_TO", "PART_OF", "DRIVES", "MONITORS", "CAUSES", "MAINTAINED_BY"]
+            },
+            "description": "要查询的关系类型；不填表示全部"
+          },
+          "direction": {
+            "type": "string",
+            "enum": ["outgoing", "incoming", "both"],
+            "description": "查询方向，默认 both"
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "description": "展开层数，默认 1"
+          }
+        },
+        "required": ["start_node"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_maintenance_history",
+      "type": "read_only",
+      "in_graph": true,
+      "description": "查询指定设备的历史维修工单记录，包括故障现象、处理措施、更换部件、停机时长与处理人。",
+      "when_to_use": "用户询问该设备以前是否出过类似问题、怎么处理的、换过什么件时",
+      "when_not_to_use": "用户询问通用操作规程或标准限值时",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9-]{2,31}$",
+            "description": "设备编号"
+          },
+          "time_range": {
+            "type": "object",
+            "properties": {
+              "start": { "type": "string" },
+              "end": { "type": "string" }
+            },
+            "required": ["start"]
+          },
+          "fault_keywords": {
+            "type": "array",
+            "maxItems": 5,
+            "items": { "type": "string" },
+            "description": "故障关键词过滤，如 轴承、振动、异响"
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "返回工单数上限，默认 20"
+          }
+        },
+        "required": ["device_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "generate_report",
+      "type": "WRITE_OPERATION",
+      "in_graph": false,
+      "architecture_note": "★ 写操作，按 V5 结论移出 LangGraph 图内执行，并建议携带 idempotency_key 防止恢复后重复生成",
+      "description": "把诊断过程与结论汇总成一份诊断报告并落盘。这是本系统唯一的写操作。",
+      "requires_review": true,
+      "when_to_use": "用户明确要求出报告、归档诊断结论时",
+      "when_not_to_use": "用户只是在询问信息、尚未形成结论时；或审核节点尚未通过时",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9-]{2,31}$",
+            "description": "报告对象设备编号"
+          },
+          "diagnosis_summary": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000,
+            "description": "诊断结论摘要"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["sensor", "knowledge", "graph", "maintenance"]
+                },
+                "ref": { "type": "string", "description": "证据引用标识，如 chunk_id 或 sensor_id" }
+              },
+              "required": ["type", "ref"]
+            },
+            "description": "结论所依据的证据引用，必须至少一条"
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warning", "critical"],
+            "description": "严重程度"
+          },
+          "recommended_actions": {
+            "type": "array",
+            "maxItems": 10,
+            "items": { "type": "string" },
+            "description": "建议处理措施"
+          },
+          "idempotency_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{8,64}$",
+            "description": "运行时幂等机制；V1 判分不比对具体值，仅校验正则。模型自生成合法串即可，服务端据此去重"
+          },
+          "format": {
+            "type": "string",
+            "enum": ["markdown", "json", "pdf"],
+            "description": "报告输出格式，默认 markdown"
+          }
+        },
+        "required": ["device_id", "diagnosis_summary", "evidence_refs"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "tool_summary": {
+    "total": 5,
+    "read_only": 4,
+    "write": 1,
+    "in_graph": 4,
+    "out_of_graph": 1,
+    "invalid_reject_scenarios": [
+      "缺少 device_id 却要求查询数据 → 应要求补充信息",
+      "要求删除/修改历史工单 → 超出只读权限，应拒绝",
+      "要求预测未来 30 天设备寿命 → 超出当前系统职责，应拒绝并说明边界"
+    ]
+  }
+}

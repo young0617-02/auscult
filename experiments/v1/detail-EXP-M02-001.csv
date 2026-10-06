@@ -1,0 +1,21 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,True,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,5406.465,186,226,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,3300.782,132,168,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,6694.168,322,1040,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,2883.557,110,236,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,False,参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.temp'],False,False,False,False,参数值错,4640.068,210,373,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,15293.912,427,1483,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend'; 参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 '离心泵振动标准限值 mm/s 振动烈度 报警值 危险值',False,False,False,False,参数值错,19010.127,781,2050,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,9896.656,364,349,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,8532.299,476,1269,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.vib_y', 'PUMP-A-01.vib_z', 'PUMP-A-01.temp']; 参数值错：aggregation 期望 'avg'，实际 'trend'",False,False,False,False,参数值错,15936.942,948,2556,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,5271.864,281,475,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,3539.633,104,100,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp']",False,False,False,False,参数值错,22529.068,1196,3882,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,4458.844,130,234,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,False,True,False,,True,,False,False,False,True,,7409.275,208,279,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,19386.003,976,3235,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,False,True,False,,True,,False,False,False,True,,5149.774,236,393,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'count_over_limit',False,False,False,False,参数值错,4553.021,204,523,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']",False,False,False,False,参数值错,10260.568,536,957,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-hybrid-cloud,False,True,True,True,,True,,False,False,False,True,,3804.942,157,438,char_fallback

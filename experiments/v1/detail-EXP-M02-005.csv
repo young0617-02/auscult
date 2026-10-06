@@ -1,0 +1,104 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,True,True,True,True,,True,,False,False,False,True,,3031.384,52,,usage
+v1-001,单工具,易,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1255.584,52,,usage
+v1-001,单工具,易,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1253.343,52,,usage
+v1-002,单工具,易,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1252.221,50,,usage
+v1-002,单工具,易,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1216.157,50,,usage
+v1-002,单工具,易,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1211.038,50,,usage
+v1-003,单工具,易,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1374.131,56,,usage
+v1-003,单工具,易,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1331.822,56,,usage
+v1-003,单工具,易,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1313.068,56,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'MONITORS']; 参数值错：direction 期望 'both'，实际 'outgoing'",False,False,False,False,参数值错,2224.155,98,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'MONITORS']",False,False,False,False,参数值错,2345.44,97,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,3,1,m02-f2-baseline-rerun,False,True,False,True,,True,,False,False,False,True,,2203.515,97,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'MONITORS']; 参数值错：direction 期望 'both'，实际 'outgoing'",False,False,False,False,参数值错,2187.939,98,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'MONITORS']",False,False,False,False,参数值错,2283.575,97,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,3,2,m02-f2-baseline-rerun,False,True,False,True,,True,,False,False,False,True,,2187.658,97,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'MONITORS']; 参数值错：direction 期望 'both'，实际 'outgoing'",False,False,False,False,参数值错,2291.39,98,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'MONITORS']",False,False,False,False,参数值错,2203.695,97,,usage
+v1-004,单工具,中,False,single,,,,,qwen2.5:7b,3,3,m02-f2-baseline-rerun,False,True,False,True,,True,,False,False,False,True,,2237.913,97,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.temp_drive'],False,False,False,False,参数值错,1235.912,51,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1220.56,53,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.temp_drive'],False,False,False,False,参数值错,1142.088,51,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1240.18,53,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.temp_drive'],False,False,False,False,参数值错,1228.776,51,,usage
+v1-005,单工具,中,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1283.546,53,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小流量运行影响',False,False,False,False,参数值错,1018.819,43,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1390.082,54,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小流量运行影响',False,False,False,False,参数值错,1026.912,43,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1295.644,54,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小流量运行影响',False,False,False,False,参数值错,1042.22,43,,usage
+v1-006,单工具,中,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1301.444,54,,usage
+v1-007,多工具,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2142.154,90,,usage
+v1-007,多工具,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2130.686,90,,usage
+v1-007,多工具,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2194.958,90,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2466.675,102,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['振动']",False,False,False,False,参数值错,2584.175,110,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2805.416,119,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['振动']",False,False,False,False,参数值错,2547.951,110,,usage
+v1-008,多工具,难,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2979.946,119,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：depth 期望 2，实际 1,False,False,False,False,参数值错,2436.788,103,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2426.144,103,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：depth 期望 2，实际 1,False,False,False,False,参数值错,2423.782,103,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2465.178,103,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：depth 期望 2，实际 1,False,False,False,False,参数值错,2447.093,103,,usage
+v1-009,多工具,难,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2417.033,103,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.vib_y', 'PUMP-A-01.vib_z', 'PUMP-A-01.temp_drive']; 参数值错：aggregation 期望 'avg'，实际 'max'",False,False,False,False,参数值错,4474.678,184,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,4014.508,164,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.vib_y', 'PUMP-A-01.vib_z', 'PUMP-A-01.temp_drive']; 参数值错：aggregation 期望 'avg'，实际 'max'",False,False,False,False,参数值错,4581.908,184,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,4148.453,164,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.vib_y', 'PUMP-A-01.vib_z', 'PUMP-A-01.temp_drive']; 参数值错：aggregation 期望 'avg'，实际 'max'",False,False,False,False,参数值错,4520.382,184,,usage
+v1-010,多工具,难,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,4157.72,164,,usage
+v1-011,参数校验,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1356.46,52,,usage
+v1-011,参数校验,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1251.82,52,,usage
+v1-011,参数校验,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1281.924,52,,usage
+v1-012,参数校验,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1283.55,53,,usage
+v1-012,参数校验,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1292.117,53,,usage
+v1-012,参数校验,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1263.983,53,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_drive']; 参数值错：aggregation 期望 'avg'，实际 'max'",False,False,False,False,参数值错,2909.449,121,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2951.039,123,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_drive']; 参数值错：aggregation 期望 'avg'，实际 'max'",False,False,False,False,参数值错,2938.805,121,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,3062.171,123,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_drive']; 参数值错：aggregation 期望 'avg'，实际 'max'",False,False,False,False,参数值错,2936.664,121,,usage
+v1-013,参数校验,难,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,3030.822,123,,usage
+v1-014,参数校验,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1009.098,40,,usage
+v1-014,参数校验,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1000.164,40,,usage
+v1-014,参数校验,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1014.212,40,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,13128.097,198,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4192.822,89,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,3,1,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,2209.005,2,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4970.235,198,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4342.012,89,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,3,2,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,2138.221,2,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4841.926,198,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4055.893,89,,usage
+v1-015,无效拒绝,中,True,single,,,,,qwen2.5:7b,3,3,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,2097.468,2,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,1694.318,66,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3928.606,81,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,3,1,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,1855.289,74,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3603.254,66,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3833.073,81,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,3,2,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,1758.553,74,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3488.711,66,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3780.494,81,,usage
+v1-016,无效拒绝,中,True,single,,,,,qwen2.5:7b,3,3,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,1792.164,74,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4950.746,133,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,2,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3584.173,66,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,3,1,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,2876.176,32,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4064.429,165,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,4705.158,116,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,3,2,m02-f2-baseline-rerun,False,False,True,False,,True,,False,False,False,True,,2101.529,2,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3295.123,133,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3655.6,67,,usage
+v1-017,无效拒绝,难,True,single,,,,,qwen2.5:7b,3,3,m02-f2-baseline-rerun,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,3681.147,67,,usage
+v1-018,多轮,中,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,9897.13,88,,usage
+v1-018,多轮,中,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2111.744,88,,usage
+v1-018,多轮,中,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,2077.731,88,,usage
+v1-019,多轮,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,4439.841,186,,usage
+v1-019,多轮,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,4320.984,187,,usage
+v1-019,多轮,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,4312.758,187,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,1,1,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1834.026,79,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,1,2,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：fault_keywords 期望覆盖 ['轴承']，实际 ['驱动端轴承'],False,False,False,False,参数值错,1844.593,77,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,2,2,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1830.614,75,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,1,3,m02-f2-baseline-rerun,False,True,True,True,,False,参数值错：fault_keywords 期望覆盖 ['轴承']，实际 ['驱动端轴承'],False,False,False,False,参数值错,1880.415,77,,usage
+v1-020,多轮,难,False,single,,,,,qwen2.5:7b,2,3,m02-f2-baseline-rerun,False,True,True,True,,True,,False,False,False,True,,1812.753,75,,usage

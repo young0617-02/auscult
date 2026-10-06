@@ -1,0 +1,8 @@
+experiment_id,route,mode,pg_sparse,recall_at_5,mrr,precision_at_5,mean_latency_ms,p95_latency_ms,recall@5[传感器与测量],recall@5[历史工单],recall@5[安全规范],recall@5[振动标准],recall@5[故障诊断],recall@5[维护规程],recall@5[设备手册]
+EXP-V2-milvus-dense,milvus,dense,tsvector,0.9000,0.9500,0.2440,293.4524,2061.9140,0.8571,0.6429,1.0000,1.0000,0.8750,1.0000,0.9286
+EXP-V2-milvus-hybrid,milvus,hybrid,tsvector,0.9100,0.9300,0.2520,5.6251,9.4800,0.9286,0.7857,1.0000,1.0000,0.7500,1.0000,0.9286
+EXP-V2-milvus-sparse,milvus,sparse,tsvector,0.9200,0.8700,0.2560,2.1822,2.8430,0.9286,0.7857,1.0000,1.0000,0.8125,1.0000,0.9286
+EXP-V2-pgvector-dense,pgvector,dense,tsvector,0.9000,0.9500,0.2440,1.1263,1.3730,0.8571,0.6429,1.0000,1.0000,0.8750,1.0000,0.9286
+EXP-V2-pgvector-hybrid-paradedb,pgvector,hybrid,paradedb,0.9100,0.9367,0.2480,6.9348,10.8570,0.9286,0.6429,1.0000,1.0000,0.8750,1.0000,0.9286
+EXP-V2-pgvector-hybrid-tsvector,pgvector,hybrid,tsvector,0.9000,0.9500,0.2440,3.2647,3.8280,0.8571,0.6429,1.0000,1.0000,0.8750,1.0000,0.9286
+EXP-V2-pgvector-sparse-tsvector,pgvector,sparse,tsvector,0.0000,0.0000,0.0000,2.1510,2.5440,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000

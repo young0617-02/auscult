@@ -1,0 +1,234 @@
+# =============================================================
+# Phase 0 基础组件编排（compose.base.yml）
+# 用途： V2 检索对比 / V3 时序接入 / V5 checkpoint 验证的基础设施
+# 端口纪律： 严格使用 env/ports.md 冻结的端口基线
+# ⚠️ 前置： T1.1 `.wslconfig` 必须先落地（20GB / 10 vCPU），
+#          否则本编排全启会撞上当前的 Docker 内存上限（≈20GB，T1.1 已安装核验）
+# 启动： docker compose -f docker/compose.base.yml up -d
+# =============================================================
+
+name: auscult-p0
+
+networks:
+  auscult-net:
+    driver: bridge
+
+volumes:
+  milvus-etcd-data:
+  milvus-minio-data:
+  milvus-data:
+  pg-data:
+  redis-data:
+  neo4j-data:
+  tdengine-data:
+  mosquitto-data:
+
+services:
+
+  # ---------------- 向量库：Milvus v3.0.0（V2 主路线） ----------------
+  # 版本锁定： milvusdb/milvus:v3.0.0
+  # digest: sha256:49371c30af46b1013e4d3e0b980e691d81376d69cdbe1b372725baf1d7255862
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.25@sha256:52f17f7e56e4f7239f0320dbfcbcc24721163d7d78ae710b466af3254ccf6366
+    container_name: auscult-etcd
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    command: etcd -advertise-client-urls=http://etcd:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - milvus-etcd-data:/etcd
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    # 内网服务，不对外暴露端口（避免占用宿主 2379）
+
+  minio:
+    image: minio/minio:RELEASE.2024-12-18T13-15-44Z@sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3
+    container_name: auscult-minio
+    environment:
+      - MINIO_ROOT_USER=minioadmin
+      - MINIO_ROOT_PASSWORD=minioadmin
+    command: minio server /minio_data --console-address ":9001"
+    volumes:
+      - milvus-minio-data:/minio_data
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  milvus:
+    image: milvusdb/milvus:v3.0.0@sha256:49371c30af46b1013e4d3e0b980e691d81376d69cdbe1b372725baf1d7255862
+    container_name: auscult-milvus
+    command: ["milvus", "run", "standalone"]
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+      # 中文 analyzer 验证所需（V2 Step1 / 风险 R6）
+      - COMMON_STORAGETYPE=local
+    volumes:
+      - milvus-data:/var/lib/milvus
+    ports:
+      - "19530:19530"   # gRPC
+      - "9091:9091"     # metrics / healthz
+    networks: [auscult-net]
+    depends_on: [etcd, minio]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
+      interval: 30s
+      start_period: 90s
+      timeout: 20s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          # 预留上限，实测值由 V4b (D8) 校准
+          memory: 4g
+
+  # ---------------- 关系库：pgvector 对照路线 + 业务库 ----------------
+  # 版本锁定： postgres:18
+  # digest: sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+  # ⚠️ pgvector / ParadeDB pg_search 扩展需在 D4 按 V2 需要另行确认安装方式
+  postgres:
+    image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
+    container_name: auscult-postgres
+    environment:
+      - POSTGRES_USER=auscult
+      - POSTGRES_PASSWORD=auscult_p0_dev
+      - POSTGRES_DB=auscult
+    volumes:
+      # PG18 数据目录布局变更：单个挂载点必须为 /var/lib/postgresql
+      # （PG18 docker 镜像要求，否则报 "use mount /var/lib/postgresql"）
+      - pg-data:/var/lib/postgresql
+    ports:
+      - "5432:5432"
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auscult"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  # ---------------- 状态库：LangGraph checkpoint（V5 验证对象） ----------------
+  # 版本锁定： redis:8
+  # digest: sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
+  # ★ 使用 configs/redis.conf：appendonly yes + noeviction + 不设 TTL
+  redis:
+    image: redis:8@sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5
+    container_name: auscult-redis
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+    volumes:
+      # 相对路径以 compose 文件所在目录(docker/)为准，../configs 指向项目根 configs/
+      - ../configs/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          # 与 configs/redis.conf 的 maxmemory 1gb 对齐，留 2 倍余量给 AOF 重写
+          memory: 2g
+
+  # ---------------- 图数据库：Neo4j ----------------
+  # ✅ 版本已锁定（version-lock.md §二.2.1 第 11 行，实测 2026-09-24）
+  # 选型约束：社区版；堆/页缓存受控，避免默认值吃满内存（V4b 关键观测点）
+  neo4j:
+    image: neo4j:5-community@sha256:ab3aafb0020e6fed65bb2b59f7db1fabd7ee0568c4da46f3cc3b8fad77801d61
+    container_name: auscult-neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/auscult_p0_dev
+      # 控制堆内存，避免默认值吃掉全部内存（V4b 关键观测点）
+      - NEO4J_server_memory_heap_initial__size=512m
+      - NEO4J_server_memory_heap_max__size=1g
+      - NEO4J_server_memory_pagecache_size=512m
+    volumes:
+      - neo4j-data:/data
+    ports:
+      - "7474:7474"   # HTTP
+      - "7687:7687"   # Bolt
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  # ---------------- MQTT Broker：Mosquitto（V3 Sparkplug B 接入） ----------------
+  # ✅ 版本已锁定（version-lock.md §二.2.1 第 10 行，实测 2026-09-24）
+  # 备考：纪律 1（digest 唯一性）禁止裸 tag，此处固定为精确 digest
+  mosquitto:
+    image: eclipse-mosquitto:2@sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408
+    container_name: auscult-mosquitto
+    volumes:
+      # 相对路径以 compose 文件所在目录(docker/)为准，../configs 指向项目根 configs/
+      - ../configs/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    ports:
+      - "1883:1883"   # MQTT
+      - "9001:9001"   # WebSocket
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/#' -C 1 -W 3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ---------------- 时序库：TDengine + taosAdapter（V3） ----------------
+  # ✅ T1.9 授权已定稿（2026-09-24）：官方 Sparkplug B 连接器仅 All-in-One/Enterprise；
+  #    本项目裁定 OSS 社区版 + 自研 Sparkplug B 解码器（≤2 天）。镜像改用 tdengine/tsdb
+  #    （3.3.7.0 起社区版由 tdengine/tdengine 改名），并固定精确 tag（禁 latest）。
+  #    本服务置于 profile "tdengine" 下，默认不启：
+  #     docker compose -f docker/compose.base.yml --profile tdengine up -d
+  tdengine:
+    image: tdengine/tsdb:3.3.8.0@sha256:36e2bf82f151e8013d39a929aadc41bfcd5c46564866635cee1a02693d2256bf
+    container_name: auscult-tdengine
+    profiles: ["tdengine"]
+    environment:
+      - TAOS_FQDN=tdengine
+    volumes:
+      - tdengine-data:/var/lib/taos
+    ports:
+      - "6030:6030"   # 原生连接
+      - "6041:6041"   # REST / taosAdapter
+    networks: [auscult-net]
+    healthcheck:
+      test: ["CMD-SHELL", "taos -s 'show databases' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+# =============================================================
+# 分组启动策略（对应 V4b 的 T8.1 启动矩阵，内存紧张时使用）
+# -------------------------------------------------------------
+# 第 1 组（检索）： docker compose up -d etcd minio milvus postgres
+# 第 2 组（状态）： docker compose up -d redis neo4j
+# 第 3 组（时序）： docker compose --profile tdengine up -d mosquitto tdengine
+#
+# 全启内存预估（待 V4b 实测校准）：
+#   milvus ~4G + postgres ~2G + redis ~2G + neo4j ~2G + tdengine ~1G
+#   + etcd/minio/mosquitto ~1G  ≈ 12G
+#   剩余需留给 Ollama(7B ≈ 5-6G 显存 + 宿主内存) 与 BGE-M3/reranker
+#   → 门禁线 24GB 是"容器 + 宿主 Ollama"的合计峰值
+# =============================================================

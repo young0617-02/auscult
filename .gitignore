@@ -1,0 +1,8 @@
+# 云端 baseline 连接配置：含直填的 API key，禁止入库
+#（安全兜底：若移除忽略，则 key 将随 git 提交泄露）
+env/cloud.json
+
+# Python 字节码缓存与虚拟环境（可再生，不入库）
+__pycache__/
+*.pyc
+.venv/

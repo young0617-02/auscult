@@ -1,0 +1,21 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,True,True,True,True,,True,,False,False,False,True,,12106.464,557,1634,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,3442.678,128,273,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,3711.335,160,457,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,False,参数值错：depth 期望 1，实际 2,False,False,False,False,参数值错,2945.282,108,248,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,4822.872,132,227,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,2824.37,101,170,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,8296.227,466,834,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,16835.023,974,2584,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,7371.78,340,771,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,False,True,,False,参数值错：time_range 期望 {'start': '1h'}，实际 {'start': '24h'}; 参数值错：aggregation 期望 'avg'，实际 'trend'; 工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,7805.002,278,737,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,5805.877,261,538,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,3137.978,131,240,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,7324.482,266,314,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,3125.94,121,281,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,False,True,False,,True,,False,False,False,True,,5541.957,122,314,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,False,True,False,,True,,False,False,False,True,,5623.563,173,423,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,False,True,False,,True,,False,False,False,True,,6715.302,240,271,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,6720.454,220,541,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,19513.076,907,2229,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-promptv4,False,True,True,True,,True,,False,False,False,True,,2666.061,105,104,char_fallback

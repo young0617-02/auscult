@@ -1,0 +1,73 @@
+{
+  "experiment_id": "EXP-M02-003",
+  "date": "2026-09-30",
+  "phase_item": "V1",
+  "models": [
+    "qwen2.5:7b"
+  ],
+  "endpoints": {
+    "qwen2.5:7b": "http://127.0.0.1:11434/v1/chat/completions"
+  },
+  "cases": "evals\\v1_cases.jsonl",
+  "repeat": 3,
+  "tag": "m02-f2-catalog",
+  "constrain": true,
+  "max_retry": 3,
+  "seed": 42,
+  "num_ctx": 8192,
+  "temperature": 0.0,
+  "top_p": 1.0,
+  "max_tokens": 1024,
+  "stream": false,
+  "prompt_version": "prompts\\tool_call_prompt_v3.md",
+  "prompt_step_version": "prompts\\tool_call_step_prompt_v1.md",
+  "step_chain_cases": 0,
+  "schema_version": "tools_v4",
+  "code_commit": "no-git",
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "raw_data_path": "experiments\\v1\\raw\\EXP-M02-003.jsonl",
+  "groups_executed": 60,
+  "groups_skipped": 0,
+  "records": 86,
+  "elapsed_s": 189.5,
+  "summary": {
+    "qwen2.5:7b": {
+      "用例数": 20,
+      "总调用次数": 86,
+      "1_工具选择准确率": 0.85,
+      "1b_多工具集合覆盖": 1.0,
+      "1c_多工具步骤链完整率": null,
+      "2_参数JSON可解析率": 1.0,
+      "3_参数值正确率": 0.7254901960784313,
+      "4a_应拒绝却调用": 9,
+      "4b_应调用却拒绝": 0,
+      "5_首次成功率": 0.65,
+      "6_重试后成功率": 1.0,
+      "7_平均延迟_冷_ms": 3520.851,
+      "7_P95延迟_冷_ms": 3520.851,
+      "7_平均延迟_热_ms": 2403.926915254237,
+      "7_P95延迟_热_ms": 5293.287,
+      "7_输出token均值": 94.56666666666666,
+      "7_think_token均值": null,
+      "8_输出冗长度_think占比": null,
+      "think_token口径": "usage",
+      "失败归类": {
+        "参数值错": 17,
+        "该拒绝却调用": 9
+      },
+      "分层_类型": {
+        "单工具": 0.6666666666666666,
+        "参数校验": 0.75,
+        "多工具": 0.5833333333333334,
+        "多轮": 1.0,
+        "无效拒绝": 0.3333333333333333
+      },
+      "分层_难度": {
+        "中": 0.6666666666666666,
+        "易": 1.0,
+        "难": 0.5416666666666666
+      }
+    }
+  }
+}

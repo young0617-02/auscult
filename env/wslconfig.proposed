@@ -1,0 +1,41 @@
+# =============================================================
+# WSL2 资源约束配置（T1.1 产出 / 待用户执行安装）
+# =============================================================
+# 目标位置： <USER_HOME>\.wslconfig
+# 当前状态： 该文件【不存在】—— 实测于 2026-09-23
+# 安装方式： 把本文件复制为 %UserProfile%\.wslconfig，然后执行
+#              wsl --shutdown
+#            再重启 Docker Desktop / WSL2，最后用
+#              docker info --format '{{.MemTotal}} {{.NCPU}}'
+#            核对内存上限与 CPU 数
+#
+# ⚠️ 执行 wsl --shutdown 会终止所有 WSL2 进程，当前正在运行的
+#    Docker 容器（实测：nacos-standalone）会被停掉，请自行选择时机。
+# =============================================================
+
+[wsl2]
+# 设计值 20GB，为本机 32GB 物理内存的 62.5%，
+# 留出 12GB 给 Windows 宿主 + Ollama(Windows 原生) + 浏览器
+memory=20GB
+
+# 设计值 10 核（本机 20 逻辑核，i7-13650HX = 6P+8E）
+processors=10
+
+# 交换区 8GB，防止 OOM 直接杀容器
+swap=8GB
+
+# swap 文件落盘位置（放 D 盘，C 盘仅剩 94GB）
+swapFile=D:\\wsl-swap.vhdx
+
+# 允许容器访问宿主 GPU（RTX4060 直通，CUDA 走 WSL2 驱动透传）
+gpuSupport=true
+
+# 关闭自动内存回收激进策略，避免压测期间抖动
+autoMemoryReclaim=disabled
+
+# 网络镜像模式，便于容器访问宿主 11434 的 Ollama
+networkingMode=mirrored
+
+[experimental]
+# 让 WSL2 可用 Windows 的 DNS/代理
+hostAddressLoopback=true

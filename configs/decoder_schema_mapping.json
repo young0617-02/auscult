@@ -1,0 +1,129 @@
+{
+  "schema_version": "v2",
+  "source": "docs/schema-mapping.md",
+  "说明": "自研 Sparkplug B 解码器的机器可读映射配置。解码器只读本文件，不硬编码映射。数据镜像 docs/schema-mapping.md §三/§四/§二.4。v2：为三张超级表补互斥子表命名（TDengine 要求子表名全局唯一，不能跨超级表同名）。",
+  "sparkplug": {
+    "namespace": "spBv1.0",
+    "group_id": "plant1",
+    "edge_node_ids": ["gw-pump-01"],
+    "protocol": "protobuf",
+    "use_alias": false,
+    "time_precedence": ["metric.timestamp", "payload.timestamp", "server_receive_time"],
+    "allowed_datatypes": ["Double", "Float", "Boolean"]
+  },
+  "topic_pattern": "spBv1.0/{group_id}/{message_type}/{edge_node_id}/{device_id:?}",
+  "message_types": {
+    "NBIRTH": "record_node_meta",
+    "NDATA": "record_node_runtime_only",
+    "NDEATH": "mark_all_devices_offline",
+    "DBIRTH": "create_or_validate_table",
+    "DDATA": "write_metrics",
+    "DDEATH": "mark_device_offline",
+    "STATE": "ignore"
+  },
+  "database": {
+    "name": "iot",
+    "keep_days": 365,
+    "duration_days": 10,
+    "precision": "ms",
+    "wal_level": 1
+  },
+  "stables": [
+    {
+      "name": "st_pump_metrics",
+      "columns": [
+        {"name": "ts", "type": "TIMESTAMP", "role": "primary_timestamp"},
+        {"name": "vib_rms", "type": "DOUBLE", "unit": "mm/s", "role": "主判据量", "comment": "振动有效值"},
+        {"name": "vib_peak", "type": "DOUBLE", "unit": "mm/s", "comment": "振动峰值"},
+        {"name": "vib_kurtosis", "type": "DOUBLE", "unit": "-", "comment": "峭度"},
+        {"name": "bearing_temp", "type": "DOUBLE", "unit": "degC", "comment": "轴承温度"},
+        {"name": "motor_current", "type": "DOUBLE", "unit": "A", "comment": "电机电流"},
+        {"name": "pump_speed", "type": "DOUBLE", "unit": "rpm", "comment": "转速，特征频率计算必需"},
+        {"name": "quality_ok", "type": "BOOL", "comment": "数据质量标记"}
+      ],
+      "tags": [
+        {"name": "group_id", "type": "NCHAR(32)", "source": "topic"},
+        {"name": "edge_node_id", "type": "NCHAR(64)", "source": "topic"},
+        {"name": "device_id", "type": "NCHAR(64)", "source": "topic"},
+        {"name": "device_type", "type": "NCHAR(32)", "source": "metric", "metric_name": "device_type"}
+      ],
+      "subtable_naming": "d_{group_id}_{device_id}",
+      "metric_mapping": [
+        {"metric_name": "vibration_rms", "column": "vib_rms", "datatype": "Double", "unit": "mm/s", "is_tag": false},
+        {"metric_name": "vibration_peak", "column": "vib_peak", "datatype": "Double", "unit": "mm/s", "is_tag": false},
+        {"metric_name": "vibration_kurtosis", "column": "vib_kurtosis", "datatype": "Double", "unit": "-", "is_tag": false},
+        {"metric_name": "bearing_temp", "column": "bearing_temp", "datatype": "Double", "unit": "degC", "is_tag": false},
+        {"metric_name": "motor_current", "column": "motor_current", "datatype": "Double", "unit": "A", "is_tag": false},
+        {"metric_name": "pump_speed", "column": "pump_speed", "datatype": "Double", "unit": "rpm", "is_tag": false},
+        {"metric_name": "metric_quality", "column": "quality_ok", "datatype": "Boolean", "is_tag": false},
+        {"metric_name": "device_type", "column": null, "tag": "device_type", "datatype": "String", "is_tag": true}
+      ]
+    },
+    {
+      "name": "st_unmapped_metrics",
+      "subtable_naming": "u_{group_id}_{device_id}",
+      "columns": [
+        {"name": "ts", "type": "TIMESTAMP"},
+        {"name": "metric_name", "type": "NCHAR(64)"},
+        {"name": "value_num", "type": "DOUBLE"},
+        {"name": "value_str", "type": "NCHAR(128)"},
+        {"name": "quality_ok", "type": "BOOL"}
+      ],
+      "tags": [
+        {"name": "group_id", "type": "NCHAR(32)", "source": "topic"},
+        {"name": "edge_node_id", "type": "NCHAR(64)", "source": "topic"},
+        {"name": "device_id", "type": "NCHAR(64)", "source": "topic"}
+      ],
+      "comment": "未登记 metric 旁路，不静默丢弃"
+    },
+    {
+      "name": "st_device_status",
+      "subtable_naming": "s_{group_id}_{device_id}",
+      "columns": [
+        {"name": "ts", "type": "TIMESTAMP"},
+        {"name": "online", "type": "BOOL"},
+        {"name": "birth_seq", "type": "BIGINT", "comment": "bdSeq"},
+        {"name": "last_seq", "type": "INT", "comment": "最近 seq，丢包检测"},
+        {"name": "reason", "type": "NCHAR(64)"}
+      ],
+      "tags": [
+        {"name": "group_id", "type": "NCHAR(32)", "source": "topic"},
+        {"name": "edge_node_id", "type": "NCHAR(64)", "source": "topic"},
+        {"name": "device_id", "type": "NCHAR(64)", "source": "topic"}
+      ]
+    }
+  ],
+  "boundary_handling": {
+    "birth": {
+      "action": "create_or_validate_table",
+      "idempotent": "使用 INSERT ... USING ... TAGS() 自动建表，天然幂等",
+      "unmapped_metric": "写入 st_unmapped_metrics + 产生 schema_drift 告警",
+      "schema_drift_alert": "schema_drift"
+    },
+    "new_metric": {
+      "default": "未知 metric -> st_unmapped_metrics + schema_drift 告警 + 人工介入",
+      "promote": "人工评审后 ALTER STABLE ADD COLUMN + 升版本映射文件，禁止解码器自动 ALTER"
+    },
+    "rebirth_conflict": [
+      {"case": "同 device_id + 同 bdSeq", "action": "忽略，重复报文（reason='duplicate'，不写新行）"},
+      {"case": "同 device_id + bdSeq 递增", "action": "正常 re-birth：更新 bdSeq、重置 seq、st_device_status.reason='rebirth'"},
+      {"case": "同 device_id + bdSeq 回退", "action": "异常：写告警，置 st_device_status.online=FALSE 且 reason='rebirth_rollback'（该表无 quality_ok 列，以 offline 表达“数据不可信”）"},
+      {"case": "device_id 同 + edge_node_id 变", "action": "设备迁移，写告警，TAG 更新（当前实现按新 edge 建独立子表，迁移动作待 P1 补齐）"}
+    ],
+    "rebirth_authority": "M6 冲突判定的 bdSeq 基准当前取自**内存** DeviceRegistry.birth_seq（同一解码器进程内）；以 st_device_status 持久化值为权威的路径见 DbWriter.query_last_birth_seq（预留，未接入）",
+    "offline": {
+      "ddeath": "st_device_status online=FALSE reason='ddeath' + device_offline 事件",
+      "ndeath": "该 edge_node_id 下所有设备批量置离线 + 单条聚合告警",
+      "will": "Broker 配置 will 指向 NDEATH/DDEATH 主题",
+      "heartbeat_timeout": "无数据 3*上报周期 -> 置离线（模拟 1Hz 即 >3s）",
+      "no_backfill": "离线期间数据不回填，不插补"
+    },
+    "lt_rule": "一条 DDATA 内逐 metric 校验，禁止因单个坏 metric 丢弃整条报文"
+  },
+  "device_id_validation": {
+    "regex": "^[A-Za-z0-9_-]+$",
+    "action_on_invalid": "拒绝并告警（丢弃该报文，写 device_id_invalid 告警；不进入子表名与 SQL）",
+    "applies_to": "DBIRTH / DDATA / DDEATH（设备级报文）；NDEATH 为网关级报文、无 device_id 段，不适用",
+    "scope_note": "本正则为**解码侧宽松口径**（只拦非法标识符与注入面）；面向用户的工具契约 schemas/tools_v1.json 使用更严格的 ^[A-Z][A-Z0-9-]{2,31}$。两者用途不同，为有意并存，见 docs/schema-mapping.md §六"
+  }
+}

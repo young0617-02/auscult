@@ -1,0 +1,61 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,True,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,5856.129,174,367,char_fallback
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,3745.396,149,250,char_fallback
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,6961.534,238,680,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,6267.642,205,623,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,2786.555,96,183,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3190.503,113,255,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,6512.239,336,1026,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,7841.011,427,1465,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,6519.639,340,1031,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,4208.478,200,559,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,4308.587,200,559,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,4181.581,200,559,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3928.97,197,321,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,4259.359,183,245,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3773.414,183,245,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3638.959,151,404,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3935.019,178,517,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3940.328,178,517,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,21849.704,1234,3780,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,17274.088,921,2741,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,15044.031,784,2335,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,9677.546,327,314,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['驱动端', '振动']",False,False,False,False,参数值错,5492.334,322,314,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['驱动端', '振动']",False,False,False,False,参数值错,5527.71,322,314,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,10441.195,558,1676,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,10091.257,557,1592,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,10139.849,557,1592,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,7651.075,358,1042,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,9056.507,433,1230,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,False,True,,False,参数值错：time_range 期望 {'start': '1h'}，实际 {'start': '24h'}; 工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,8659.226,420,1157,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,5280.949,196,277,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,16778.504,874,1559,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,7283.621,314,499,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3846.527,182,326,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3816.623,182,326,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,3768.033,182,326,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,7899.812,470,990,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,6960.725,404,778,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,7007.82,404,778,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 search_knowledge,False,True,True,False,格式退化,2974.595,94,185,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 search_knowledge,False,True,True,False,格式退化,3043.315,94,185,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 search_knowledge,False,True,True,False,格式退化,2964.061,94,185,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,True,False,,True,,False,False,False,True,,4964.36,185,322,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,True,False,,True,,False,False,False,True,,4328.915,213,360,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,True,False,,True,,False,False,False,True,,4370.546,213,360,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,32810.183,1916,6956,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,43628.597,2582,9270,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,21970.285,1240,4520,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,True,False,,True,,False,False,False,True,,6819.689,254,182,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,True,False,,True,,False,False,False,True,,5029.839,237,189,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,True,False,,True,,False,False,False,True,,5296.254,247,182,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,5904.014,267,670,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,5892.683,267,670,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,5907.411,267,670,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 generate_report,False,True,True,False,格式退化,13124.198,633,1735,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 generate_report,False,True,True,False,格式退化,15604.745,782,2060,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,False,False,False,,False,工具缺失：未调用 generate_report,False,True,True,False,格式退化,16101.142,800,1948,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,2440.557,67,93,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,2440.036,67,93,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h3-toolsv5,False,True,True,True,,True,,False,False,False,True,,2401.727,67,93,char_fallback

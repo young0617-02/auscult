@@ -1,0 +1,21 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,True,False,False,False,,False,工具缺失：未调用 query_sensor,False,True,True,False,格式退化,4472.674,146,227,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,4975.595,218,584,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,3109.362,123,326,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,3861.244,154,408,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,3930.234,198,322,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,6793.294,345,1365,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,11280.662,607,1319,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,5421.701,330,330,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,9995.484,561,1531,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,False,True,,False,参数值错：aggregation 期望 'avg'，实际 'trend'; 工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,6709.619,300,764,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,4210.597,172,173,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,3743.292,204,349,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,6800.07,352,558,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,3031.148,122,135,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,False,True,False,,True,,False,False,False,True,,10905.665,259,378,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,11682.412,523,1722,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,False,True,False,,True,,False,False,False,True,,4911.866,218,260,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,5494.167,249,506,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,13825.845,684,1350,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-replicate-006,False,True,True,True,,True,,False,False,False,True,,3998.634,163,450,char_fallback

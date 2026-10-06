@@ -1,0 +1,228 @@
+{
+    "_meta":  {
+                  "script":  "scripts/collect_env.ps1",
+                  "collected_at":  "2026-09-29T11:49:36+08:00",
+                  "purpose":  "T1.2 hardware collection / V4a physical constraint input",
+                  "hostname":  "<WORKSTATION>",
+                  "note":  "Reports citing this file must also cite env-baseline-v2.md version"
+              },
+    "os":  {
+               "hostname":  "<WORKSTATION>",
+               "build":  "26200",
+               "product_name":  "Windows 10 Pro",
+               "display_version":  "25H2"
+           },
+    "cpu":  {
+                "logical_processors":  20,
+                "name":  "13th Gen Intel(R) Core(TM) i7-13650HX",
+                "identifier":  "Intel64 Family 6 Model 183 Stepping 1"
+            },
+    "memory":  {
+                   "total_gb":  32,
+                   "total_bytes":  34359738368
+               },
+    "gpu":  {
+                "name":  "NVIDIA GeForce RTX 4060 Laptop GPU",
+                "driver_version_windows":  "32.0.16.1656",
+                "adapter_ram_wmi":  4293918720,
+                "adapter_ram_note":  "WMI AdapterRAM is a truncated 32-bit value; trust nvidia-smi",
+                "driver_version_nvidia":  "616.56",
+                "vram_total_mib":  8188,
+                "vram_used_mib":  1368,
+                "compute_capability":  "8.9"
+            },
+    "disk":  [
+                 {
+                     "used_gb":  107.6,
+                     "drive":  "C",
+                     "free_gb":  93.3
+                 },
+                 {
+                     "used_gb":  96.4,
+                     "drive":  "D",
+                     "free_gb":  404.6
+                 },
+                 {
+                     "used_gb":  189.5,
+                     "drive":  "E",
+                     "free_gb":  61.5
+                 }
+             ],
+    "cuda":  {
+                 "versions":  null,
+                 "toolkit_installed_in_default_path":  false,
+                 "toolkit_path_checked":  "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA"
+             },
+    "wsl":  {
+                "wslconfig_path":  "<USER_HOME>\\.wslconfig",
+                "wslconfig_present":  true,
+                "distro_checked":  "docker-desktop",
+                "wslconfig_content":  "# =============================================================\n# WSL2 璧勬簮绾︽潫閰嶇疆锛圱1.1 浜у嚭 / 寰呯敤鎴锋墽琛屽畨瑁咃級\n# =============================================================\n# 鐩爣浣嶇疆锛?<USER_HOME>\\.wslconfig\n# 褰撳墠鐘舵€侊細 璇ユ枃浠躲€愪笉瀛樺湪銆戔€斺€?瀹炴祴浜?2026-09-23\n# 瀹夎鏂瑰紡锛?鎶婃湰鏂囦欢澶嶅埗涓?%UserProfile%\\.wslconfig锛岀劧鍚庢墽琛?#              wsl --shutdown\n#            鍐嶉噸鍚?Docker Desktop / WSL2锛屾渶鍚庣敤\n#              docker info --format \u0027{{.MemTotal}} {{.NCPU}}\u0027\n#            鏍稿鍐呭瓨涓婇檺涓?CPU 鏁?#\n# 鈿狅笍 鎵ц wsl --shutdown 浼氱粓姝㈡墍鏈?WSL2 杩涚▼锛屽綋鍓嶆鍦ㄨ繍琛岀殑\n#    Docker 瀹瑰櫒锛堝疄娴嬶細nacos-standalone锛変細琚仠鎺夛紝璇疯嚜琛岄€夋嫨鏃舵満銆?# =============================================================\n\n[wsl2]\n# 璁捐鍊?20GB锛屼负鏈満 32GB 鐗╃悊鍐呭瓨鐨?62.5%锛?# 鐣欏嚭 12GB 缁?Windows 瀹夸富 + Ollama(Windows 鍘熺敓) + 娴忚鍣?memory=20GB\n\n# 璁捐鍊?10 鏍革紙鏈満 20 閫昏緫鏍革紝i7-13650HX = 6P+8E锛?processors=10\n\n# 浜ゆ崲鍖?8GB锛岄槻姝?OOM 鐩存帴鏉€瀹瑰櫒\nswap=8GB\n\n# swap 鏂囦欢钀界洏浣嶇疆锛堟斁 D 鐩橈紝C 鐩樹粎鍓?94GB锛?swapFile=D:\\\\wsl-swap.vhdx\n\n# 鍏佽瀹瑰櫒璁块棶瀹夸富 GPU锛圧TX4060 鐩撮€氾紝CUDA 璧?WSL2 椹卞姩閫忎紶锛?gpuSupport=true\n\n# 鍏抽棴鑷姩鍐呭瓨鍥炴敹婵€杩涚瓥鐣ワ紝閬垮厤鍘嬫祴鏈熼棿鎶栧姩\nautoMemoryReclaim=disabled\n\n# 缃戠粶闀滃儚妯″紡锛屼究浜庡鍣ㄨ闂涓?11434 鐨?Ollama\nnetworkingMode=mirrored\n\n[experimental]\n# 璁?WSL2 鍙敤 Windows 鐨?DNS/浠ｇ悊\nhostAddressLoopback=true",
+                "version_raw":  "WSL 版本: 2.7.11.0\n内核版本: 6.18.33.2-2\nWSLg 版本: 1.0.73.2\nMSRDC 版本: 1.2.7214\nDirect3D 版本: 1.611.1-81528511\nDXCore 版本: 10.0.26100.1-240331-1435.ge-release\nWindows: 10.0.26200.7171",
+                "distros_raw":  "  NAME              STATE           VERSION\n* docker-desktop    Running         2",
+                "distro_state":  "Running",
+                "live_raw":  "10 | Mem:          20001        3111       10705          53        6185       16563",
+                "gpu_passthrough_in_wsl":  "UNVERIFIED: /bin/sh: nvidia-smi: not found"
+            },
+    "docker":  {
+                   "engine_version":  "29.6.2",
+                   "compose_version":  "5.3.1",
+                   "os":  "Docker Desktop",
+                   "ncpu":  "10",
+                   "mem_total_bytes":  "20972691456",
+                   "mem_total_gb":  19.53,
+                   "images":  [
+                                  "hawkeye/webhook-adapter:local|sha256:640b08429869e3fdd96e594695732320fd31dfe201d554440ffb9afe7ee39a45|74.1MB",
+                                  "auscult-ingest-self-decoder:latest|sha256:56b21ac80107351dbc1cfec9797f1f121e2f048bbae1bc8cf0e7b9df13de4362|192MB",
+                                  "paradedb/paradedb:latest|sha256:188591a0bc317beb2c6d6d3f9ef0cb3e859d09ecc15a71dda5e9a027876686cf|1.4GB",
+                                  "neo4j:5-community|sha256:ab3aafb0020e6fed65bb2b59f7db1fabd7ee0568c4da46f3cc3b8fad77801d61|986MB",
+                                  "redis:7-alpine|sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499|57.8MB",
+                                  "eclipse-mosquitto:2|sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408|41.8MB",
+                                  "docker:cli|sha256:018edbc908e08fcc9dbf029c812c34251e9b4719e6f71ca0e5eae2a987d014ca|237MB",
+                                  "bash:5|sha256:61962062d969cb46dfc2bad061d36342406fa485f64f246aa7e95693ca07df1f|23.7MB",
+                                  "mongodb/mongodb-atlas-local:8.0|sha256:33de960ef58be32fddba97edaea2dc6976dc10caf11b4e38b32c3c67ade96c91|2.02GB",
+                                  "mongo:8|sha256:5d7043a4ffe02b9ed1b6e0bab057546981af5ca0a79107e9c461e49bc44c0a7b|1.15GB",
+                                  "nacos/nacos-server:latest|sha256:1c191c30c8cd5ff2a72bf576555dbaa57a616378c55168651a74aefadedf7708|2.09GB",
+                                  "redis:8|sha256:298e5b3bc566bade82f46ad5511777a4a07a294097ce16ada2f6a42be5239df5|212MB",
+                                  "postgres:18|sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280|650MB",
+                                  "pgvector/pgvector:pg18|sha256:2ba9ca5f2e7daa0f0e7723cba1ee9167bab54efd3640516a44ac1a928dd67e7a|631MB",
+                                  "milvusdb/milvus:v3.0.0|sha256:49371c30af46b1013e4d3e0b980e691d81376d69cdbe1b372725baf1d7255862|3.93GB",
+                                  "mysql:8.4|sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb|1.12GB",
+                                  "docker/desktop-cloud-provider-kind:v0.6.0|sha256:46d51b990e97493119aac0907bcf50fd69660dc8637765a517642f1677acdb76|613MB",
+                                  "docker/desktop-containerd-registry-mirror:v0.0.4|sha256:1de142695bb068e49b4c8abb7f1eab5b215f23ba93f69b2ed44a5d75b55d5cc1|52.9MB",
+                                  "envoyproxy/envoy:v1.36.7|sha256:29d778ba078e0404d18fa45ffb834c062071b0f81dc0a6a41501ce8e23a0059f|253MB",
+                                  "kindest/node:v1.36.1|sha256:3489c7674813ba5d8b1a9977baea8a6e553784dab7b84759d1014dbd78f7ebd5|1.31GB",
+                                  "alpine:3.20|sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc|12.2MB",
+                                  "quay.io/coreos/etcd:v3.5.25|sha256:52f17f7e56e4f7239f0320dbfcbcc24721163d7d78ae710b466af3254ccf6366|93.8MB",
+                                  "tdengine/tsdb:3.3.8.0|sha256:36e2bf82f151e8013d39a929aadc41bfcd5c46564866635cee1a02693d2256bf|1.68GB",
+                                  "golang:1.23-alpine|sha256:383395b794dffa5b53012a212365d40c8e37109a626ca30d6151c8348d380b5f|370MB",
+                                  "minio/minio:RELEASE.2024-12-18T13-15-44Z|sha256:1dce27c494a16bae114774f1cec295493f3613142713130c2d22dd5696be6ad3|244MB",
+                                  "prom/prometheus:v2.53.1|sha256:f20d3127bf2876f4a1df76246fca576b41ddf1125ed1c546fbd8b16ea55117e6|380MB",
+                                  "grafana/grafana:11.1.0|sha256:079600c9517b678c10cda6006b4487d3174512fd4c6cface37df7822756ed7a5|604MB",
+                                  "prom/node-exporter:v1.8.1|sha256:fa7fa12a57eff607176d5c363d8bb08dfbf636b36ac3cb5613a202f3c61a6631|38.2MB",
+                                  "quay.io/strimzi/kafka:0.40.0-kafka-3.7.0|sha256:c491a95f9b9b58f406461faf222ef612ad8d2f4d7b53f7f3645b20c99d7d1583|1.04GB",
+                                  "prom/alertmanager:v0.27.0|sha256:e13b6ed5cb929eeaee733479dce55e10eb3bc2e9c4586c705a4e8da41e5eacf5|106MB"
+                              ],
+                   "running_containers":  [
+                                              "nacos-standalone|nacos/nacos-server:latest|Up 28 minutes|0.0.0.0:8080-\u003e8080/tcp, [::]:8080-\u003e8080/tcp, 0.0.0.0:8848-\u003e8848/tcp, [::]:8848-\u003e8848/tcp, 0.0.0.0:9848-\u003e9848/tcp, [::]:9848-\u003e9848/tcp"
+                                          ]
+               },
+    "toolchain":  {
+                      "python":  {
+                                     "version":  "Python 3.12.8",
+                                     "path":  "D:\\Python312\\python.exe"
+                                 },
+                      "node":  {
+                                   "version":  "v24.19.0",
+                                   "path":  "C:\\Program Files\\nodejs\\node.exe"
+                               },
+                      "git":  {
+                                  "version":  "git version 2.45.1.windows.1",
+                                  "path":  "C:\\Program Files\\Git\\cmd\\git.exe"
+                              },
+                      "ollama":  {
+                                     "version":  "UNKNOWN(probe returned empty)",
+                                     "path":  "<USER_HOME>\\AppData\\Local\\Programs\\Ollama\\ollama.exe"
+                                 },
+                      "docker":  {
+                                     "version":  "Docker version 29.6.2, build dfc4efb",
+                                     "path":  "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe"
+                                 },
+                      "wsl":  {
+                                  "version":  "WSL 版本: 2.7.11.0",
+                                  "path":  "C:\\WINDOWS\\system32\\wsl.exe"
+                              },
+                      "nvidia-smi":  {
+                                         "version":  "616.56",
+                                         "path":  "C:\\WINDOWS\\system32\\nvidia-smi.exe"
+                                     }
+                  },
+    "models":  [
+                   {
+                       "manifest_path":  "D:\\.ollama\\models\\manifests\\registry.ollama.ai\\library\\bge-m3\\latest",
+                       "model_layer_digest":  "sha256:daec91ffb5dd0c27411bd71f29932917c49cf529a641d0168496c3a501e3062c",
+                       "model":  "bge-m3:latest",
+                       "manifest_config_digest":  "sha256:0c4c9c2a325fb1cdafec606e6809cb745f1cb26a6d919994400d27372303e276",
+                       "model_layer_size":  1157671200
+                   },
+                   {
+                       "manifest_path":  "D:\\.ollama\\models\\manifests\\registry.ollama.ai\\library\\deepseek-r1\\7b",
+                       "model_layer_digest":  "sha256:96c415656d377afbff962f6cdb2394ab092ccbcbaab4b82525bc4ca800fe8a49",
+                       "model":  "deepseek-r1:7b",
+                       "manifest_config_digest":  "sha256:40fb844194b25e429204e5163fb379ab462978a262b86aadd73d8944445c09fd",
+                       "model_layer_size":  4683073184
+                   },
+                   {
+                       "manifest_path":  "D:\\.ollama\\models\\manifests\\registry.ollama.ai\\library\\qwen2.5\\7b",
+                       "model_layer_digest":  "sha256:2bada8a7450677000f678be90653b85d364de7db25eb5ea54136ada5f3933730",
+                       "model":  "qwen2.5:7b",
+                       "manifest_config_digest":  "sha256:2f15b3218f0552c60647ce60ada83632d2c09755b16259b13e3e4458e9ae419d",
+                       "model_layer_size":  4683073952
+                   }
+               ],
+    "ports":  [
+                  {
+                      "port":  19530,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  9091,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  7474,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  7687,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  6030,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  6041,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  5432,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  6379,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  11434,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  1883,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  8000,
+                      "status":  "free",
+                      "owner":  null
+                  },
+                  {
+                      "port":  3000,
+                      "status":  "free",
+                      "owner":  null
+                  }
+              ],
+    "warnings":  [
+
+                 ]
+}

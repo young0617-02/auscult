@@ -1,0 +1,21 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,True,True,True,True,,True,,False,False,False,True,,7651.737,330,818,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,5981.325,173,302,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,6141.647,120,341,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,5746.904,212,651,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,4577.908,180,306,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,7298.344,367,1104,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,13865.022,789,2183,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,5440.036,311,330,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,False,参数值错：direction 期望 'outgoing'，实际 'both',False,False,False,False,参数值错,8832.625,502,1283,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,7485.169,393,615,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,10104.214,310,605,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,9266.16,440,1120,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,6892.129,323,420,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,3176.795,124,294,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,False,True,False,,True,,False,False,False,True,,6380.189,237,524,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,14402.2,510,1655,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,False,True,False,,True,,False,False,False,True,,4194.156,185,260,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,6006.569,308,927,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,16448.102,916,2526,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-toolsv4-cloud,False,True,True,True,,True,,False,False,False,True,,3435.609,149,371,char_fallback

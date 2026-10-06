@@ -1,0 +1,3 @@
+experiment_id,scale,route,build_s,p95_ms,mean_ms,calls,peak_gb,query_count,ts
+EXP-V2-LOAD-100000,100000,pgvector-paradedb,7.6,170.6,119.9,100,0.33,20,2026-09-28T17:12:05+08:00
+EXP-V2-LOAD-100000,100000,milvus-bm25,7.0,5.6,4.0,100,1.28,20,2026-09-28T17:12:22+08:00

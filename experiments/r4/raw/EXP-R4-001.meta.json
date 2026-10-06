@@ -1,0 +1,32 @@
+{
+  "experiment_id": "EXP-R4-001",
+  "date": "2026-09-29",
+  "phase_item": "R-4",
+  "models": [
+    "qwen2.5:7b"
+  ],
+  "endpoints": {
+    "qwen2.5:7b": "http://127.0.0.1:11434/v1/chat/completions"
+  },
+  "cases": "evals\\r4_cases.jsonl",
+  "repeat": 3,
+  "max_retry": 3,
+  "seed": 42,
+  "num_ctx": 8192,
+  "temperature": 0.0,
+  "top_p": 1.0,
+  "max_tokens": 1024,
+  "stream": false,
+  "prompt_version": "prompts\\r4_prompt_v1.md",
+  "schema_version": "tools_v1",
+  "code_commit": "no-git",
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "raw_data_path": "experiments\\r4\\raw\\EXP-R4-001.jsonl",
+  "groups_executed": 60,
+  "groups_skipped": 0,
+  "records": 81,
+  "first_first_success": 0.7,
+  "conclusion": "【待实测】",
+  "elapsed_s": 321.2
+}

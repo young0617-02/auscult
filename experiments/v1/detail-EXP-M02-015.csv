@@ -1,0 +1,61 @@
+case_id,case_type,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,True,True,True,True,,False,参数值错：window 期望 '1h'，实际 '15m',False,False,False,False,参数值错,4755.688,214,386,char_fallback
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,False,参数值错：window 期望 '1h'，实际 '15m',False,False,False,False,参数值错,5221.279,220,396,char_fallback
+v1-001,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,False,参数值错：window 期望 '1h'，实际 '15m',False,False,False,False,参数值错,3906.146,220,396,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3640.126,178,429,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,False,参数值错：top_k 期望 5，实际 8,False,False,False,False,参数值错,3184.879,162,442,char_fallback
+v1-002,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,False,参数值错：top_k 期望 5，实际 8,False,False,False,False,参数值错,3169.256,162,442,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,2285.003,105,178,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3757.056,116,227,char_fallback
+v1-003,单工具,易,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,2719.285,116,227,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3008.67,144,337,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,5335.756,283,806,char_fallback
+v1-004,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,5610.508,233,674,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,2906.167,161,242,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4282.544,170,287,char_fallback
+v1-005,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3587.774,170,287,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,False,True,,True,,False,False,False,True,,6959.199,382,1213,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4929.341,260,866,char_fallback
+v1-006,单工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,5356.576,204,486,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,8680.154,479,1021,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,5443.287,323,479,char_fallback
+v1-007,多工具,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,False,参数值错：aggregation 期望 'max'，实际 'trend',False,False,False,False,参数值错,5448.579,323,479,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,8034.672,439,988,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,7695.147,429,1065,char_fallback
+v1-008,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['振动']",False,False,False,False,参数值错,8927.958,524,1418,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,False,参数值错：depth 期望 2，实际 3,False,False,False,False,参数值错,6517.833,347,918,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,False,参数值错：direction 期望 'outgoing'，实际 'both',False,False,False,False,参数值错,6306.368,343,849,char_fallback
+v1-009,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,False,参数值错：depth 期望 2，实际 3,False,False,False,False,参数值错,7955.642,415,1239,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'trend',False,False,False,False,参数值错,9139.634,514,1206,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'trend',False,False,False,False,参数值错,7641.068,410,777,char_fallback
+v1-010,多工具,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'trend',False,False,False,False,参数值错,8292.83,447,935,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,6042.323,321,581,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4637.909,229,415,char_fallback
+v1-011,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4933.634,253,462,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4991.103,269,655,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4499.748,236,478,char_fallback
+v1-012,参数校验,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3329.299,179,212,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4805.621,273,382,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4819.876,273,382,char_fallback
+v1-013,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,5083.058,273,382,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,2279.54,98,118,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,2278.951,98,118,char_fallback
+v1-014,参数校验,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,2354.045,98,118,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,False,True,False,,True,,False,False,False,True,,4263.287,185,322,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,False,True,False,,True,,False,False,False,True,,4050.703,181,322,char_fallback
+v1-015,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,False,True,False,,True,,False,False,False,True,,3766.502,165,408,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,10478.589,536,1685,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,7944.051,420,1301,char_fallback
+v1-016,无效拒绝,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,10199.112,511,1610,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,False,True,False,,True,,False,False,False,True,,5305.324,248,182,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,False,True,False,,True,,False,False,False,True,,5278.152,246,182,char_fallback
+v1-017,无效拒绝,难,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,False,True,False,,True,,False,False,False,True,,5620.77,246,182,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,False,True,,True,,False,False,False,True,,5213.261,324,362,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,False,True,,True,,False,False,False,True,,5213.489,324,362,char_fallback
+v1-018,多轮,中,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,False,True,,True,,False,False,False,True,,5232.819,324,362,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,18458.081,1100,3021,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,10824.902,619,1115,char_fallback
+v1-019,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,11451.867,652,947,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,4803.95,220,663,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3040.696,137,312,char_fallback
+v1-020,多轮,难,False,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h5-tools,False,True,True,True,,True,,False,False,False,True,,3075.308,137,312,char_fallback

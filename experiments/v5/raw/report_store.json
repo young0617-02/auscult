@@ -1,0 +1,7 @@
+{
+  "84b52ae611d475e625ea3c845e5859fa9aa1712b4b3769c548d92bf07a95abd3": {
+    "report_id": "RPT-84b52ae611d4",
+    "thread_id": "EXP-V5-003-T",
+    "content": "{\"actions\": [\"停机更换轴承\", \"复核对中\"], \"evidence\": [\"PUMP-A-01.vib_x=7.1mm/s\", \"ISO 10816 振动烈度限值\"], \"root_cause\": \"轴承外圈剥落（疑似）\"}"
+  }
+}

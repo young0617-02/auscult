@@ -1,0 +1,11 @@
+# 行尾策略：**一律不做 EOL 转换**（`-text`）
+#
+# 原因：本机全局 `core.autocrlf = true`，而仓库内行尾本就混杂
+#   - LF：.gitignore / scripts/*.py / docs/*.md / env/*.json …
+#   - CRLF：README.md / CHANGELOG.md（PowerShell 编辑产物）
+# 若不声明，checkout 时 git 会把 LF 文件改写成 CRLF → **工作区字节与提交对象不一致**，
+# 破坏本项目「可复现 / 可追溯」的基线要求（`code_commit` 取回后应逐字节一致）。
+#
+# `-text` 表示：入库即所见、取回即所存，**绝不改写任何字节**。
+# 注意这不是「标记为二进制」——git 仍按内容自动识别文本并正常 diff/合并。
+* -text

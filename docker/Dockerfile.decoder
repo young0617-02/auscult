@@ -1,0 +1,39 @@
+# =============================================================
+# 自研 Sparkplug B 解码器镜像（Dockerfile.decoder）
+# 用途： V3 时序链路消费者 —— 订阅 Mosquitto -> 解析 Protobuf ->
+#        按 configs/decoder_schema_mapping.json 写入 TDengine(REST 6041)
+# 依赖版本：见 docs/version-lock.md §二.2.7（protobuf/paho-mqtt/taospy 已实测锁定；
+#            taosrest 模块随 taospy wheel 自带，无需单独安装）
+# 构建（context 为项目根）：
+#   docker build -f docker/Dockerfile.decoder -t auscult-self-decoder .
+# 运行： docker compose -f docker/compose.ingest.yml up -d self-decoder
+# 自检（本地无容器）： python scripts/self_decoder.py --selftest
+# =============================================================
+# 🔴【弃用声明（2026-09-29，方案 A）】
+#   本镜像已弃用，不再由 compose.ingest.yml 构建或运行。解码器现由本地 /venv
+#   python 环境直跑（连接 127.0.0.1 的 Mosquitto 1883 / TDengine 6041），因此
+#   base 镜像 python:3.12-slim 的 digest **无需锚定**（不再构建本镜像）。
+#   本文件仅保留用于「审计可追溯」，记录解码器曾可容器化运行的完整形态；
+#   如需重新容器化，须先把 base 镜像 digest 于干净机/网络恢复后实测回填，
+#   否则违反纪律 1（禁止裸 tag）。历史参照：docs/version-lock.md §三 第 16 行。
+#   本地直跑方式：见 docs/sparkplug-b-decoder.md §八 与 top of scripts/self_decoder.py。
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+# 先拷贝依赖体积小的源码层（protos 需在 sys.path 中，解码器加载 sparkplug_b_pb2）
+COPY protos /app/protos
+COPY configs /app/configs
+COPY scripts /app/scripts
+
+# 运行期依赖：protobuf（PB 解析） + paho-mqtt（订阅） + taospy（含 taosrest，写 6041）
+# 版本锁定见 docs/version-lock.md §二.2.7
+RUN pip install --no-cache-dir \
+        protobuf==7.36.2 \
+        paho-mqtt==2.1.0 \
+        taospy==2.8.10
+
+CMD ["python", "scripts/self_decoder.py"]

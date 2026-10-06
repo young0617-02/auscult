@@ -1,0 +1,22 @@
+# =============================================================
+# V4b 分组启动隔离实测 override（2026-09-28）
+# 用途： 在不动现行 v2 / iotao / smart-doc 容器的前提下，拉起 base 四档实测稳态峰值。
+# 隔离手段：
+#   ① 宿主端口重映射：PG 5432→15432、Redis 6379→16379
+#      （因 5432 被 iotao-tsdb-lite、6379 被 iotao-redis-lite 占用，且当前须保持其运行）
+#   ② 容器名沿用 auscult-*：经核查当前无私名 auscult-* 实例在跑，与 auscult-v2-* 不冲突。
+#   其余端口（milvus 19530/9091、neo4j 7474/7687、mosquitto 1883/9001、tdengine 6030/6041）
+#   实测 2026-09-28 全部空闲，维持 base 默认。
+# 组合： docker compose -f docker/compose.base.yml -f docker/compose.v4b-iso.yml <cmd>
+# 注： docker compose v2 对 ports 默认【追加】；须用 !override 强制【替换】为如下单条映射，
+#     否则 5432/6379 原始绑定仍会在 iotao 上冲突。
+# =============================================================
+name: auscult-p0
+
+services:
+  postgres:
+    ports: !override
+      - "15432:5432"   # 重映射，避开 iotao-tsdb-lite 的 5432
+  redis:
+    ports: !override
+      - "16379:6379"   # 重映射，避开 iotao-redis-lite 的 6379

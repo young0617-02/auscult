@@ -1,0 +1,111 @@
+# =============================================================
+# Phase 0 时序接入编排（compose.ingest.yml）
+# 用途： V3 时序链路常驻组件 —— Mosquitto + TDengine + 自研解码器
+# 背景： T1.9 授权已定稿（2026-09-24）= 需降级（OSS + 自研 Sparkplug B 解码器 ≤2 天）
+#        官方 Sparkplug B 连接器仅随 All-in-One/Enterprise；本项目不采用。
+# 端口纪律： 严格使用 env/ports.md 冻结基线（6030 / 6041 / 1883，均已实测空闲）
+# 版本锁定： 见 docs/version-lock.md §二.2.1（tdengine/tsdb:3.3.8.0 digest 已锁）
+# 启动： docker compose -f docker/compose.ingest.yml up -d
+# 说明： 本文件只编排【常驻三件套】。Sparkplug B 模拟器是验证工具（scripts/spb_simulator.py），
+#         随 --scenario 手动跑，不进 compose（见 docs/sparkplug-b-decoder.md §八）。
+# 内存： 启动前必须确认 T1.1 `.wslconfig` 已落地（20GB / 10 vCPU）；mem_limit 待 V4b 仲裁回填。
+# =============================================================
+
+name: auscult-ingest
+
+networks:
+  ingest-net:
+    driver: bridge
+
+# =============================================================
+# ⚠️ 变更记录（2026-09-29，方案 A）：
+#   自研解码器（self-decoder）已由「compose 容器常驻」改为「本地 python 环境直跑」。
+#   原因：用户选定直接使用本地 /venv python 环境（依赖 §二.2.7 已复核安装），
+#         单点运行无需再构建解码器镜像，彻底消解 Dockerfile base digest 待锁问题。
+#   本文件现在只编排【常驻两件套】：Mosquitto + TDengine。
+#   解码器本地直跑方式见 docs/sparkplug-b-decoder.md §八 与 self_decoder.py 顶部注释：
+#     python scripts/self_decoder.py --schema-mapping configs/decoder_schema_mapping.json \
+#       --mqtt-host 127.0.0.1 --td-host 127.0.0.1
+#   Dockerfile.decoder 予以保留（含弃用注释、便于审计可追溯），不再由本文件 build。
+# =============================================================
+
+volumes:
+  tdengine-data:
+  tdengine-log:
+  mosquitto-data:
+
+services:
+
+  # ---------------- MQTT Broker：Mosquitto（默认选型） ----------------
+  # 版本： eclipse-mosquitto:2@sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408
+  # 备考： 纪律 1（digest 唯一性）禁止裸 tag；version-lock.md §二.2.1 第 10 行已锁
+  mosquitto:
+    image: eclipse-mosquitto:2@sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408
+    container_name: auscult-ingest-mosquitto
+    ports:
+      - "1883:1883"   # MQTT（Sparkplug B 传输层，env/ports.md 基线）
+    volumes:
+      - ../configs/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-data:/mosquitto/data
+    networks: [ingest-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -t '$$SYS/#' -C 1 -W 3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # mem_limit: 【待 V4b 仲裁回填】
+
+  # ---------------- 时序库：TDengine（OSS，T1.9 已定稿） ----------------
+  # 版本： tdengine/tsdb:3.3.8.0
+  # digest: sha256:36e2bf82f151e8013d39a929aadc41bfcd5c46564866635cee1a02693d2256bf（已锁）
+  # 备考： 纪律 1（digest 唯一性）禁止裸 tag；version-lock.md §二.2.1 第 9 行已锁
+  # 镜像名说明：3.3.7.0 起社区版由 tdengine/tdengine 改为 tdengine/tsdb（v3-auth.md §十一）
+  tdengine:
+    image: tdengine/tsdb:3.3.8.0@sha256:36e2bf82f151e8013d39a929aadc41bfcd5c46564866635cee1a02693d2256bf
+    container_name: auscult-ingest-tdengine
+    environment:
+      - TAOS_FQDN=tdengine
+    ports:
+      - "6030:6030"   # 原生连接（taosd）
+      - "6041:6041"   # REST / taosAdapter（自研解码器走此端口写入）
+    volumes:
+      - tdengine-data:/var/lib/taos
+      - tdengine-log:/var/log/taos
+    networks: [ingest-net]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "taos -s 'show databases' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    # mem_limit: 【待 V4b 仲裁回填】
+
+# ---------------- 自研 Sparkplug B 解码器（已移出 compose，改本地直跑） ----------------
+# 【已弃用容器化（2026-09-29，方案 A）】原服务段自 container_name: auscult-ingest-decoder
+#   起的内容已移除。解码器现由本地 python /venv 直跑，连接 127.0.0.1 的
+#   Mosquitto(1883) / TDengine(6041)。见顶部变更记录 + docs/sparkplug-b-decoder.md §八。
+#   历史 Dockerfile.decoder 仍保留（弃用注释），供审计追溯；不再由本文件 build。
+
+# 启动与核对
+#   docker compose -f docker/compose.ingest.yml up -d
+#   docker compose -f docker/compose.ingest.yml ps
+#   docker compose -f docker/compose.ingest.yml logs mosquitto --tail 50
+#   核对端口： netstat -ano | findstr :1883
+#   解码器本地直跑（验证链路贯通，M6 收尾）：
+#     .venv\Scripts\python.exe scripts\self_decoder.py \
+#         --schema-mapping configs/decoder_schema_mapping.json \
+#         --mqtt-host 127.0.0.1 --td-host 127.0.0.1
+#   手工灌数（验证工具，不进 compose）：
+#     .venv\Scripts\python.exe scripts\spb_simulator.py --scenario birth,rebirth,offline
+#
+# 启动前约束（docs/sparkplug-b-decoder.md §七）：
+# ① configs/decoder_schema_mapping.json 已就绪 ✅
+# ② scripts/spb_simulator.py 已实现（--selftest 通过）✅
+# ③ scripts/self_decoder.py 已实现（--selftest 通过，四类边界实测通过，v3-auth.md §6.2）✅
+# ④ version-lock.md §二.2.7 解码器依赖已回填（grpcio-tools/paho-mqtt/taospy 已装复核）✅
+# ⑤ 端口占用 1883/6030/6041：与本文件同端口冲突的 compose.base.yml 第 3 组不得同时启动
+#
+# ⚠️ 端口共用警示：本编排占 1883 / 6030 / 6041，与 compose.base.yml 第 3 组
+#   「mosquitto + tdengine」端口重叠。二者**不得同时启动**（会端口冲突）；
+#   需要时序链路时，用本文件；需要 Milvus/PG/Redis 时用 compose.base.yml。

@@ -1,0 +1,218 @@
+case_id,case_type,difficulty,expect_reject,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1-001,单工具,易,False,qwen2.5:7b,1,1,fewshot-8+reject,True,True,True,True,,False,参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,11956.178,89,,usage
+v1-001,单工具,易,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2308.577,89,,usage
+v1-001,单工具,易,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,2320.059,89,,usage
+v1-001,单工具,易,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2314.487,89,,usage
+v1-001,单工具,易,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,2327.5,89,,usage
+v1-001,单工具,易,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2242.754,89,,usage
+v1-002,单工具,易,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1287.358,50,,usage
+v1-002,单工具,易,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1260.692,50,,usage
+v1-002,单工具,易,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1337.908,50,,usage
+v1-003,单工具,易,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1452.57,56,,usage
+v1-003,单工具,易,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1502.743,56,,usage
+v1-003,单工具,易,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1500.075,56,,usage
+v1-004,单工具,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']; 参数值错：direction 期望 'both'，实际 'outgoing'",False,False,False,False,参数值错,2555.959,97,,usage
+v1-004,单工具,中,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']",False,False,False,False,参数值错,2443.189,95,,usage
+v1-004,单工具,中,False,qwen2.5:7b,3,1,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']",False,False,False,False,参数值错,2509.084,96,,usage
+v1-004,单工具,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']; 参数值错：direction 期望 'both'，实际 'outgoing'",False,False,False,False,参数值错,2420.34,97,,usage
+v1-004,单工具,中,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']",False,False,False,False,参数值错,2412.53,95,,usage
+v1-004,单工具,中,False,qwen2.5:7b,3,2,fewshot-8+reject,False,True,False,True,,True,,False,False,False,True,,2455.426,97,,usage
+v1-004,单工具,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']; 参数值错：direction 期望 'both'，实际 'outgoing'",False,False,False,False,参数值错,2439.807,97,,usage
+v1-004,单工具,中,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,False,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES', 'PART_OF']",False,False,False,False,参数值错,2429.461,95,,usage
+v1-004,单工具,中,False,qwen2.5:7b,3,3,fewshot-8+reject,False,True,False,True,,True,,False,False,False,True,,2541.832,97,,usage
+v1-005,单工具,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：window 期望 '5m'，实际 '15m',False,False,False,False,参数值错,1752.232,67,,usage
+v1-005,单工具,中,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1695.213,66,,usage
+v1-005,单工具,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：window 期望 '5m'，实际 '15m',False,False,False,False,参数值错,1732.098,67,,usage
+v1-005,单工具,中,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1687.94,66,,usage
+v1-005,单工具,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：window 期望 '5m'，实际 '15m',False,False,False,False,参数值错,1704.508,67,,usage
+v1-005,单工具,中,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1708.011,66,,usage
+v1-006,单工具,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小流量运行',False,False,False,False,参数值错,1100.897,42,,usage
+v1-006,单工具,中,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1432.626,54,,usage
+v1-006,单工具,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小流量运行',False,False,False,False,参数值错,1168.058,46,,usage
+v1-006,单工具,中,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1492.024,58,,usage
+v1-006,单工具,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 'PUMP-A-01 最小流量运行',False,False,False,False,参数值错,1211.807,46,,usage
+v1-006,单工具,中,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1518.598,58,,usage
+v1-007,多工具,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 'PUMP-A-01 振动标准限值',False,False,False,False,参数值错,3495.557,137,,usage
+v1-007,多工具,中,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3618.23,140,,usage
+v1-007,多工具,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 '离心泵振动标准限值',False,False,False,False,参数值错,3306.482,131,,usage
+v1-007,多工具,中,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3650.251,140,,usage
+v1-007,多工具,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 '离心泵振动标准限值',False,False,False,False,参数值错,3451.04,131,,usage
+v1-007,多工具,中,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3661.753,140,,usage
+v1-008,多工具,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['振动']",False,False,False,False,参数值错,2945.122,110,,usage
+v1-008,多工具,难,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2955.682,113,,usage
+v1-008,多工具,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['振动']",False,False,False,False,参数值错,2820.432,110,,usage
+v1-008,多工具,难,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2936.393,113,,usage
+v1-008,多工具,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：fault_keywords 期望覆盖 ['轴承', '振动']，实际 ['振动']",False,False,False,False,参数值错,2832.283,110,,usage
+v1-008,多工具,难,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2905.193,113,,usage
+v1-009,多工具,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：depth 期望 2，实际 1,False,False,False,False,参数值错,2543.889,96,,usage
+v1-009,多工具,难,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2510.396,96,,usage
+v1-009,多工具,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：depth 期望 2，实际 1,False,False,False,False,参数值错,2455.219,96,,usage
+v1-009,多工具,难,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2499.494,96,,usage
+v1-009,多工具,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：depth 期望 2，实际 1,False,False,False,False,参数值错,2431.949,96,,usage
+v1-009,多工具,难,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2520.37,96,,usage
+v1-010,多工具,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,3076.627,120,,usage
+v1-010,多工具,难,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,2068.871,79,,usage
+v1-010,多工具,难,False,qwen2.5:7b,3,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3155.576,120,,usage
+v1-010,多工具,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,3089.625,120,,usage
+v1-010,多工具,难,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,2037.558,79,,usage
+v1-010,多工具,难,False,qwen2.5:7b,3,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3198.338,120,,usage
+v1-010,多工具,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,3140.561,120,,usage
+v1-010,多工具,难,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,2026.644,79,,usage
+v1-010,多工具,难,False,qwen2.5:7b,3,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3067.483,120,,usage
+v1-011,参数校验,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,2493.542,96,,usage
+v1-011,参数校验,中,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2502.359,96,,usage
+v1-011,参数校验,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,2450.411,96,,usage
+v1-011,参数校验,中,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2543.712,96,,usage
+v1-011,参数校验,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,2596.123,96,,usage
+v1-011,参数校验,中,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2678.7,96,,usage
+v1-012,参数校验,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1780.106,61,,usage
+v1-012,参数校验,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1682.482,61,,usage
+v1-012,参数校验,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1703.954,61,,usage
+v1-013,参数校验,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3108.741,117,,usage
+v1-013,参数校验,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3187.854,117,,usage
+v1-013,参数校验,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,3056.838,117,,usage
+v1-014,参数校验,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1011.348,40,,usage
+v1-014,参数校验,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1001.113,40,,usage
+v1-014,参数校验,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1014.706,40,,usage
+v1-015,无效拒绝,中,True,qwen2.5:7b,1,1,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,7771.589,25,,usage
+v1-015,无效拒绝,中,True,qwen2.5:7b,1,2,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2872.429,25,,usage
+v1-015,无效拒绝,中,True,qwen2.5:7b,1,3,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2799.592,25,,usage
+v1-016,无效拒绝,中,True,qwen2.5:7b,1,1,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2899.987,26,,usage
+v1-016,无效拒绝,中,True,qwen2.5:7b,1,2,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2916.891,26,,usage
+v1-016,无效拒绝,中,True,qwen2.5:7b,1,3,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2801.137,26,,usage
+v1-017,无效拒绝,难,True,qwen2.5:7b,1,1,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2841.662,26,,usage
+v1-017,无效拒绝,难,True,qwen2.5:7b,1,2,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2942.258,26,,usage
+v1-017,无效拒绝,难,True,qwen2.5:7b,1,3,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,2799.292,26,,usage
+v1-018,多轮,中,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9578.131,88,,usage
+v1-018,多轮,中,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2150.341,88,,usage
+v1-018,多轮,中,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,2266.806,88,,usage
+v1-019,多轮,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']; 参数值错：severity 期望 'warning'，实际 'critical'",False,False,False,False,参数值错,5107.269,205,,usage
+v1-019,多轮,难,False,qwen2.5:7b,2,1,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']",False,False,False,False,参数值错,4979.474,205,,usage
+v1-019,多轮,难,False,qwen2.5:7b,3,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,5659.062,228,,usage
+v1-019,多轮,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']; 参数值错：severity 期望 'warning'，实际 'critical'",False,False,False,False,参数值错,5082.805,205,,usage
+v1-019,多轮,难,False,qwen2.5:7b,2,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']",False,False,False,False,参数值错,4969.913,205,,usage
+v1-019,多轮,难,False,qwen2.5:7b,3,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,5630.806,228,,usage
+v1-019,多轮,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']; 参数值错：severity 期望 'warning'，实际 'critical'",False,False,False,False,参数值错,4903.651,205,,usage
+v1-019,多轮,难,False,qwen2.5:7b,2,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']",False,False,False,False,参数值错,5079.738,205,,usage
+v1-019,多轮,难,False,qwen2.5:7b,3,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,5611.979,228,,usage
+v1-020,多轮,难,False,qwen2.5:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1884.295,75,,usage
+v1-020,多轮,难,False,qwen2.5:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1866.222,75,,usage
+v1-020,多轮,难,False,qwen2.5:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,1845.979,75,,usage
+v1-001,单工具,易,False,deepseek-r1:7b,1,1,fewshot-8+reject,True,True,True,True,,False,参数值错：aggregation 期望 'trend'，实际 'avg'; 参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,18511.285,323,472,char_fallback
+v1-001,单工具,易,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9836.163,404,697,char_fallback
+v1-001,单工具,易,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'trend'，实际 'avg'; 参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,7794.134,327,479,char_fallback
+v1-001,单工具,易,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,7896.221,332,534,char_fallback
+v1-001,单工具,易,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'trend'，实际 'avg'; 参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,8033.631,327,479,char_fallback
+v1-001,单工具,易,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8081.075,332,534,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10424.886,420,673,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,9374.018,377,622,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵轴承振动速度有效值 报警值 停机值 分区边界'，实际 'PUMP-A-01 轴承振动报警值和停机值是多少？',False,False,False,False,参数值错,10256.974,424,683,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9225.493,373,597,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,9400.158,377,622,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵轴承振动速度有效值 报警值 停机值 分区边界'，实际 'PUMP-A-01 轴承振动报警值和停机值是多少？',False,False,False,False,参数值错,10191.428,424,683,char_fallback
+v1-002,单工具,易,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9166.136,373,597,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,8423.086,342,577,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,9840.116,405,390,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,3,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,24952.041,1024,530,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,6659.695,268,422,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,10237.957,423,422,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,25283.84,1024,713,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,6732.912,268,422,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,10405.644,423,422,char_fallback
+v1-003,单工具,易,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,25225.748,1024,713,char_fallback
+v1-004,单工具,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9100.016,369,548,char_fallback
+v1-004,单工具,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES']",False,False,False,False,参数值错,6433.425,263,386,char_fallback
+v1-004,单工具,中,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8920.948,366,663,char_fallback
+v1-004,单工具,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：relation_types 期望覆盖 ['CONNECTS_TO', 'DRIVES']，实际 ['DRIVES']",False,False,False,False,参数值错,6533.171,263,386,char_fallback
+v1-004,单工具,中,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8811.494,366,663,char_fallback
+v1-005,单工具,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8811.783,336,522,char_fallback
+v1-005,单工具,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10713.443,424,634,char_fallback
+v1-005,单工具,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10565.032,424,634,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,10229.559,412,499,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,11056.472,442,640,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,3,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,8584.823,346,466,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 '离心泵允许流量范围 7.1 mm/s 问题评价',False,False,False,False,参数值错,9020.522,359,582,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,10748.312,444,684,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 '离心泵允许流量范围 7.1 mm/s 问题评价',False,False,False,False,参数值错,10040.218,411,756,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 '离心泵允许流量范围 7.1 mm/s 问题评价',False,False,False,False,参数值错,8918.947,359,582,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,10976.854,444,684,char_fallback
+v1-006,单工具,中,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '离心泵允许运行流量范围 最小流量 温升 径向力'，实际 '离心泵允许流量范围 7.1 mm/s 问题评价',False,False,False,False,参数值错,10102.391,411,756,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,9405.06,381,583,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 'PUMP-A-01 振动标准限值 7.1 mm/s 评价',False,False,False,False,参数值错,10290.411,419,597,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,3,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_sensor,False,False,False,False,工具名错,9688.795,392,583,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,8333.726,316,438,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 'PUMP-A-01 振动标准限值 7.1 mm/s 评价',False,False,False,False,参数值错,8771.527,349,503,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8254.229,322,423,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,7825.678,316,438,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,False,参数值错：query 期望近似 '振动速度有效值 分区边界 报警值 停机值'，实际 'PUMP-A-01 振动标准限值 7.1 mm/s 评价',False,False,False,False,参数值错,8659.611,349,503,char_fallback
+v1-007,多工具,中,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,7973.363,322,423,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,False,True,,False,参数值错：window 期望 '1h'，实际 '5m'; 工具缺失：未调用 get_maintenance_history,False,False,False,False,参数值错,11520.609,472,687,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,True,False,True,,False,参数值错：time_range 期望 {'start': '7d'}，实际 {'start': '2026-09-20T00:00:00+08:00'}; 工具缺失：未调用 get_maintenance_history,False,False,False,False,参数值错,15407.796,622,762,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,3,1,fewshot-8+reject,False,True,False,True,,False,工具缺失：未调用 get_maintenance_history,False,False,False,False,参数值错,17806.671,704,923,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,False,True,,False,参数值错：aggregation 期望 'trend'，实际 'max'; 参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,11903.544,480,650,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,False,True,,False,参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,14336.799,589,903,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,True,False,True,,True,,False,False,False,True,,13103.515,530,819,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,False,True,,False,参数值错：aggregation 期望 'trend'，实际 'max'; 参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,12157.488,480,650,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,False,True,,False,参数值错：window 期望 '1h'，实际 '5m',False,False,False,False,参数值错,14441.437,589,903,char_fallback
+v1-008,多工具,难,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,True,False,True,,True,,False,False,False,True,,12953.157,530,819,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,14784.762,596,1101,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,10010.79,396,676,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,3,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,15232.78,606,638,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,15008.109,600,1066,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,10483.276,420,588,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,25605.44,1024,455,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,14867.015,600,1066,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,10456.474,420,588,char_fallback
+v1-009,多工具,难,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 query_graph; 工具缺失：未调用 get_maintenance_history,False,False,False,False,工具名错,25515.836,1024,455,char_fallback
+v1-010,多工具,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,False,True,,False,参数值错：time_range 期望 {'start': '1h'}，实际 {'start': '24h'}; 工具缺失：未调用 search_knowledge,False,False,False,False,参数值错,9833.994,397,654,char_fallback
+v1-010,多工具,难,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8944.34,363,585,char_fallback
+v1-010,多工具,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,False,参数值错：time_range 期望 {'start': '1h'}，实际 {'start': '24h'}; 参数值错：aggregation 期望 'avg'，实际 'raw'; 参数值错：query 期望近似 '轴承箱表面温度正常范围'，实际 '轴承温度标准限值',False,False,False,False,参数值错,10969.74,435,654,char_fallback
+v1-010,多工具,难,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,16472.345,667,1207,char_fallback
+v1-010,多工具,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,False,参数值错：time_range 期望 {'start': '1h'}，实际 {'start': '24h'}; 参数值错：aggregation 期望 'avg'，实际 'raw'; 参数值错：query 期望近似 '轴承箱表面温度正常范围'，实际 '轴承温度标准限值',False,False,False,False,参数值错,10917.313,435,654,char_fallback
+v1-010,多工具,难,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,16471.435,667,1207,char_fallback
+v1-011,参数校验,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10017.982,416,649,char_fallback
+v1-011,参数校验,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9010.75,360,561,char_fallback
+v1-011,参数校验,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9149.277,360,561,char_fallback
+v1-012,参数校验,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10284.571,431,685,char_fallback
+v1-012,参数校验,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8105.586,319,457,char_fallback
+v1-012,参数校验,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8034.143,319,457,char_fallback
+v1-013,参数校验,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,False,参数值错：aggregation 期望 'avg'，实际 'max',False,False,False,False,参数值错,11220.904,450,598,char_fallback
+v1-013,参数校验,难,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9561.582,392,560,char_fallback
+v1-013,参数校验,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']",False,False,False,False,参数值错,13947.031,568,745,char_fallback
+v1-013,参数校验,难,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10945.5,442,547,char_fallback
+v1-013,参数校验,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：sensor_ids 期望覆盖 ['PUMP-A-01.vib_z', 'PUMP-A-01.temp_bearing_de']，实际 ['PUMP-A-01.vib_x', 'PUMP-A-01.temp_bearing_de']",False,False,False,False,参数值错,13832.772,568,745,char_fallback
+v1-013,参数校验,难,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,10763.348,442,547,char_fallback
+v1-014,参数校验,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,8806.861,337,495,char_fallback
+v1-014,参数校验,难,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,False,False,True,,True,,False,False,False,True,,8933.952,361,519,char_fallback
+v1-014,参数校验,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,7591.716,309,472,char_fallback
+v1-014,参数校验,难,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,False,False,True,,True,,False,False,False,True,,8153.705,330,481,char_fallback
+v1-014,参数校验,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,False,True,,False,工具缺失：未调用 search_knowledge,False,False,False,False,工具名错,7545.835,309,472,char_fallback
+v1-014,参数校验,难,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,False,False,True,,True,,False,False,False,True,,8087.796,330,481,char_fallback
+v1-015,无效拒绝,中,True,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,16218.688,346,,usage
+v1-015,无效拒绝,中,True,deepseek-r1:7b,2,1,fewshot-8+reject,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,12558.086,502,,usage
+v1-015,无效拒绝,中,True,deepseek-r1:7b,3,1,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,9507.984,371,,usage
+v1-015,无效拒绝,中,True,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,9139.18,393,,usage
+v1-015,无效拒绝,中,True,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,9551.711,393,,usage
+v1-016,无效拒绝,中,True,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,16084.029,668,,usage
+v1-016,无效拒绝,中,True,deepseek-r1:7b,2,1,fewshot-8+reject,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,13371.808,516,,usage
+v1-016,无效拒绝,中,True,deepseek-r1:7b,3,1,fewshot-8+reject,False,False,False,True,,True,,True,False,False,False,该拒绝却调用,13633.829,477,,usage
+v1-016,无效拒绝,中,True,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,8726.347,292,,usage
+v1-016,无效拒绝,中,True,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,False,False,$.query_sensor.aggregation: 类型应为 string，实际 list,True,,True,False,False,False,该拒绝却调用,9857.811,397,,usage
+v1-016,无效拒绝,中,True,deepseek-r1:7b,2,3,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,9954.576,397,,usage
+v1-017,无效拒绝,难,True,deepseek-r1:7b,1,1,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,11255.599,448,,usage
+v1-017,无效拒绝,难,True,deepseek-r1:7b,1,2,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,16532.927,662,,usage
+v1-017,无效拒绝,难,True,deepseek-r1:7b,1,3,fewshot-8+reject,False,False,True,False,,True,,False,False,False,True,,16440.871,662,,usage
+v1-018,多轮,中,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,15188.05,324,502,char_fallback
+v1-018,多轮,中,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9165.871,362,559,char_fallback
+v1-018,多轮,中,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,9252.761,362,559,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge']; 参数值错：severity 期望 'warning'，实际 'critical'",False,False,False,False,参数值错,14695.976,583,695,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,2,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,12162.447,475,550,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge', 'knowledge']",False,False,False,False,参数值错,14167.003,568,601,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,2,2,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge', 'knowledge']",False,False,False,False,参数值错,12280.267,484,552,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,3,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,14620.788,572,577,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge', 'knowledge']",False,False,False,False,参数值错,14400.345,568,601,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,2,3,fewshot-8+reject,False,True,True,True,,False,"参数值错：evidence_refs 期望覆盖证据类型 ['sensor', 'knowledge', 'maintenance']，实际 ['sensor', 'knowledge', 'knowledge']",False,False,False,False,参数值错,12185.487,484,552,char_fallback
+v1-019,多轮,难,False,deepseek-r1:7b,3,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,14405.656,572,577,char_fallback
+v1-020,多轮,难,False,deepseek-r1:7b,1,1,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,7255.918,288,485,char_fallback
+v1-020,多轮,难,False,deepseek-r1:7b,1,2,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8999.551,355,633,char_fallback
+v1-020,多轮,难,False,deepseek-r1:7b,1,3,fewshot-8+reject,False,True,True,True,,True,,False,False,False,True,,8814.544,355,633,char_fallback
