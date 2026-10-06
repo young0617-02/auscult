@@ -64,11 +64,11 @@
 
 ## 三、遗留项（**本次未解决，如实记录**）
 
-| # | 项 | 说明 | 建议 |
+| # | 项 | 说明 | 处置 |
 |---|---|---|---|
-| 1 | **仓库含 89 MB 原始实验数据** | 其中 `experiments/v2/raw/corpora_v2/corpus_100000.jsonl` 单文件 **54.6 MB**（由 `scripts/v2_synth_corpus.py` 生成，**可再生成**） | 决策：改用 **Git LFS**，或把可再生成的语料移出版本控制 |
-| 2 | 初始提交较大 | 265 文件 / 89 MB 集中在首个提交 | 若采用 LFS，宜在提交数尚少时处理，避免后续历史重写 |
-| 3 | **依赖漂移未解决** | 9 个锁定包未安装（`psycopg` / `langgraph` 全家桶 / `redisvl`）；`redis` 实装 8.1.0 vs 锁定 6.3.0 → **V5 checkpoint（M0.4 依据）与 V2 pgvector 路线事实不可运行** | 按 `docs/version-lock.md` 恢复或按纪律 2 升版 |
+| 1 | **仓库含可再生成的合成语料** | `experiments/v2/raw/corpora_v2/`（3 文件 / **76.36 MB**，占 `experiments/v2/raw` 的 96.2%），由 `scripts/v2_synth_corpus.py` 以**固定种子 42** 生成、可完全复现 | ✅ **已处置（2026-10-06，用户选定）**：加入 `.gitignore`（第 18 行，附三条生成命令）+ `git rm -r --cached`，**仅移出索引、磁盘文件保留**（已实测 3 文件仍在）。受版本控制文件数 **266 → 263**。提交 `b99df0a` |
+| 2 | **历史仍含这 3 个 blob** | `.git` 当前 **26.88 MB**（git 压缩后，远小于 76 MB 原始体积）—— 基线提交 `672143e` 仍引用它们，故 `git rm --cached` **不会**回收这部分空间 | ⏳ **待决策**：如需回收须重写历史（当前仅 4 个提交、**无远程**，成本最低）。**未擅自执行**（属破坏性操作） |
+| 3 | **依赖漂移未解决** | 9 个锁定包未安装（`psycopg` / `langgraph` 全家桶 / `redisvl`）；`redis` 实装 8.1.0 vs 锁定 6.3.0 → **V5 checkpoint（M0.4 依据）与 V2 pgvector 路线事实不可运行** | ⏳ 按 `docs/version-lock.md` 恢复或按纪律 2 升版 |
 | 4 | `M0.6` 门禁未放行 | 与本次无关，一并声明 | 见 `reports/P0-summary.md` |
 
 ---
@@ -87,3 +87,4 @@
 | 日期 | 修订人 | 原因 | 影响范围 |
 |---|---|---|---|
 | 2026-10-06 | 单人（本人） | 初始建立：首次纳入 Git 并建立基线 `672143e` / 标签 `baseline-2026-10-06`；记录密钥防护与字节一致性验证；列出遗留项与提交后回归 | `reports/`（本文件）、`.gitattributes`（新）、`CHANGELOG.md`、`docs/experiment-log-template.md` |
+| 2026-10-06 | 单人（本人） | **遗留项 #1 已处置**：经用户选定，将 `experiments/v2/raw/corpora_v2/`（76.36 MB 可再生成语料）移出版本控制（`.gitignore` + `git rm -r --cached`，**磁盘文件保留**），提交 `b99df0a`；并补记历史 blob 未回收（`.git` 26.88 MB）与重写历史的待决项 | 本文件 §三、`.gitignore` |
