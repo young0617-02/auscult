@@ -56,7 +56,9 @@ auscult/
 ├─ experiments/   v1 / v2 / v3 / v4b / v5 / r4 原始实测数据（raw/，只增不改）+ plans/（P1 专项计划）
 ├─ env/           env-baseline-v2.md（+v1 留档）/ hardware.json（+v1 留档）/ ports.md / cloud.json
 │                 / wslconfig.proposed / wslconfig.bak
-└─ prompts/       tool_call_prompt_v1.md / v2.md / v3.md / tool_call_step_prompt_v1.md / r4_prompt_v1.md
+└─ prompts/       tool_call_prompt_v1.md（**评测活动版本**）/ v2.md（⛔ 含测试集泄漏，禁用于评测）/ 
+                  v3.md（未采纳，备查）/ v4.md（候选未采纳）/ v5.md（实验版未采纳）/
+                  tool_call_step_prompt_v1.md / r4_prompt_v1.md
 ```
 
 > **整理说明（2026-09-30）**：已清理字节码缓存与空目录、修正 1 处误命名数据文件、移除 1 个零引用的字节相同副本。

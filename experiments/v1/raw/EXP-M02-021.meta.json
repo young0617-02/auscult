@@ -1,0 +1,67 @@
+{
+  "experiment_id": "EXP-M02-021",
+  "date": "2026-10-06",
+  "phase_item": "V1",
+  "models": [
+    "Qwen/Qwen3.8-27B"
+  ],
+  "endpoints": {
+    "Qwen/Qwen3.8-27B": "https://api-inference.modelscope.cn/v1/chat/completions"
+  },
+  "cases": "evals\\v1_refusal_transfer_v1.jsonl",
+  "repeat": 3,
+  "tag": "exp-m02-021",
+  "constrain": false,
+  "transport": "tools",
+  "tool_choice": "auto",
+  "max_retry": 1,
+  "seed": 42,
+  "num_ctx": 8192,
+  "temperature": 0.0,
+  "top_p": 1.0,
+  "max_tokens": 1024,
+  "stream": false,
+  "prompt_version": "prompts\\tool_call_prompt_v3.md",
+  "prompt_step_version": "prompts\\tool_call_step_prompt_v1.md",
+  "step_chain_cases": 0,
+  "schema_version": "tools_v4",
+  "code_commit": "dirty-de57f7f",
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "raw_data_path": "experiments\\v1\\raw\\EXP-M02-021.jsonl",
+  "groups_executed": 15,
+  "groups_skipped": 0,
+  "records": 15,
+  "elapsed_s": 82.1,
+  "summary": {
+    "Qwen/Qwen3.8-27B": {
+      "用例数": 5,
+      "总调用次数": 15,
+      "1_工具选择准确率": 0.0,
+      "1b_多工具集合覆盖": null,
+      "1c_多工具步骤链完整率": null,
+      "2_参数JSON可解析率": null,
+      "3_参数值正确率": null,
+      "4a_应拒绝却调用": 0,
+      "4b_应调用却拒绝": 0,
+      "5_首次成功率": 1.0,
+      "6_重试后成功率": 1.0,
+      "7_平均延迟_冷_ms": 7455.878,
+      "7_P95延迟_冷_ms": 7455.878,
+      "7_平均延迟_热_ms": 5318.5525,
+      "7_P95延迟_热_ms": 9309.211,
+      "7_输出token均值": 249.8,
+      "7_think_token均值": 355.3333333333333,
+      "8_输出冗长度_think占比": 1.4224713103816384,
+      "think_token口径": "字符近似（provider 未回传 reasoning_tokens）",
+      "失败归类": {},
+      "分层_类型": {
+        "无效拒绝": 1.0
+      },
+      "分层_难度": {
+        "中": 1.0,
+        "难": 1.0
+      }
+    }
+  }
+}
