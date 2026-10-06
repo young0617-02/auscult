@@ -1,0 +1,73 @@
+{
+  "experiment_id": "EXP-M02-025",
+  "date": "2026-10-06",
+  "phase_item": "V1",
+  "models": [
+    "Qwen/Qwen3.8-27B"
+  ],
+  "endpoints": {
+    "Qwen/Qwen3.8-27B": "https://api-inference.modelscope.cn/v1/chat/completions"
+  },
+  "cases": "evals\\v1_refusal_transfer_v1.jsonl",
+  "repeat": 3,
+  "tag": "m02-h14-pv4-transfer",
+  "constrain": false,
+  "transport": "tools",
+  "tool_choice": "auto",
+  "max_retry": 1,
+  "seed": 42,
+  "num_ctx": 8192,
+  "temperature": 0.0,
+  "top_p": 1.0,
+  "max_tokens": 1024,
+  "stream": false,
+  "prompt_version": "prompts\\tool_call_prompt_v4.md",
+  "prompt_step_version": "prompts\\tool_call_step_prompt_v1.md",
+  "step_chain_cases": 0,
+  "schema_version": "tools_v4",
+  "input_sha256": {
+    "prompt": "9c8294f759be35318c426e95e2f2804a5ef349d372daa230db9f98ca5d894a5f",
+    "prompt_step": "7e388371b1cbfea1b27fe2aef94db68bad00993389b7b9bc4885dc13475290f9",
+    "cases": "1dc4af7402f18df63861b9a22df04e1ce42e2ae284d7d2f3f3194b5ae90a89ef",
+    "schema": "3070113baf3f8494f2218bfc33cc75d4a3b3b5e6d74d47797972bafdb229aed1"
+  },
+  "code_commit": "dirty-8898d10",
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "raw_data_path": "experiments\\v1\\raw\\EXP-M02-025.jsonl",
+  "groups_executed": 15,
+  "groups_skipped": 0,
+  "records": 15,
+  "elapsed_s": 107.3,
+  "summary": {
+    "Qwen/Qwen3.8-27B": {
+      "用例数": 5,
+      "总调用次数": 15,
+      "1_工具选择准确率": 0.0,
+      "1b_多工具集合覆盖": null,
+      "1c_多工具步骤链完整率": null,
+      "2_参数JSON可解析率": null,
+      "3_参数值正确率": null,
+      "4a_应拒绝却调用": 0,
+      "4b_应调用却拒绝": 0,
+      "5_首次成功率": 1.0,
+      "6_重试后成功率": 1.0,
+      "7_平均延迟_冷_ms": 7248.953,
+      "7_P95延迟_冷_ms": 7248.953,
+      "7_平均延迟_热_ms": 7118.983071428572,
+      "7_P95延迟_热_ms": 15898.131,
+      "7_输出token均值": 348.46666666666664,
+      "7_think_token均值": 893.6,
+      "8_输出冗长度_think占比": 2.5643772718576625,
+      "think_token口径": "字符近似（provider 未回传 reasoning_tokens）",
+      "失败归类": {},
+      "分层_类型": {
+        "无效拒绝": 1.0
+      },
+      "分层_难度": {
+        "中": 1.0,
+        "难": 1.0
+      }
+    }
+  }
+}
