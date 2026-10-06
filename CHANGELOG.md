@@ -39,9 +39,18 @@
 - **`ISS-030` → 已修复**（`known-issues.md` 收录范围 → **ISS-001 – ISS-030**）。该缺陷的危害在于：`--selftest` 只证明"脚本不崩"，**覆盖不到判据分支**，故 B2 判据恒真、判分器 `--detail-out` 空结果 IndexError、F1 裸单对象、ISS-011 `think` 污染、D1/D2 等价口径、ISS-024 few-shot 同源、ISS-029 判据超范围等**均可被后续改动静默打回**。
 - **边界（诚实声明）**：本套件**不发起任何网络/容器请求**；`run_v5` 的 LangGraph 图执行与 PG/Redis checkpointer **未测**（依赖未安装）；本套件防的是"**已修复缺陷复发**"，**不是功能正确性证明**。
 
+### 版本控制（建立基线）
+
+- **`git init -b main` + 基线提交**（**此前仓库无 `.git`**）：commit **`672143e`**（全量 `672143eacf08acf9255cccb7f9fa5bf0cf1f27ff`），作者 `dev`，标签 **`baseline-2026-10-06`**；入库 **265 个文件**。
+  - **消除的缺陷**：`docs/experiment-log-template.md` 强制要求 `code_commit` 字段，而仓库无版本控制 → 该字段**长期无法填写**（在 2026-09-30、10-05 的状态核查中均被列为未闭环项）。现已在模板中说明填写方式与基线哈希。
+  - **密钥安全**：`env/cloud.json`（含 API key）由 `.gitignore` 拦截，**未入库**；已用 `git check-ignore -v` 逐条验证命中规则（密钥仅存在于该文件，全仓扫描确认无第二处）。
+  - **新增 `.gitattributes`（`* -text`）**：关闭 EOL 转换。原因：本机全局 `core.autocrlf = true`，而仓库行尾**本就混杂**（`README.md` / `CHANGELOG.md` 为 CRLF，`.gitignore` / `scripts/*.py` / `docs/*.md` 为 LF）→ 若不声明，checkout 时会改写字节。**已验证 9/9 代表文件的工作区哈希与库内 blob 哈希逐字节一致**。
+  - **已知遗留（未同时解决，如实记录）**：仓库含 **89 MB** 原始实验数据，其中 `experiments/v2/raw/corpora_v2/corpus_100000.jsonl` 单文件 **54.6 MB**（由 `scripts/v2_synth_corpus.py` 生成，可再生成）。是否改用 Git LFS 或移出版本控制，留待决策。
+  - 未纳入版本控制（按 `.gitignore`）：`.venv/`（968 MB）、`env/cloud.json`、`**/__pycache__/`。
+
 ### 文档
 
-- 新增 `reports/regression-suite-2026-10-06.md`；`docs/known-issues.md` 新增 **ISS-030**；`reports/P0-summary.md` §三新增**决策17**；`README.md` 快速开始补 pytest 步骤；`reports/README.md` 登记新报告。
+- 新增 `reports/regression-suite-2026-10-06.md`；`docs/known-issues.md` 新增 **ISS-030**；`reports/P0-summary.md` §三新增**决策17**；`README.md` 快速开始补 pytest 步骤；`reports/README.md` 登记新报告；`docs/experiment-log-template.md` 的 `code_commit` 补填写说明与基线哈希。
 
 ---
 

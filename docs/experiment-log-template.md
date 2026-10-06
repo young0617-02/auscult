@@ -31,7 +31,7 @@ Phase 0 的结论是"**用数字做的技术决策**"。数字只有在**可复�
 | `prompt_version` | string | ✅ | 提示词文件路径 + 版本 | `prompts/tool_call_prompt_v1.md` |
 | `num_ctx` | int | ✅ | 上下文窗口 | `8192` |
 | `temperature` | float | ✅ | 采样温度 | `0.0` |
-| `code_commit` | string | ✅ | Git commit（短 hash 或 `dirty-<hash>`） | `a1b2c3d` |
+| `code_commit` | string | ✅ | Git commit（短 hash 或 `dirty-<hash>`）。**该字段自 2026-10-06 起可填写**：仓库基线提交 = `672143e`（标签 `baseline-2026-10-06`，见 `CHANGELOG.md` 2026-10-06）。工作区存在未提交改动时写 `dirty-<短hash>` | `672143e` |
 | `hardware_snapshot` | string | ✅ | 硬件与 WSL 配额快照（**照抄基线**） | 见 §三范例 |
 | `raw_data_path` | path | ✅ | 原始数据落盘路径（必须在 `experiments/**/raw/`） | `experiments/v1/raw/EXP-V1-003.jsonl` |
 | `conclusion` | string | ✅ | 结论摘要（可量化则必须带数字） | "首次成功率 85%（17/20）→ 落入中间区间" |
