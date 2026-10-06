@@ -1,0 +1,33 @@
+{
+  "experiment_id": "EXP-M02-026",
+  "date": "2026-10-06",
+  "phase_item": "V1/H15",
+  "component": "refusal_gate（R-1 前置门）",
+  "models": [
+    "qwen2.5:7b"
+  ],
+  "endpoint": "http://127.0.0.1:11434/v1/chat/completions",
+  "cases": "evals\\v1_cases.jsonl",
+  "repeat": 3,
+  "tag": "h15-t2-gate-main",
+  "temperature": 0.0,
+  "seed": 42,
+  "num_ctx": 8192,
+  "top_p": 1.0,
+  "max_tokens": 256,
+  "gate_prompt": "prompts\\refusal_gate_v1.md",
+  "input_sha256": {
+    "gate_prompt": "5035dcac23b7cf7ebe509f19ede4173dca84187873b80d32f0c61264b4e43c39",
+    "cases": "af4622ee95f6464107194953a0b2aab9dd0672ce5441f348d0b9ee32e18ee5e5",
+    "schema": "3070113baf3f8494f2218bfc33cc75d4a3b3b5e6d74d47797972bafdb229aed1"
+  },
+  "verdict_rule": {
+    "误拒_pass": 0.0,
+    "误拒_中间上限": 0.1,
+    "note": "仅本测试自评，不改变 M0.2 判据"
+  },
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "records": 60,
+  "elapsed_s": 22.8
+}

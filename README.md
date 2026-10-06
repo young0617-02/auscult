@@ -50,14 +50,14 @@ auscult/
 ├─ protos/        sparkplug_b.proto + 生成的 PB 类（sparkplug_b_pb2.py、__init__.py）
 ├─ configs/       decoder_schema_mapping.json / mosquitto.conf / redis.conf
 ├─ docker/        compose.base.yml / compose.ingest.yml / compose.v2.yml / compose.v4b-iso.yml / Dockerfile.decoder
-├─ scripts/       18 个 Python 执行器 + 2 个 PowerShell（其中 12 个含 --selftest）
+├─ scripts/       19 个 Python 执行器 + 2 个 PowerShell（其中 13 个含 --selftest）
 ├─ tests/         回归测试（pytest，119 用例；离线运行，见 ISS-030 / ISS-031）
 ├─ evals/         golden_set_v1(50) / v1_cases(20) / v2_cases(25) / v3_cases(25) / r4_cases(20) / corpora_v1/corpus_100
 ├─ experiments/   v1 / v2 / v3 / v4b / v5 / r4 原始实测数据（raw/，只增不改）+ plans/（P1 专项计划）
 ├─ env/           env-baseline-v2.md（+v1 留档）/ hardware.json（+v1 留档）/ ports.md / cloud.json
 │                 / wslconfig.proposed / wslconfig.bak
 └─ prompts/       tool_call_prompt_v1.md（**评测活动版本**）/ v2.md（⛔ 含测试集泄漏，禁用于评测）/ 
-                  v3.md（未采纳，备查）/ v4.md（候选未采纳）/ v5.md（实验版未采纳）/
+                  v3.md（未采纳，备查）/ v4.md（⭐ 当前最优候选）/ v5.md（实验版未采纳）/ refusal_gate_v1.md（H15 前置门，**零示例**）/
                   tool_call_step_prompt_v1.md / r4_prompt_v1.md
 ```
 
@@ -70,7 +70,7 @@ auscult/
 # 1) 依赖（版本见 requirements.txt，来源 docs/version-lock.md）
 uv pip install -r requirements.txt
 
-# 2) 离线自检（不联网、不需容器；18 个脚本中 12 个已覆盖，全部应 exit 0）
+# 2) 离线自检（不联网、不需容器；19 个脚本中 13 个已覆盖，全部应 exit 0）
 foreach ($s in 'llm_adapter','judge_tools','gbnf_grammar','param_normalizer','run_v1',
                'run_cloud_baseline','run_v2','self_decoder','spb_simulator','run_v5',
                'run_r4','judge_r4') {
@@ -102,6 +102,7 @@ python scripts/run_v3_alert.py --threshold 4.5 --window-min 5 --must-windows 3
 | V5 checkpoint 验证 | `python scripts/run_v5.py --step t5.3 --resume <thread_id> --checkpointer postgres` |
 | R-4 证据归纳执行 | `python scripts/run_r4.py` |
 | R-4 证据归纳判分 | `python scripts/judge_r4.py --raw experiments/r4/raw/EXP-R4-001.jsonl --out experiments/r4/summary-EXP-R4-001.csv` |
+| H15 拒止前置门（R-1） | `python scripts/refusal_gate.py --models qwen2.5:7b --cases evals/v1_cases.jsonl --repeat 3 --out experiments/v1/raw/EXP-M02-026.jsonl` |
 
 ## 迭代纪律（改动前必读）
 
