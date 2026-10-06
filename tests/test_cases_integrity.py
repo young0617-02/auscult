@@ -13,7 +13,8 @@ import judge_tools as jt
 
 ROOT = Path(__file__).resolve().parents[1]
 CASES_PATH = ROOT / "evals" / "v1_cases.jsonl"
-ARCHIVE = ROOT / "evals" / "v1_cases-pre-2026-10-05.jsonl"
+ARCHIVE = ROOT / "evals" / "v1_cases-pre-2026-10-05.jsonl"          # 路径 B 之前
+ARCHIVE_1006 = ROOT / "evals" / "v1_cases-pre-2026-10-06.jsonl"     # ISS-036 拆档之前
 SCHEMA = ROOT / "schemas" / "tools_v4.json"
 
 CASES = [json.loads(l) for l in CASES_PATH.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -61,6 +62,37 @@ def test_type_coverage():
     """五类形态须保持覆盖（否则分档指标会失真）。"""
     types = {c["type"] for c in CASES}
     assert {"单工具", "多工具", "参数校验", "无效拒绝", "多轮"} <= types
+
+
+# ---------------------------------------------------------------- ISS-036 拆档锁定
+def test_reject_cases_declare_refusal_kind():
+    """`ISS-036`：所有 `expect_reject=True` 用例须显式声明 `refusal_kind`（拒止/澄清）。
+
+    该字段决定它们进入「拒止」还是「澄清」档 —— 缺失会退化为 `notes` 推断（容错路径），
+    新增/修改用例时必须显式补齐。迁移集同样适用。
+    """
+    for c in CASES:
+        if c["expect_reject"]:
+            assert c.get("refusal_kind") in ("拒止", "澄清"), \
+                f"{c['case_id']} 未声明 refusal_kind"
+        else:
+            assert "refusal_kind" not in c, \
+                f"{c['case_id']} 非拒绝用例不应带 refusal_kind"
+
+
+def test_refusal_kind_agrees_with_judge_inference():
+    """显式声明须与 `notes` 推断一致（防声明与考点脱节）。"""
+    import judge_tools as jt
+
+    for c in CASES:
+        kind, source = jt.refusal_kind_of(c)
+        if c["expect_reject"]:
+            assert source == "explicit", f"{c['case_id']} 应走显式路径"
+            assert kind == c["refusal_kind"]
+            assert jt.refusal_kind_of({**c, "refusal_kind": None})[0] == kind, \
+                f"{c['case_id']} 的 notes 推断与显式声明不一致"
+        else:
+            assert kind is None
 
 
 # ---------------------------------------------------------------- 路径 B 锁定：非考点参数不得回流
@@ -136,13 +168,35 @@ def test_non_solution_value_still_fails():
 
 # ---------------------------------------------------------------- 归档可追溯
 def test_pre_revision_archive_exists_and_differs():
-    """修订前原件须保留归档，且与被修订版本确有差异（可审计）。"""
+    """修订前原件须保留归档，且与被修订版本确有差异（可审计）。
+
+    按修订**隔离**校验：`-pre-2026-10-05`（路径 B 之前）↔ `-pre-2026-10-06`（拆档之前）
+    —— 两者之差应恰为**路径 B 的 14 个用例**，且四个身份字段不得被改。
+    """
     assert ARCHIVE.exists(), "缺少 -pre-2026-10-05 归档件"
+    assert ARCHIVE_1006.exists(), "缺少 -pre-2026-10-06 归档件（ISS-036 拆档前）"
     old = {json.loads(l)["case_id"]: json.loads(l)
            for l in ARCHIVE.read_text(encoding="utf-8").splitlines() if l.strip()}
-    assert set(old) == set(BY_ID)
-    changed = [cid for cid in BY_ID if old[cid] != BY_ID[cid]]
-    assert len(changed) == 14, f"归档件应与 14 个被修订用例不同，实际 {len(changed)}"
-    for cid in BY_ID:
+    mid = {json.loads(l)["case_id"]: json.loads(l)
+           for l in ARCHIVE_1006.read_text(encoding="utf-8").splitlines() if l.strip()}
+    assert set(old) == set(BY_ID) == set(mid)
+    changed = [cid for cid in mid if old[cid] != mid[cid]]
+    assert len(changed) == 14, f"路径 B 应修订 14 个用例，实际 {len(changed)}"
+    for cid in mid:
         for k in ("input", "type", "difficulty", "expect_reject"):
-            assert old[cid][k] == BY_ID[cid][k], f"{cid}.{k} 不应被修订"
+            assert old[cid][k] == mid[cid][k], f"{cid}.{k} 不应被修订"
+
+
+def test_iss036_split_revision_scope():
+    """`ISS-036` 拆档修订：相对 `-pre-2026-10-06` 应**只新增** `refusal_kind`，其余字段零改动。"""
+    before = {json.loads(l)["case_id"]: json.loads(l)
+              for l in ARCHIVE_1006.read_text(encoding="utf-8").splitlines() if l.strip()}
+    added = [cid for cid in BY_ID if "refusal_kind" in BY_ID[cid]]
+    assert sorted(added) == sorted(cid for cid in BY_ID if BY_ID[cid]["expect_reject"]), \
+        "refusal_kind 只应加在 expect_reject 用例上"
+    for cid in BY_ID:
+        x, y = before[cid], BY_ID[cid]
+        assert set(y) - set(x) == ({"refusal_kind"} if y["expect_reject"] else set()), \
+            f"{cid} 除 refusal_kind 外不应新增字段"
+        for k in x:
+            assert x[k] == y.get(k), f"{cid}.{k} 不得在拆档修订中被改动"

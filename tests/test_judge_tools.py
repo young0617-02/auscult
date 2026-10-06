@@ -219,13 +219,38 @@ def test_multi_tool_tier_boundary(rate, label):
     assert v.startswith(label), v
 
 
+@pytest.mark.parametrize("tier", ["拒止", "澄清"])
 @pytest.mark.parametrize("rate,label", [
     (0.90, "Pass"), (0.89, "中间区间"), (0.70, "中间区间"), (0.69, "No-Go"),
 ])
-def test_reject_tier_boundary(rate, label):
-    """无效拒绝档 pass=0.90（高线）。"""
-    v = jt.judge_verdict_tiered({"无效拒绝": rate})["无效拒绝"]
+def test_reject_tier_boundary(tier, rate, label):
+    """`ISS-036` 拆档后，`拒止` / `澄清` 两档各自沿用原高线 pass=0.90。"""
+    v = jt.judge_verdict_tiered({tier: rate})[tier]
     assert v.startswith(label), v
+
+
+def test_legacy_reject_tier_is_gone():
+    """「无效拒绝」档应已被拆为 拒止 / 澄清（防回退）。"""
+    assert "无效拒绝" not in jt.TIER_CRITERIA
+    assert {"拒止", "澄清"} <= set(jt.TIER_CRITERIA)
+
+
+def test_clarify_failure_cannot_be_masked_by_refuse_pass():
+    """拆档的关键语义：拒止 100% 但澄清 No-Go 时，整体必须是 No-Go（不得被平均掩盖）。"""
+    tiers = {"单工具": 1.0, "参数校验": 1.0, "多轮": 1.0, "多工具": 1.0,
+             "拒止": 1.0, "澄清": 0.0}
+    assert jt.judge_verdict_tiered(tiers)["整体"].startswith("No-Go")
+
+
+def test_refusal_kind_explicit_then_notes_fallback():
+    """考点细分：优先显式字段；缺省由 `notes` 推断（兼容 2026-10-06 前的 raw）。"""
+    assert jt.refusal_kind_of({"expect_reject": True, "refusal_kind": "澄清"}) == ("澄清", "explicit")
+    assert jt.refusal_kind_of({"expect_reject": True, "refusal_kind": "拒止"}) == ("拒止", "explicit")
+    assert jt.refusal_kind_of(
+        {"expect_reject": True, "notes": "考察信息不足时的澄清行为"}) == ("澄清", "notes_infer")
+    assert jt.refusal_kind_of(
+        {"expect_reject": True, "notes": "正确行为是明确拒绝并说明权限边界"}) == ("拒止", "notes_infer")
+    assert jt.refusal_kind_of({"expect_reject": False, "notes": "澄清"}) == (None, "n/a")
 
 
 def test_tier_verdict_no_data_ignored():

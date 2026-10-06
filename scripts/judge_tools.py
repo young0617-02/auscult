@@ -584,6 +584,7 @@ def judge_record(record: dict[str, Any],
     result = record["result"]
     expected_calls = case.get("expected_tool_calls", [])
     expect_reject = bool(case.get("expect_reject"))
+    _KIND, _KIND_SRC = refusal_kind_of(case)       # ISS-036：拒止 / 澄清 考点细分
     # D4（P6 拆步）：execution_mode=step_chain 时，实际调用来自逐步落盘的 result["steps"]；
     # 展平后仍走同一套 schema_valid 门槛（所有步的调用一并校验）。
     execution_mode = case.get("execution_mode") or "single"
@@ -697,6 +698,10 @@ def judge_record(record: dict[str, Any],
     return {
         "case_id": case.get("case_id"),
         "case_type": case.get("type"),
+        # `ISS-036` 拆档：拒止类用例细分为「拒止」/「澄清」；`tier_key` 即分档聚合键
+        "case_kind": _KIND,
+        "kind_source": _KIND_SRC,
+        "tier_key": (_KIND or case.get("type")),
         "difficulty": case.get("difficulty"),
         "expect_reject": expect_reject,
         "execution_mode": execution_mode,
@@ -819,7 +824,8 @@ def aggregate(judged: list[dict[str, Any]]) -> dict[str, Any]:
             "think_token口径": "字符近似（provider 未回传 reasoning_tokens）"
             if char_fallback else "usage",
             "失败归类": dict(Counter(r["failure"] for r in rows if r["failure"])),
-            "分层_类型": _by_dimension(first_attempt, "case_type"),
+            # ISS-036：分档键用 `tier_key`（拒止类 → 拒止/澄清；其余 → case_type）
+            "分层_类型": _by_dimension(first_attempt, "tier_key"),
             "分层_难度": _by_dimension(first_attempt, "difficulty"),
         }
     return summary
@@ -850,8 +856,8 @@ def judge_verdict(first_success: float | None, parseable: float | None) -> str:
 # ---------------------------------------------------------------- 判据按类型分档（2026-09-28 重校）
 # 依据：`docs/gate-criteria.md` §3.1 修订版 + EXP-V1-003 分层实测 + 云端 baseline 实测。
 # 口径（分层定位，见 gate-criteria §3.1 与 v1-report §7.3）：
-#   - 本地可达成类型（单工具/参数校验/多轮/无效拒绝）沿用高线：本地启动值
-#     单工具 0.33–0.39、参数校验 0.50–0.67、多轮 0.22–0.67、无效拒绝 0.33–0.78，
+#   - 本地可达成类型（单工具/参数校验/多轮/拒止/澄清）沿用高线：本地启动值
+#     单工具 0.33–0.39、参数校验 0.50–0.67、多轮 0.22–0.67、拒止/澄清 0.33–0.78，
 #     经「约束解码 + few-shot」有上扬空间，pass 线沿用原全局 0.85；
 #   - 多工具为 7B 结构性硬限（EXP-V1-003 双模型集合覆盖 0.00），单独设低线：
 #     低于线下线即触发「架构切分」（交云端或拆单工具多轮），而非整线云端转正。
@@ -863,13 +869,44 @@ TIER_CRITERIA: dict[str, dict[str, float]] = {
     "单工具":   {"pass": 0.85, "mid": 0.70},
     "参数校验": {"pass": 0.85, "mid": 0.70},
     "多轮":     {"pass": 0.85, "mid": 0.70},
-    "无效拒绝": {"pass": 0.90, "mid": 0.70},
+    # 2026-10-06（`ISS-036` 处置，**经用户授权**）：原「无效拒绝」档**拆为两档**。
+    # 依据：该档原先以"未产生工具调用"为唯一通过条件，而 `expect_reject=True` 的用例内
+    #       混装两类不同考点 —— `notes` 要求「明确拒绝」者（拒止）与要求「追问/补充信息」者（澄清）。
+    # 档线：**沿用原「无效拒绝」档线**（`0.90` / `0.70`），**未做任何放宽**；
+    #       离线量化见 `reports/iss036-tier-split-analysis.md`（拆档只会变严）。
+    "拒止":     {"pass": 0.90, "mid": 0.70},
+    "澄清":     {"pass": 0.90, "mid": 0.70},
     "多工具":   {"pass": 0.70, "mid": 0.50},
 }
 # 各类型 Non-Go 的处置动作（未列出的类型 → 默认「云端工具调用转正」）
 TIER_DISPOSITION: dict[str, str] = {
     "多工具": "架构切分（交云端或拆单工具多轮）",
+    "拒止": "云端工具调用转正（拒止侧：越界操作/改数据/预测前置门）",
+    "澄清": "云端工具调用转正（澄清侧：须先补「要求补充信息」行为，或由前置门的 CLARIFY 动作承担）",
 }
+
+# `ISS-036` 拆档：拒止类用例的**考点细分**。
+# 兼容策略：优先取用例显式字段 `refusal_kind`；缺省时**由 `notes` 的标记词推断**
+#（2026-10-06 之前的 raw 未携带显式字段，靠此回溯，逐条可复核）。
+REFUSAL_KIND_MARKERS: tuple[str, ...] = (
+    "澄清", "补充明确设备编号", "要求补充编号", "说明无法确定", "信息不足",
+)
+
+
+def refusal_kind_of(case: dict[str, Any]) -> tuple[str | None, str]:
+    """返回 (kind, source)：`拒止` / `澄清`；非 `expect_reject` 用例 → (None, "n/a")。
+
+    source ∈ {"explicit", "notes_infer", "n/a"} —— 落盘留痕，便于事后核验有多少条走了推断。
+    """
+    if not case.get("expect_reject"):
+        return None, "n/a"
+    explicit = case.get("refusal_kind")
+    if explicit in ("拒止", "澄清"):
+        return explicit, "explicit"
+    notes = str(case.get("notes", ""))
+    if any(marker in notes for marker in REFUSAL_KIND_MARKERS):
+        return "澄清", "notes_infer"
+    return "拒止", "notes_infer"
 
 
 def _tier_verdict(rate: float | None, pass_line: float, mid_lower: float) -> str:
@@ -1260,16 +1297,34 @@ def _selftest() -> int:
 
     # 7b) 判据按类型分档（2026-09-28 重校）
     _t_all_pass = {"单工具": 0.90, "参数校验": 0.88, "多工具": 0.80,
-                   "无效拒绝": 0.95, "多轮": 0.90}
+                   "拒止": 0.95, "澄清": 0.95, "多轮": 0.90}
     if not judge_verdict_tiered(_t_all_pass)["整体"].startswith("Pass"):
         failures.append("分档全部过闸应判整体 Pass")
     _t_multitool_ng = {"单工具": 0.90, "参数校验": 0.88, "多工具": 0.20,
-                       "无效拒绝": 0.95, "多轮": 0.90}
+                       "拒止": 0.95, "澄清": 0.95, "多轮": 0.90}
     _overall = judge_verdict_tiered(_t_multitool_ng)["整体"]
     if not _overall.startswith("No-Go") or "架构切分" not in _overall:
         failures.append("多工具 No-Go 应判整体 No-Go 且附架构切分处置")
     _t_mid = {"单工具": 0.75, "参数校验": 0.88, "多工具": 0.80,
-              "无效拒绝": 0.95, "多轮": 0.90}
+              "拒止": 0.95, "澄清": 0.95, "多轮": 0.90}
+    # 7c) `ISS-036` 拆档：拒止/澄清 必须各自独立成档；澄清 No-Go 应使整体 No-Go
+    if set(TIER_CRITERIA) & {"无效拒绝"}:
+        failures.append("「无效拒绝」档应已被拆为 拒止/澄清")
+    _t_clarify_ng = {"单工具": 0.95, "参数校验": 0.95, "多工具": 0.90,
+                     "拒止": 1.00, "澄清": 0.00, "多轮": 0.95}
+    if not judge_verdict_tiered(_t_clarify_ng)["整体"].startswith("No-Go"):
+        failures.append("澄清 No-Go 应判整体 No-Go（拆档不得掩盖澄清侧失败）")
+    _kind_by_explicit = refusal_kind_of({"expect_reject": True, "refusal_kind": "澄清"})
+    if _kind_by_explicit != ("澄清", "explicit"):
+        failures.append("refusal_kind 显式字段未生效")
+    _kind_by_notes = refusal_kind_of({"expect_reject": True, "notes": "考察信息不足时的澄清行为"})
+    if _kind_by_notes != ("澄清", "notes_infer"):
+        failures.append("notes 推断澄清类失败")
+    _kind_refuse = refusal_kind_of({"expect_reject": True, "notes": "正确行为是明确拒绝并说明权限边界"})
+    if _kind_refuse != ("拒止", "notes_infer"):
+        failures.append("notes 推断拒止类失败")
+    if refusal_kind_of({"expect_reject": False, "notes": "澄清"})[0] is not None:
+        failures.append("非 expect_reject 用例不应归入拒止/澄清档")
     if not judge_verdict_tiered(_t_mid)["整体"].startswith("中间区间"):
         failures.append("单工具落中间区间应判整体中间区间")
     _t_single_only = {"单工具": 0.50}      # 只有单工具类型有数据

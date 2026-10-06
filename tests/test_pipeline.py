@@ -142,10 +142,13 @@ def test_file_sha256_matches_hashlib(tmp_path):
 
 
 def test_meta_records_input_fingerprints():
-    """ISS-034 回归：实验 meta 必须落盘 prompt/cases/schema 的内容指纹，且与当前文件一致。
+    """ISS-034 回归：meta 必须落盘输入指纹，且**当时那一版输入可从仓库内找回**。
 
-    动机：`prompt_version` 等字段只记**路径**。2026-10-06 的 `ISS-033` 命名事故中，
-    同名路径的内容被替换 → 事后**无法自证实验输入**。指纹字段是这类场景的唯一权威标识。
+    动机：`prompt_version` 等字段只记**路径**。`ISS-033` 命名事故中同名路径的内容被替换 →
+    事后无法自证实验输入。指纹的价值在于：**输入正当演进后，仍能定位到实验当时用的那一版。**
+
+    因此断言不是"等于当前文件"，而是"等于**当前文件或任一归档副本**"
+    （用例集/提示词会随授权修订演进，归档件 `*-pre-*.jsonl` 即为其历史版本）。
     """
     import hashlib
     import json
@@ -160,8 +163,12 @@ def test_meta_records_input_fingerprints():
     for key, rel in (("prompt", meta["prompt_version"]),
                      ("cases", meta["cases"]),
                      ("schema", "schemas/%s.json" % meta["schema_version"])):
-        actual = hashlib.sha256((ROOT / str(rel).replace("\\", "/")).read_bytes()).hexdigest()
-        assert fp[key] == actual, f"{key} 指纹与实际文件不一致：{rel}"
+        target = (ROOT / str(rel).replace("\\", "/")).resolve()
+        candidates = [target] + sorted(target.parent.glob(target.stem + "-pre-*.jsonl"))
+        digests = {hashlib.sha256(p.read_bytes()).hexdigest() for p in candidates if p.exists()}
+        assert fp[key] in digests, (
+            f"{key} 指纹在仓库内找不到对应版本：{rel}\n"
+            f"  记录={fp[key]}\n  候选={sorted(digests)}")
 
 
 def test_done_groups_resume_logic(tmp_path):

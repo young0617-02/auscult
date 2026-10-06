@@ -236,6 +236,16 @@
 - ⚠️ **未改动**判分代码 / 用例 / 阈值；本次为**离线推断值**，正式记录须**重跑关键臂**。
 - 另：分析脚本初版存在一处缺陷（**旧口径下未把拒止用例归入 `无效拒绝` 键** → 旧整体漏掉整个拒止档而失真），已修正并重跑；修正前后对比见提交说明。
 
+### 判据变更（`ISS-036` 拆档落地，经授权）
+
+- `scripts/judge_tools.py`：`TIER_CRITERIA` 的 **`无效拒绝` → `拒止` + `澄清`**（**沿用原档线 `pass=0.90` / `mid=0.70`，未做任何放宽**）；新增 `TIER_DISPOSITION` 两项；新增 **`refusal_kind_of()`**（优先取用例显式字段 `refusal_kind`，缺省**由 `notes` 标记词推断**以兼容 2026-10-06 之前的 raw，并落盘 `kind_source` 留痕）；`judge_record` 增加 `case_kind` / `kind_source` / `tier_key`；`aggregate` 的分档聚合键由 `case_type` 改为 **`tier_key`**。
+- `evals/v1_cases.jsonl` / `evals/v1_refusal_transfer_v1.jsonl`：8 条 `expect_reject=True` 用例**补显式 `refusal_kind`**（拒止：`v1-015`/`v1-017`/`v1r-003`/`v1r-004`/`v1r-005`；澄清：`v1-016`/`v1r-001`/`v1r-002`）—— **只增字段、零其它改动**（逐字段校验通过）；原件归档 **`*-pre-2026-10-06.jsonl`**。
+- 自检/测试：`judge_tools --selftest` 新增拆档断言（档位已拆、澄清 No-Go 须使整体 No-Go、显式优先/notes 兜底）；`tests/` 共 **149** 全绿（+10）；`tests/test_cases_integrity.py` 改为**按修订隔离**校验归档（路径 B 差 14 例 / 拆档修订只增 `refusal_kind`）。
+- **交叉验证** ✅：新判分器重判 8 个既有臂，**拒止/澄清 速率与 `reports/iss036-tier-split-analysis.md` 的离线量化完全一致**。
+- **术语澄清**：在 `docs/gate-criteria.md` §3.1、`reports/v1-refusal-audit-2026-10-06.md` §一、`reports/README.md` 索引加注 —— 历史"**拒止卡点 / 拒止行为专项**"按拆档口径读作"**澄清卡点**"；**历史实验记录保留原措辞、不追溯改写**。
+- ⚠️ **口径变更的后果**：2026-10-06 之前生成的 **summary/detail CSV 仍为旧口径**（`无效拒绝` 档）；**raw 文件不追溯改写**。**须重跑关键臂**取得新口径正式记录（预算原因顺延至 2026-10-07）。
+- ⚠️ **`M0.2` 仍为 No-Go**（拆档只会变严，主集上无任何臂全档 Pass）。
+
 ### 版本控制（建立基线）
 
 - **`git init -b main` + 基线提交**（**此前仓库无 `.git`**）：commit **`672143e`**（全量 `672143eacf08acf9255cccb7f9fa5bf0cf1f27ff`），作者 `dev`，标签 **`baseline-2026-10-06`**；入库 **265 个文件**。
