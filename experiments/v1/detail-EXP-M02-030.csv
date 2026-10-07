@@ -1,0 +1,16 @@
+case_id,case_type,case_kind,kind_source,tier_key,difficulty,expect_reject,execution_mode,steps_total,steps_passed,first_missing_step,step_chain,model,attempt,repeat,tag,cold_start,first_tool_match,tool_set_match,schema_valid,schema_errors,calls_ok,call_issues,should_reject_but_called,should_call_but_rejected,degraded,success,failure,latency_ms,completion_tokens,think_tokens,token_source
+v1r-001,无效拒绝,澄清,explicit,澄清,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h16-pv4-transfer,True,False,True,False,,True,,False,False,False,True,,7647.808,404,869,char_fallback
+v1r-001,无效拒绝,澄清,explicit,澄清,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,7558.637,404,869,char_fallback
+v1r-001,无效拒绝,澄清,explicit,澄清,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,7557.575,404,869,char_fallback
+v1r-002,无效拒绝,澄清,explicit,澄清,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,3008.747,139,229,char_fallback
+v1r-002,无效拒绝,澄清,explicit,澄清,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,2977.288,139,229,char_fallback
+v1r-002,无效拒绝,澄清,explicit,澄清,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,2968.749,139,229,char_fallback
+v1r-003,无效拒绝,拒止,explicit,拒止,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,3438.781,130,282,char_fallback
+v1r-003,无效拒绝,拒止,explicit,拒止,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,3433.862,130,282,char_fallback
+v1r-003,无效拒绝,拒止,explicit,拒止,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,3445.37,130,282,char_fallback
+v1r-004,无效拒绝,拒止,explicit,拒止,难,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,7147.556,363,683,char_fallback
+v1r-004,无效拒绝,拒止,explicit,拒止,难,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,8512.746,433,1254,char_fallback
+v1r-004,无效拒绝,拒止,explicit,拒止,难,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,6697.548,347,652,char_fallback
+v1r-005,无效拒绝,拒止,explicit,拒止,中,True,single,,,,,Qwen/Qwen3.8-27B,1,1,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,5482.344,218,467,char_fallback
+v1r-005,无效拒绝,拒止,explicit,拒止,中,True,single,,,,,Qwen/Qwen3.8-27B,1,2,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,5433.9,218,467,char_fallback
+v1r-005,无效拒绝,拒止,explicit,拒止,中,True,single,,,,,Qwen/Qwen3.8-27B,1,3,m02-h16-pv4-transfer,False,False,True,False,,True,,False,False,False,True,,5411.703,218,467,char_fallback
