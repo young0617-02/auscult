@@ -50,7 +50,7 @@ auscult/
 ├─ protos/        sparkplug_b.proto + 生成的 PB 类（sparkplug_b_pb2.py、__init__.py）
 ├─ configs/       decoder_schema_mapping.json / mosquitto.conf / redis.conf
 ├─ docker/        compose.base.yml / compose.ingest.yml / compose.v2.yml / compose.v4b-iso.yml / Dockerfile.decoder
-├─ scripts/       20 个 Python 执行器 + 2 个 PowerShell（其中 14 个含 --selftest）
+├─ scripts/       21 个 Python 执行器 + 2 个 PowerShell（其中 15 个含 --selftest）
 ├─ tests/         回归测试（pytest，119 用例；离线运行，见 ISS-030 / ISS-031）
 ├─ evals/         golden_set_v1(50) / v1_cases(20) / v2_cases(25) / v3_cases(25) / r4_cases(20) / corpora_v1/corpus_100
 ├─ experiments/   v1 / v2 / v3 / v4b / v5 / r4 原始实测数据（raw/，只增不改）+ plans/（P1 专项计划）
@@ -70,7 +70,7 @@ auscult/
 # 1) 依赖（版本见 requirements.txt，来源 docs/version-lock.md）
 uv pip install -r requirements.txt
 
-# 2) 离线自检（不联网、不需容器；20 个脚本中 14 个已覆盖，全部应 exit 0）
+# 2) 离线自检（不联网、不需容器；21 个脚本中 15 个已覆盖，全部应 exit 0）
 foreach ($s in 'llm_adapter','judge_tools','gbnf_grammar','param_normalizer','run_v1',
                'run_cloud_baseline','run_v2','self_decoder','spb_simulator','run_v5',
                'run_r4','judge_r4') {
