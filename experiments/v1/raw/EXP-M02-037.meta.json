@@ -1,0 +1,16 @@
+{
+  "experiment_id": "EXP-M02-037",
+  "date": "2026-10-07",
+  "phase_item": "V1/H18b",
+  "component": "gate_rules（规则优先前置门）",
+  "rule_version": "gate_rules_v1",
+  "models": [],
+  "llm_calls": 0,
+  "cases": [
+    "evals\\v1_cases.jsonl",
+    "evals\\v1_refusal_transfer_v1.jsonl"
+  ],
+  "records": 25,
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0"
+}
