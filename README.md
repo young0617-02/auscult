@@ -1,7 +1,7 @@
 # 云侧工业 IoT 诊断 Agent 系统（auscult）
 
 > 主场景：**离心泵驱动端轴承振动异常诊断**
-> 当前阶段：**Phase 0（技术验证与范围锁定）已收口，M0.6 门禁未放行**；Phase 1 计划就绪待启动
+> 当前阶段：**Phase 0（技术验证与范围锁定）已完成，M0.6 门禁已放行（2026-10-08）**；Phase 1 计划就绪，可启动
 > 环境唯一事实源：`env/env-baseline-v2.md` ｜ 版本唯一事实源：`docs/version-lock.md`
 
 ## 这是什么
@@ -22,7 +22,7 @@
 
 | 验证项 | 判定 | 关键数字 |
 |---|---|---|
-| V1 LLM 工具调用 | **No-Go**（M0.2 挂起；P5/P6/P7 处置后仍 No-Go） | 约束解码首次 qwen 0.35 / ds 0.45；P6 拆步多工具 qwen 40%→20%、ds 13.3%→0%（负结果）；P7 混合形态（R-2/R-3 上云，EXP-M02-001）云端 27B 首次 0.60、多工具用例级 50%、参数值正确率 0.5882 → 处置链①②③④全执行仍 No-Go |
+| V1 LLM 工具调用 | **Pass**（M0.2 达成；2026-10-08 H22 同日多轮聚合口径裁定） | 3 轮同日聚合（225 样本）：单工具 **92.6%** / 参数校验 100% / 多工具 **75.0%** / 多轮 100% / 拒止 100% / 澄清 100% → **整体 Pass**（合并首次成功率 **0.9422**）；⚠️ 残余风险：单轮口径仍不稳、多工具档余量 5.0pp、结论依赖 provider 版本（`ISS-028`） |
 | V2 混合检索 | **Pass** | 混合 `Recall@5` 0.91 |
 | V3 时序接入 | **封板定稿**（决策3，2026-09-29） | 四类边界 4/4；聚合 P95 ≈26.2 ms；解码器吞吐 P1 |
 | V4a 环境采集 | **Pass** | env 三件套 |
@@ -50,8 +50,8 @@ auscult/
 ├─ protos/        sparkplug_b.proto + 生成的 PB 类（sparkplug_b_pb2.py、__init__.py）
 ├─ configs/       decoder_schema_mapping.json / mosquitto.conf / redis.conf
 ├─ docker/        compose.base.yml / compose.ingest.yml / compose.v2.yml / compose.v4b-iso.yml / Dockerfile.decoder
-├─ scripts/       21 个 Python 执行器 + 2 个 PowerShell（其中 15 个含 --selftest）
-├─ tests/         回归测试（pytest，119 用例；离线运行，见 ISS-030 / ISS-031）
+├─ scripts/       22 个 Python 执行器 + 2 个 PowerShell（其中 16 个含 --selftest）
+├─ tests/         回归测试（pytest，176 用例；离线运行，见 ISS-030 / ISS-031 / ISS-037）
 ├─ evals/         golden_set_v1(50) / v1_cases(20) / v2_cases(25) / v3_cases(25) / r4_cases(20) / corpora_v1/corpus_100
 ├─ experiments/   v1 / v2 / v3 / v4b / v5 / r4 原始实测数据（raw/，只增不改）+ plans/（P1 专项计划）
 ├─ env/           env-baseline-v2.md（+v1 留档）/ hardware.json（+v1 留档）/ ports.md / cloud.json
