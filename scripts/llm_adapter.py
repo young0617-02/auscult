@@ -1,7 +1,7 @@
 """LLM 统一适配层（V1 · T2.3）
 
-对应交付物：`Phase 0 详细开发计划（D1-D10 可执行版）.md` §三 D2–D3 · T2.3
-判据依据：`reports/v1-report.md` §3.4
+对应交付物：`p0-plan-detailed-d1-d10.md` §三 D2–D3 · T2.3
+判据依据：`reports/p0-report-v1-tool-call.md` §3.4
 
 职责（单一入口，两个模型走同一条路径）：
   1. 从 `schemas/tools_v1.json` **程序化注入**工具定义，禁止手抄（防止提示词与 Schema 漂移）；

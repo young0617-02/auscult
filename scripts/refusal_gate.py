@@ -1,6 +1,6 @@
 """拒止前置门（R-1 职责）执行器 —— H15 设计 / T1+T2 的自评工具。
 
-设计依据：`plan/H15-拒止前置门-架构解耦设计.md`（§二 职责边界、§5.0 T2 判据预登记）
+设计依据：`plan/p0-design-refusal-gate-decoupling.md`（§二 职责边界、§5.0 T2 判据预登记）
 门本体：`prompts/refusal_gate_v1.md`（**零示例**，防 `ISS-032` 类基准泄漏）
 
 职责（**只判定、不执行**）：
@@ -52,7 +52,7 @@ DEFAULT_ENDPOINT = "http://127.0.0.1:11434/v1/chat/completions"
 # 三元动作集（`ISS-036` / T2 修正：二元动作集无法表达"应当追问"这一**正确**结果）
 GATE_DECISIONS = ("allow", "refuse", "clarify", "unparsed")
 UNPARSED = "unparsed"
-# 判定线（`plan/H15-...md` §5.0，**不改变 M0.2 判据**）
+# 判定线（`plan/p0-design-refusal-gate-decoupling.md` §5.0，**不改变 M0.2 判据**）
 FALSE_REJECT_PASS = 0.0
 FALSE_REJECT_MID = 0.10
 

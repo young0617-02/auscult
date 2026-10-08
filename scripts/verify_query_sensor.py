@@ -13,7 +13,7 @@
     python scripts/verify_query_sensor.py --aggregation max --window 15m --metric vib_rms
 
 原始明细落盘： experiments/v3/raw/EXP-V3-QS.jsonl
-参考：reports/v3-auth.md §七；docs/schema-mapping.md §4.5。
+参考：reports/p0-report-v3-ingest-license.md §七；docs/prj-spec-schema-mapping.md §4.5。
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # 标识符白名单：列名 / 设备号会直接拼入 SQL（TDengine REST 不支持参数化占位符）
 SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
 
-# 契约默认测点（schema-mapping 主表固定列）
+# 契约默认测点（prj-spec-schema-mapping 主表固定列）
 DEFAULT_METRICS = ["vib_rms", "bearing_temp", "motor_current", "pump_speed"]
 
 # aggregation -> 每窗口统计列表达式（trend 用首末差近似斜率）

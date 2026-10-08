@@ -1,6 +1,6 @@
 # reports/daily/ 日报规范
 
-> 用途：记录 Phase 0（D0–D10）每一天的**实际发生了什么**，作为 `reports/P0-summary.md` 与风险登记的原始素材。
+> 用途：记录 Phase 0（D0–D10）每一天的**实际发生了什么**，作为 `reports/p0-gate-review.md` 与风险登记的原始素材。
 
 ---
 
@@ -21,7 +21,7 @@ reports/daily/D0-status.md        # 如需记录决策冻结日，用 D0
 | 1. 当日目标 | 引用计划中对应日期的目标与出口里程碑 | 必须原文引用里程碑编号（如 M0.1） |
 | 2. 逐任务执行表 | 任务编号 / 计划动作 / **实际状态**（已完成 / 部分完成 / 未开始 / 阻塞）/ 产出物 / 证据 | 状态必须写实，"部分完成"必须写清缺哪一半 |
 | 3. 实测事实与证据 | 命令、原始输出摘要、文件路径、digest、时间戳 | **只写真实跑过的东西**，未跑的不写 |
-| 4. 发现的问题与风险 | 编号 / 描述 / 影响 / 处置 / 是否新增风险项（对应 R1–R16） | 新增风险须给出临时编号并建议纳入 `docs/risk-register.md` |
+| 4. 发现的问题与风险 | 编号 / 描述 / 影响 / 处置 / 是否新增风险项（对应 R1–R16） | 新增风险须给出临时编号并建议纳入 `docs/prj-ledger-risk-register.md` |
 | 5. 次日待办与阻塞 | 待办清单 + 阻塞项 + 解除阻塞需要谁做什么 | 阻塞项必须写明"卡住的是哪个下游结论" |
 
 可选附加节：`时间开销`（计划 vs 实际）。
@@ -50,7 +50,7 @@ reports/daily/D0-status.md        # 如需记录决策冻结日，用 D0
 ## 五、每日通用规则（开工前必查，与计划 §八 一致）
 
 - [ ] 今日 V 项的 **Pass / 中间 / No-Go 已定义**
-- [ ] 实验按 `docs/experiment-log-template.md` 登记（digest / seed / prompt 版本 / commit）
+- [ ] 实验按 `docs/prj-template-experiment-log.md` 登记（digest / seed / prompt 版本 / commit）
 - [ ] 原始数据落盘 `experiments/**/raw/`（可追溯，含断点续跑）
 - [ ] 结论引用 `env/env-baseline-v2.md` 版本号
 

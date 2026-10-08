@@ -1,8 +1,8 @@
 """V1 实验执行器（T2.1 / T2.3）
 
-对应交付物：`Phase 0 详细开发计划（D1-D10 可执行版）.md` §三 D2–D3 · T2.1 / T2.3
-判据依据：`reports/v1-report.md` §3.3、§7.1 ｜ 提示词：`prompts/tool_call_prompt_v1.md`
-实验登记：`docs/experiment-log-template.md`（raw 落盘与断点续跑纪律）
+对应交付物：`p0-plan-detailed-d1-d10.md` §三 D2–D3 · T2.1 / T2.3
+判据依据：`reports/p0-report-v1-tool-call.md` §3.3、§7.1 ｜ 提示词：`prompts/tool_call_prompt_v1.md`
+实验登记：`docs/prj-template-experiment-log.md`（raw 落盘与断点续跑纪律）
 
 执行口径（与上游计划 §四 V1 逐字对齐）：
   - 默认 2 个本地模型 × 20 用例 × 3 次重复 = 120 次；云端 baseline 可选（+20 次）；

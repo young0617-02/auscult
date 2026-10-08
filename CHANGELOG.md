@@ -1,7 +1,7 @@
 # 变更日志（CHANGELOG）
 
 本项目为 Phase 0 技术验证项目，变更以**验证项 / 里程碑**为粒度记录。
-版本锁定细节见 `docs/version-lock.md`（含逐条修订记录）；缺陷见 `docs/known-issues.md`。
+版本锁定细节见 `docs/prj-ledger-version-lock.md`（含逐条修订记录）；缺陷见 `docs/prj-ledger-known-issues.md`。
 
 约定：日期为 +08:00；`代码` / `文档` / `配置` / `数据` 四类分开标注；**原始实验数据只增不改**。
 
@@ -9,9 +9,39 @@
 
 ## [未发布] — Phase 1 待启动
 
-- 门禁状态：M0.6 **未放行**；**M0.1 / M0.3 / M0.4 / M0.5 已达成**；**M0.2（V1）仍为唯一阻塞** —— 但据 2026-10-07 H20（决策32），已由「整体 No-Go」**收敛为整体「中间区间」且所有档位均非 No-Go**（唯一非 Pass 档 = 单工具 83.3%）。Phase 1 按 `docs/handover-p1.md` 启动。
+- 门禁状态：✅ **M0.1 / M0.2 / M0.3 / M0.4 / M0.5 全部达成，M0.6 已于 2026-10-08 放行**（`M0.2` 依 `docs/p0-spec-gate-criteria.md` §3.1.3「同日多轮聚合口径」裁决；~~本行原写「M0.6 未放行、M0.2 仍为唯一阻塞」为 2026-10-07 时点，已由下文 10-08 条目取代**）。Phase 1 按 `docs/p0-handover-p1.md` 启动。
+- **残余风险（放行不等于风险消失）**：单轮口径仍不稳（R1 单轮仍判中间区间）、多工具档余量仅 5.0pp、云端结论依赖 provider 版本（`ISS-028` / `R-V1-10`）→ 三项列入 P1 持续监控，任何改动前后须按同口径复测。
 - 首日待办：MinerU 解析 Spike（R14）、A1 接入骨架、环境复用、PG 迁移、P0 遗留项收口。
-- **文档**：新增 `reports/status-report-2026-10-07.md`（**项目状态报告**：全局维度核查 + 任务进度分栏〔已完成/进行中/未开始〕+ 优化措施效果评估〔13 项〕+ 改进建议）并登记入 `reports/README.md`；现场验证 `pytest` **170 全绿**、git 工作区干净。
+- **P1 开工前置（2026-10-08 文档整理新发现）**：`pytest` **未登记进 `requirements.txt` 与 `docs/prj-ledger-version-lock.md`** → 新机器上「改代码必跑 176 用例回归」不可执行（本机 `.venv` 即无 pytest，实跑于宿主 Python 3.12）；`env/ports.md` 为 2026-09-23 快照、未随 T1.1 重采，起容器前须重采。
+- **文档**：新增 `reports/p0-audit-status-2026-10-07.md`（**项目状态报告**，现名，🟡 时点快照）；当日现场验证 `pytest` **170 全绿**（**2026-10-08 复跑 176**）、git 工作区干净。
+
+---
+
+## 2026-10-08（午后）— 文档治理：全量一致性同步 + 命名规范落地（48 份改名 / 约 1737 处引用改写）
+
+> 触发：用户要求「检查项目完整状态、梳理并同步更新所有文档、统一命名规则」。零云端调用、零功能代码改动（仅注释与文档路径字符串）。
+
+- **文档 · 命名规范（新建，唯一入口）**：`docs/prj-spec-document-standard.md` —— 命名规则 `<阶段 p0|p1|prj>-<类型 plan|design|spec|decision|report|analysis|audit|review|gate|summary|handover|checklist|template|ledger>[-<主题>][-<YYYY-MM-DD>]`、全小写 ASCII kebab（禁空格与全角括号）；🟢活动 / 🟡时点快照 / 🔵冻结 三态标记；目录职责表；**不可改写区**（`prompts/`、`schemas/`、`evals/`、`configs/`、`docker/`、`protos/`、`experiments/**/raw/`、`env/cloud.json`）；**48 项旧名→新名映射表**；7 条残留清单。
+- **文档 · 重命名与搬运（48 项，全部 `git mv`）**：`docs/` 15 份加阶段/类型前缀（`version-lock` → `prj-ledger-version-lock` 等）；`plan/` 7 份去空格与全角括号（`Phase 0 详细开发计划（D1-D10 可执行版）.md` → `p0-plan-detailed-d1-d10.md`）；`reports/` 25 份规范化（`P0-summary` → `p0-gate-review`、`v1-report` → `p0-report-v1-tool-call`、`h17-single-tool-tier-audit` → `p0-audit-v1-single-tool-tier-2026-10-07` 等）。**跨目录搬运 2 项**：`plan/Phase 0 任务总结.md` → `reports/p0-summary-phase0-2026-09-30.md`（总结不属于 `plan/`）、`experiments/plans/P1-V4B-CLEANRM.md` → `plan/p1-plan-v4b-cleanrm.md`（计划不属于数据目录）。**归档 3 项**：求职素材 `G2-实测数据填表` / `待填信息问卷-49项-回填` / `草稿问卷-审阅与回填` → `archive/personal/`（`reports/` 混入非项目产物、且全仓零引用）。
+- **文档 · 引用改写**：110 个文件、**1714 处**旧路径 + **23 处**省略号缩写（`plan/H15-...md` 这类从未指向真实路径的写法，涉 11 个文件）全部展开为新名；单遍正则（长名优先）避免二次替换污染；`scripts/*.py`、`tests/*.py`、`requirements.txt`、`.gitignore`、`.trae/documents/*` 一并同步。**验证**：`python -m pytest tests/ -q` → **176 passed**（改名前后一致）；引用完整性扫描 = 悬空引用仅剩「P1 未来产物占位」与不可改写区残留。
+- **文档 · 历史留痕**：22 份被取代的文档在**正文一字不改**的前提下加首行「⚠️ 历史留痕」横幅（标注判定时点 + 取代文件）并追加修订记录行 —— 含 `p0-report-v1-tool-call`（No-Go 时点）、`p0-gate-closeout-2026-10-07`（当时不放行）、三份全景/状态快照、四份已终结的 plan 方案。
+- **文档 · 活文档过期状态更正（本次核心不一致修复）**：
+  1. `docs/p0-spec-gate-criteria.md`：头部「实测结论待回填」→ **已回填并过闸**；§3.1.2「必附声明③」与 §六 阻塞说明加**时点限定**（消除同文内 §3.1.2「仍不放行」↔ §3.1.3「放行」的自相矛盾）；§八 待闭环 6 项逐条回填（**仅第 5 项「V2 质量接近差值门限」仍未成文 → 转 P1**）；补登 10-05 ~ 10-08 修订行 4 条。
+  2. `docs/prj-ledger-known-issues.md`：头部「最近更新 2026-10-06」→ 10-08，并把 `ISS-036` 由「⏳ 未处置·须授权」更正为主表既有的「✅ 已修复（10-06 经授权拆档）」；§五 与风险册对应关系由「止于 ISS-026」补齐至 **ISS-037**；§七 DoD 三条未勾项按实测回填；**新建修订记录表**。
+  3. `docs/prj-ledger-risk-register.md`：`ISS-032` 由「处置待授权」→ **已处置（10-06）**、`ISS-035` 由「未处置·须授权」→ **已处置（10-07）**（两者此前与缺陷台账状态互相打脸）；补登 `ISS-030/031/033/034/037` 处置行（原缺记）；`R-V1-13` 状态转「已处置」；新增「门禁状态」行（全档达成 + 放行 + 残余风险）。
+  4. `docs/p0-checklist-daily.md`：§4.3 **M0.2 未达成 → ✅ 达成、M0.6 未放行 → ✅ 放行**；§3.2–§3.6 共 14 条出口项按交付物核对结果勾选并补证据指针；注明 §二 4 条为「每日开工自检」常态留空、非未完成。
+  5. `docs/p0-handover-p1.md`（P1 直接照此开工的文档）：§5.1 M0.2/M0.6、§5.2 V1 行改为过闸结论并保留处置链留痕；交付物口径更正（缺陷册 ISS-037、文档 16 份、报告 25 份、执行器 22 个〔16 含自检〕、**活动基线 = `tools_v4` + `prompt_v4`**，原清单只列 `tools_v1`+`prompt_v1`）；§6.6 核对表逐条勾选并补 `run_e2e`/`gate_rules`/`aggregate_runs`/`tests/` 176 用例/迁移集与对抗集；目录骨架补列 `plan/`、`tests/`、`archive/`。
+  6. `docs/p0-spec-scope-mvp.md`：头部「实测状态栏一律为框架就绪、实测未执行」→ **已逐项回填**；停止条件 **S1 未达成（给出 3/6/4 分布，不再以「均未实测」概括）、S2 达成（0.91 / 5.6 ms / 0.9422 三项）、S3 达成（并说明版本锁 §三 是按设计保留的待锁定清单，非缺陷）**；触发条件 T3/T4 改为「未触发 / 已裁决不适用」；兑现 3 条空占位修订行。
+  7. `docs/prj-spec-review-lifecycle.md`：§5.4 四个「🔲 待 D7 填入」按 V5 实测回填（3 项 Pass + 1 项「多 worker」**如实标注未实测转 P1**，并保留 P0 以文件存储模拟 PG 唯一索引的声明）。
+  8. `docs/p0-decision-checkpoint.md`：「恢复耗期 / 体积待定基线」→ 已定基线（实测 296 KB/thread）；§九 DoD 9 项按 V5 结论勾选；**新建修订记录表**。
+  9. `docs/prj-ledger-version-lock.md` / `docs/prj-spec-schema-mapping.md` / `docs/p0-design-sparkplug-decoder.md` / `docs/p1-spec-data-sources.md` / `docs/prj-spec-labeling.md` / `docs/prj-template-experiment-log.md`：分别更正「授权边界待 T1.9」与正文「已定稿」的互斥、依赖「待装」→ 已实装、模拟器「待 D4」→ 已完成、`sim_sparkplug.py`/`sim_alarm_replay.py` 标注**等价能力已由 `spb_simulator.py`/`run_v3_alert.py` 实现**、`kappa.py` 与 `experiments/v7/log.md` **如实标注 P0 未执行/未创建**、实验编号范围 `EXP-V1-001~012` → 双族（至 `EXP-M02-040`）。
+  10. `env/env-baseline-v2.md`（环境唯一事实源）：**删除与版本锁冲突的「建议升级到 Ollama 0.34.3 并重登 digest」**（U-04 / `ISS-009` 已裁决锁定 0.34.2）；GPU 直通「未验证」→ **已裁决为不需要**；「本机没有 Neo4j/TDengine/Mosquitto」→ **已拉取并锁 digest**。
+  11. `env/ports.md`：加**时点声明**（09-23 快照早于 `.wslconfig` 安装、Redis「checkpoint」用途已切 PG、瞬时 PID 已失效），并给出 P1 重采路径。
+  12. `plan/p1-plan-detailed.md`（唯一待执行计划）：头部声明 M0.6 已放行、计划生效，并更正 **4 处前置物 + 3 处选型** —— 工具基线 `tools_v1`→`tools_v4`、环境基线 v1→v2、连接器「降级预案」→ **已转正选（taosX 不采用、+2 天已消化、A 线非零起点）**、Broker EMQX 未裁决→已锁 Mosquitto、**三元组抽取「优先本地 7B」→ 默认云端臂（本地化须先按 §3.1.1 判档实测）**、风险项 P1-R9（Redis 驱逐 checkpoint）因 B7 切 PG **关闭**。
+  13. `README.md` / `reports/README.md`：目录结构与计数全部按实况重写（`docs` 16、`reports` 25、脚本 22〔16 自检〕、回归 **176**〔原两处写 119 / 12-15 个〕、schemas/prompts/evals 活动资产、新增 `archive/` 行）；`reports/README.md` §一 索引加「阶段」列、补登 12 行（含移入的 `p0-summary-phase0` 与本报告）、**修正 5 行「实测待填入」过期描述**、去掉 `project-summary-2026-09-29` 的「最新全景」称号、补两条读法说明（`rN` ≠ 复审轮次；V1 双实验族不可比）、§五 改指向命名规范、§六 全局摘要按实况重写。
+  14. `archive/README.md`（新建）：3 份非项目产物的用途、外部 `<PRIVATE_VAULT>/...` 依赖、以及「数据转录自 10-05 时点报告，V1 当时仍判 No-Go，对外使用前须按 10-08 新结论重核」的阅读须知。
+- **未做（如实声明）**：① **不静默改写历史结论** —— 旧判定只加横幅，正文一字未改；② 台账表格内的**行序倒置**（风险册 §六、缺陷册 §二 主表）**未重排**，改行序等于改动既有台账行；③ 历史正文中的旧术语「**无效拒绝**」（26+ 处）**不追改**；④ `pytest` 依赖锁**未擅自补写**（版本唯一来源为版本锁，须按纪律升版，留给授权动作）；⑤ 未提交（48 项改名已 staged、其余为 working-tree 修改）。
+- **验证证据**：`python -m pytest tests/ -q` = **176 passed**；`aggregate_runs` / `gate_rules` / `run_e2e` / `judge_tools` 等 16 个 `--selftest` 覆盖未变；`git diff --cached --name-status -M` = **48 项 `R100`**（纯改名、内容彼时逐字节一致）。
 
 ---
 
@@ -34,9 +64,9 @@
 - → **`M0.2` 达成**；**`M0.6` 放行**（Phase 0 过闸）。
 
 ### 判据（新口径）
-- `docs/gate-criteria.md` 新增 **§3.1.3「同日多轮聚合」**（沿用原线、轮数预登记、不挑选、**与单轮口径不可直接比较**）；§六 **M0.2 → 达成**、**M0.6 → 放行**。
-- `reports/P0-summary.md` 新增**决策34**；`docs/known-issues.md` **ISS-028 ⑨**（**缓解，非消除**）。
-- `README.md`（阶段 / V1 行 / 脚本与用例计数）；新增 `reports/phase0-m0.2-verdict-2026-10-08.md` 并登记入 `reports/README.md`。
+- `docs/p0-spec-gate-criteria.md` 新增 **§3.1.3「同日多轮聚合」**（沿用原线、轮数预登记、不挑选、**与单轮口径不可直接比较**）；§六 **M0.2 → 达成**、**M0.6 → 放行**。
+- `reports/p0-gate-review.md` 新增**决策34**；`docs/prj-ledger-known-issues.md` **ISS-028 ⑨**（**缓解，非消除**）。
+- `README.md`（阶段 / V1 行 / 脚本与用例计数）；新增 `reports/p0-gate-m02-verdict-2026-10-08.md` 并登记入 `reports/README.md`。
 
 ### 残余风险（不略去）
 - 单轮口径仍不稳（R1 判中间）；**多工具档聚合余量仅 5.0pp**（75.0% vs 70% 线）；结论**依赖 provider 版本**（`ISS-028`，云端不可 digest 化）→ 列入 **P1 持续监控**。
@@ -49,7 +79,7 @@
 
 ### 数据
 - 新增 `experiments/v1/EXP-M02-039.md`（**预登记先行**）＋ `raw/EXP-M02-039.jsonl`（75）＋ `.meta.json`（含 `input_sha256`）。
-- `env/cloud.json`：**第五次调锁 300→340**（依据 `plan/M02-V1-混合形态方案.md` §六「重测小步，超限须先调锁」）。
+- `env/cloud.json`：**第五次调锁 300→340**（依据 `plan/p0-design-m02-hybrid-form.md` §六「重测小步，超限须先调锁」）。
 - **无新增脚本**；**未改动** `scripts/**`、`schemas/**`、`evals/**`、`prompts/**`。
 
 ### 结论（H21，`EXP-M02-039`）
@@ -59,12 +89,12 @@
 
 ### 缺陷（`ISS-035` → 已处置，经授权）
 - V1 分档**按职责拆分判据对象**：**拒止/澄清 → 本地前置门**（`scripts/gate_rules.py`）；**单工具/参数校验/多轮/多工具 → 云端 R-2/R-3 臂**（`prompt v1`）；执行入口 `scripts/run_e2e.py`。
-- **三处同步留痕**：`docs/gate-criteria.md`（新增 **§3.1.2**）、`docs/role-decision.md` §4.6、`docs/known-issues.md` ISS-035 行。
+- **三处同步留痕**：`docs/p0-spec-gate-criteria.md`（新增 **§3.1.2**）、`docs/p0-decision-model-role.md` §4.6、`docs/prj-ledger-known-issues.md` ISS-035 行。
 - **未放宽任何档线**；拆分后最差档 = 多工具 66.7% → **`M0.2` 仍为中间区间 → 防「移动球门」成立**；**新旧口径不可直接比较**。
 
 ### 文档
-- 新增 `reports/phase0-closeout-2026-10-07.md`（Phase 0 收尾报告）并登记入 `reports/README.md`。
-- 同步门禁口径：`docs/gate-criteria.md` §六（M0.2/M0.6 行）、`reports/P0-summary.md`（新增**决策33**）、`README.md`。
+- 新增 `reports/p0-gate-closeout-2026-10-07.md`（Phase 0 收尾报告）并登记入 `reports/README.md`。
+- 同步门禁口径：`docs/p0-spec-gate-criteria.md` §六（M0.2/M0.6 行）、`reports/p0-gate-review.md`（新增**决策33**）、`README.md`。
 
 ### 门禁
 - `M0.2` **仍未达成（但已由 No-Go 收敛为中间区间）**；`M0.6` **仍不放行**。
@@ -96,7 +126,7 @@
 
 ### 结论
 
-- **`ISS-030` → 已修复**（`known-issues.md` 收录范围 → **ISS-001 – ISS-030**）。该缺陷的危害在于：`--selftest` 只证明"脚本不崩"，**覆盖不到判据分支**，故 B2 判据恒真、判分器 `--detail-out` 空结果 IndexError、F1 裸单对象、ISS-011 `think` 污染、D1/D2 等价口径、ISS-024 few-shot 同源、ISS-029 判据超范围等**均可被后续改动静默打回**。
+- **`ISS-030` → 已修复**（`prj-ledger-known-issues.md` 收录范围 → **ISS-001 – ISS-030**）。该缺陷的危害在于：`--selftest` 只证明"脚本不崩"，**覆盖不到判据分支**，故 B2 判据恒真、判分器 `--detail-out` 空结果 IndexError、F1 裸单对象、ISS-011 `think` 污染、D1/D2 等价口径、ISS-024 few-shot 同源、ISS-029 判据超范围等**均可被后续改动静默打回**。
 - **边界（诚实声明）**：本套件**不发起任何网络/容器请求**；`run_v5` 的 LangGraph 图执行与 PG/Redis checkpointer **未测**（依赖未安装）；本套件防的是"**已修复缺陷复发**"，**不是功能正确性证明**。
 
 ### 数据（H9）
@@ -118,7 +148,7 @@
   `qwen` 强于**单工具**（67% vs 33%）与**多工具**（50% vs 25%）；`deepseek` 强于**参数校验**（**100%** vs 50%）与**多轮**（**56%** vs 0%）
   → **"本地 7B"不是单一能力水平；模型选择会显著改变档位画像，报告不得以单模型代表"本地能力"**
 - **`deepseek-r1:7b` 的特征是"只说不做"**：输出 token 均值 **531**（`qwen` 84 的 6.3 倍）、延迟 **14.6 s**（3.2 倍），而 `4b_应调用却拒绝 = 14` —— 推理预算大，反而漏掉工具调用
-- ⚠️ **对 `ISS-025` 的限定性修正**：该条称"参数值语义为**跨模型共同瓶颈**"，但同通道实测显示**失败主因因模型而异**（`qwen` 以参数值错为主 18 条；`deepseek` 以格式退化/未调用为主 14 条）→ 已限定为"**参数值语义是两个模型都需面对的瓶颈之一**"，**不得**表述为"共同的首要瓶颈"，并在 `known-issues.md` ISS-025 ⑥ 留痕
+- ⚠️ **对 `ISS-025` 的限定性修正**：该条称"参数值语义为**跨模型共同瓶颈**"，但同通道实测显示**失败主因因模型而异**（`qwen` 以参数值错为主 18 条；`deepseek` 以格式退化/未调用为主 14 条）→ 已限定为"**参数值语义是两个模型都需面对的瓶颈之一**"，**不得**表述为"共同的首要瓶颈"，并在 `prj-ledger-known-issues.md` ISS-025 ⑥ 留痕
 - **M0.2 维持 No-Go**（四臂均未全档 Pass）
 
 ### 缺陷（`ISS-031`：判分器对非字符串 `aggregation` 崩溃）
@@ -200,8 +230,8 @@
 
 **文档**
 
-- `docs/version-lock.md`：新增 **§2.7「V1 提示词版本状态」**（**`prompt v2` 禁止用于评测**、v5 为实验版暂不采纳、v1 仍为活动版本；并写入**反泄漏硬约束**：任何示例改动后必须重跑重合审计）；**并修正 §2.6**（活动 Schema 版本原误标 `v2` → 更正为 **`v4`**，补 v4 / v5 行）。
-- `docs/known-issues.md`：**`ISS-032` → 已处置**（登记处置结果与 v5 实测）；`reports/P0-summary.md` §三新增**决策22**；新增 `experiments/v1/EXP-M02-020-022.md`。
+- `docs/prj-ledger-version-lock.md`：新增 **§2.7「V1 提示词版本状态」**（**`prompt v2` 禁止用于评测**、v5 为实验版暂不采纳、v1 仍为活动版本；并写入**反泄漏硬约束**：任何示例改动后必须重跑重合审计）；**并修正 §2.6**（活动 Schema 版本原误标 `v2` → 更正为 **`v4`**，补 v4 / v5 行）。
+- `docs/prj-ledger-known-issues.md`：**`ISS-032` → 已处置**（登记处置结果与 v5 实测）；`reports/p0-gate-review.md` §三新增**决策22**；新增 `experiments/v1/EXP-M02-020-022.md`。
 
 ### 路线（下一步）
 
@@ -217,7 +247,7 @@
 
 - ⚠️ **撤回"规则 6b 误伤写工具"的机制归因**（原列为"已查清"）。复核既有记录后**不成立**：① **反例** —— `EXP-M02-009` 的 `prompt v4` **含同款 6b**，其 `v1-019` = **✅**；② `EXP-M02-010` 已判定 `v1-001` / `v1-019` 属"**同一 prompt 下正反均现**"的**噪声项**；③ 本实验 `repeat=3` 只证"该次运行内一致"，**不足以区分提示词效应与运行间噪声**。→ 该归因**降级为候选假设**；两处回归**须先按噪声看待**。
 - **连带更正 `H13`**：由"写 v6 去修 6b"改为 **"直接复用既有 `prompt v4`**（`EXP-M02-009` 显示 v4 已同时达成拒止 100% 与 `v1-019` ✅）+ 路径 B 后用例集 + `repeat=3`，**同日配 `prompt v1` 对照**"；`H14` 改为在 H13 基础上加跑迁移集。**即：上一轮的 H13 前提不成立，不应再写新提示词版本。**
-- 更正范围 7 文件（`EXP-M02-020-022.md` / `tool_call_prompt_v5.md` / `known-issues.md` / `version-lock.md` / `P0-summary.md` / `refusal-audit` / 本文件）；同时修复由替换串引入的 3 处表格损坏与 1 处被劈开的修订记录行。
+- 更正范围 7 文件（`EXP-M02-020-022.md` / `tool_call_prompt_v5.md` / `prj-ledger-known-issues.md` / `prj-ledger-version-lock.md` / `p0-gate-review.md` / `refusal-audit` / 本文件）；同时修复由替换串引入的 3 处表格损坏与 1 处被劈开的修订记录行。
 
 ### 工程（`ISS-034`：实验输入指纹）
 
@@ -225,7 +255,7 @@
   - **动机**：meta 原先只记**路径**，而 `ISS-033`（提示词命名事故）证明**同名路径的内容可被替换** → 事后无法自证实验输入。
   - **实测验证**：`EXP-M02-023` 的四项指纹与当前文件**逐项一致**。
   - 补 **2 条回归测试**（`tests/` 共 **121** 全绿）。纪律：**今后判读实验前先核对 `input_sha256`，而非只核路径**。
-- 文档：`docs/known-issues.md` 新增 **ISS-034**（收录范围 → **ISS-001 – ISS-034**）。
+- 文档：`docs/prj-ledger-known-issues.md` 新增 **ISS-034**（收录范围 → **ISS-001 – ISS-034**）。
 
 ### 数据（冒烟，零云端成本）
 
@@ -253,11 +283,11 @@
 
 ### 文档（H13/H14 补充）
 
-- 新增 `experiments/v1/EXP-M02-024-025.md`；`reports/P0-summary.md` §三新增**决策23**；`docs/known-issues.md` **收窄修正 `ISS-026`**（页头同步）；`docs/version-lock.md` 提示词 **`v4` 行 → "⭐ 当前最优候选（未达全档 Pass）"**；`plan/V1-破局路径方案对比.md` §9.4 回填 **D4-9**，并修正编号重复（`D4-6`/`D4-7`/`D4-8`）。
+- 新增 `experiments/v1/EXP-M02-024-025.md`；`reports/p0-gate-review.md` §三新增**决策23**；`docs/prj-ledger-known-issues.md` **收窄修正 `ISS-026`**（页头同步）；`docs/prj-ledger-version-lock.md` 提示词 **`v4` 行 → "⭐ 当前最优候选（未达全档 Pass）"**；`plan/p0-design-v1-breakthrough-paths.md` §9.4 回填 **D4-9**，并修正编号重复（`D4-6`/`D4-7`/`D4-8`）。
 
 ### 设计（H15：拒止前置门架构解耦，**零调用、未授权**）
 
-- 新增 **`plan/H15-拒止前置门-架构解耦设计.md`**：把已实测的"拒止 ↔ 单工具"互斥（`v4`/`v5` 独立复制）转为**结构性对策** —— 拒止下沉为**本地前置门（R-1）**，工具调用保持云端（`prompt v1`），并定义门的输入/输出、失败语义、安全默认（不可用时 `REFUSE`）与失败注入测试（T1–T7）。
+- 新增 **`plan/p0-design-refusal-gate-decoupling.md`**：把已实测的"拒止 ↔ 单工具"互斥（`v4`/`v5` 独立复制）转为**结构性对策** —— 拒止下沉为**本地前置门（R-1）**，工具调用保持云端（`prompt v1`），并定义门的输入/输出、失败语义、安全默认（不可用时 `REFUSE`）与失败注入测试（T1–T7）。
 - ⚠️ **同时发现判据适格性问题并登记 `ISS-035` / `R-V1-13`（⏳ 未处置·须授权）**：三份既有文档均规定 **V1 判据只针对本地模型 / 有效拒绝保持本地 / V1 只测 R-2/R-3**，但实际评测**把「无效拒绝」档计入云端臂的整体裁决** → R-1 与 R-2/R-3 **职责捆测**。
 - **防"移动球门"论证**：方案 A 下 `prompt v1` 云端臂**多工具 67%（中间区间）** → `M0.2` **仍为 No-Go**（不会因拆口径而通过）；拆分依据为**事故前既有文档**，非事后放宽；换来的 100% 由**本地实测**支撑（`EXP-M02-016` / `-023`）。
 - **本文档不含实测结论**；管线组合为**推测**，须 H16 验证。
@@ -265,7 +295,7 @@
 ### 工具与数据（H15-T2：拒止前置门 + 误拒率自评）
 
 - **新增门本体 `prompts/refusal_gate_v1.md`**（规则 R1–R4 + 严格 JSON 输出，**零 few-shot**，防 `ISS-032` 类基准泄漏）+ **执行器 `scripts/refusal_gate.py`**（`--selftest`：解析 8 / 门本体 6 / 指标与判定线 6）。
-- **判据前置**：判定线于**开跑前**预登记于 `plan/H15-...md` §5.0（误拒 Pass=0% / 中间=(0%,10%] / No-Go=>10%），并**声明不改变 `M0.2` 判据**；**未事后调整**。
+- **判据前置**：判定线于**开跑前**预登记于 `plan/p0-design-refusal-gate-decoupling.md` §5.0（误拒 Pass=0% / 中间=(0%,10%] / No-Go=>10%），并**声明不改变 `M0.2` 判据**；**未事后调整**。
 - 数据：`EXP-M02-026`（门 × 主集 20×3）+ `EXP-M02-027`（门 × 迁移集 5×3）= **纯本地 75 次、零云端调用**。
 - 回归测试 **+18**（`tests/test_refusal_gate.py`，含**防泄漏断言**：门提示词不得逐字包含任何用例 `input`），`tests/` 共 **139**。
 
@@ -276,18 +306,18 @@
   - **漏判 100% 落在"澄清类"** —— `v1-016` / `v1r-001` / `v1r-002` 的 `notes` 明写正确行为是"**澄清 / 要求补充编号**"（**不是拒止**），而门只有 `{allow, refuse}`、**无 `CLARIFY`** → 只能退化为 `allow`。**剔除澄清类后：真拒止类（越界/改数据/预测）主集 6 次 + 迁移集 9 次，漏判 = 0** ✅
   - **误拒 100% 来自"未纳入对话历史"**（`v1-019` 的设备号在 `context` 内，门却判"定指无标识"）→ 单一可修原因
 - 🔁 **同时暴露既有判据缺陷（登记 `ISS-036` / `R-V1-14`，⏳ 未处置·须授权）**：`run_v1` 的「无效拒绝」档**把"未产生工具调用"一律算作"有效拒绝"**，而该集合**混装两类考点（拒止 vs 澄清）** → **该档的 100%（本地 `EXP-M02-016` / 云端 `EXP-M02-024`）不可解释为"拒止能力"**。
-- ⚠️ **据此更正 `plan/H15-...md` §1.1** 中"本地免费达成拒止 100%"的表述；`H15` 的方向依据回落到两条更稳事实（互斥在两版提示词上可复现 + 分工文档本就要求分层），而"**门的实现是否容易**"**尚未证实**。
+- ⚠️ **据此更正 `plan/p0-design-refusal-gate-decoupling.md` §1.1** 中"本地免费达成拒止 100%"的表述；`H15` 的方向依据回落到两条更稳事实（互斥在两版提示词上可复现 + 分工文档本就要求分层），而"**门的实现是否容易**"**尚未证实**。
 - ⚠️ **`M0.2` 仍为 No-Go**；**判据、用例、阈值均未改动**。
 
 ### 文档（H15-T2 补充）
 
 - 新增 `experiments/v1/EXP-M02-026-027.md`、`tests/test_refusal_gate.py`
-- `docs/known-issues.md` 新增 **ISS-036**（收录范围 → **ISS-001 – ISS-036**）；`docs/risk-register.md` 新增 **R-V1-14**；`reports/P0-summary.md` §三新增**决策24**、§执行器计数 18→19（含 `--selftest` 12→13）
-- `plan/H15-拒止前置门-架构解耦设计.md` §1.1 更正、§二 动作集加 `CLARIFY`、§五 回填 T2；`README.md` 计数与 prompts 清单；`experiments/v1/EXP-M02-024-025.md` 补注
+- `docs/prj-ledger-known-issues.md` 新增 **ISS-036**（收录范围 → **ISS-001 – ISS-036**）；`docs/prj-ledger-risk-register.md` 新增 **R-V1-14**；`reports/p0-gate-review.md` §三新增**决策24**、§执行器计数 18→19（含 `--selftest` 12→13）
+- `plan/p0-design-refusal-gate-decoupling.md` §1.1 更正、§二 动作集加 `CLARIFY`、§五 回填 T2；`README.md` 计数与 prompts 清单；`experiments/v1/EXP-M02-024-025.md` 补注
 
 ### 分析（`ISS-036` 拆档影响量化）
 
-- 新增 **`reports/iss036-tier-split-analysis.md`**：把「无效拒绝」档离线拆为 **`拒止` + `澄清`** 并重判全部既有 raw（**零云端调用、零判分代码改动**；档线**沿用原 `0.90`/`0.70`、不放宽**）。
+- 新增 **`reports/p0-analysis-iss036-tier-split-2026-10-06.md`**：把「无效拒绝」档离线拆为 **`拒止` + `澄清`** 并重判全部既有 raw（**零云端调用、零判分代码改动**；档线**沿用原 `0.90`/`0.70`、不放宽**）。
 - **分类依据 = 用例 `notes`**（不看实测值）：拒止类 `v1-015`/`v1-017`/`v1r-003`/`v1r-004`/`v1r-005`；澄清类 `v1-016`/`v1r-001`/`v1r-002`。脚本逐条打印 `notes` 与命中标记，可独立复核。
 - ✅ **防"移动球门"成立**：口径变化仅 **2 个臂**（`EXP-M02-011`、`EXP-M02-020`），**均为「中间区间 → No-Go」**（**变严**）；**主集上无任何臂全档 Pass → `M0.2` 仍为 No-Go**。拆档口径下"全档 Pass"的 3 个臂全部是**迁移集单集**（5 条全 `expect_reject`），**不得**作为 `M0.2` 依据。
 - 🔴 **最重要的再解读**：**卡点是「澄清」而非「拒止」** —— 拒止档 **11 个主集臂中 10 个 100%**；澄清档 **5 个臂 0%**（`-013`/`-014`/`-015`/`-018`/`-019`）。`EXP-M02-009` 所称"云端唯一稳定卡点 `v1-016`"**本质是澄清**。
@@ -301,8 +331,8 @@
 - `scripts/judge_tools.py`：`TIER_CRITERIA` 的 **`无效拒绝` → `拒止` + `澄清`**（**沿用原档线 `pass=0.90` / `mid=0.70`，未做任何放宽**）；新增 `TIER_DISPOSITION` 两项；新增 **`refusal_kind_of()`**（优先取用例显式字段 `refusal_kind`，缺省**由 `notes` 标记词推断**以兼容 2026-10-06 之前的 raw，并落盘 `kind_source` 留痕）；`judge_record` 增加 `case_kind` / `kind_source` / `tier_key`；`aggregate` 的分档聚合键由 `case_type` 改为 **`tier_key`**。
 - `evals/v1_cases.jsonl` / `evals/v1_refusal_transfer_v1.jsonl`：8 条 `expect_reject=True` 用例**补显式 `refusal_kind`**（拒止：`v1-015`/`v1-017`/`v1r-003`/`v1r-004`/`v1r-005`；澄清：`v1-016`/`v1r-001`/`v1r-002`）—— **只增字段、零其它改动**（逐字段校验通过）；原件归档 **`*-pre-2026-10-06.jsonl`**。
 - 自检/测试：`judge_tools --selftest` 新增拆档断言（档位已拆、澄清 No-Go 须使整体 No-Go、显式优先/notes 兜底）；`tests/` 共 **149** 全绿（+10）；`tests/test_cases_integrity.py` 改为**按修订隔离**校验归档（路径 B 差 14 例 / 拆档修订只增 `refusal_kind`）。
-- **交叉验证** ✅：新判分器重判 8 个既有臂，**拒止/澄清 速率与 `reports/iss036-tier-split-analysis.md` 的离线量化完全一致**。
-- **术语澄清**：在 `docs/gate-criteria.md` §3.1、`reports/v1-refusal-audit-2026-10-06.md` §一、`reports/README.md` 索引加注 —— 历史"**拒止卡点 / 拒止行为专项**"按拆档口径读作"**澄清卡点**"；**历史实验记录保留原措辞、不追溯改写**。
+- **交叉验证** ✅：新判分器重判 8 个既有臂，**拒止/澄清 速率与 `reports/p0-analysis-iss036-tier-split-2026-10-06.md` 的离线量化完全一致**。
+- **术语澄清**：在 `docs/p0-spec-gate-criteria.md` §3.1、`reports/p0-audit-v1-refusal-2026-10-06.md` §一、`reports/README.md` 索引加注 —— 历史"**拒止卡点 / 拒止行为专项**"按拆档口径读作"**澄清卡点**"；**历史实验记录保留原措辞、不追溯改写**。
 - ⚠️ **口径变更的后果**：2026-10-06 之前生成的 **summary/detail CSV 仍为旧口径**（`无效拒绝` 档）；**raw 文件不追溯改写**。**须重跑关键臂**取得新口径正式记录（预算原因顺延至 2026-10-07）。
 - ⚠️ **`M0.2` 仍为 No-Go**（拆档只会变严，主集上无任何臂全档 Pass）。
 
@@ -312,14 +342,14 @@
 - **主集（新口径）**：`pv4` **0.9000 / `4a=0` / 单工具 78%（中间） / 拒止 100% Pass / 澄清 100% Pass / 多工具 75% Pass** → 整体「**中间区间**」（**无 No-Go 档**）；`pv1` **0.8500 / `4a=3` / 澄清 0% No-Go** → 整体 **No-Go（澄清）**。
 - **迁移集**：`pv4` **15/15 全档 Pass**；`pv1` 12/15（澄清 50% No-Go）。
 - ✅ **正式确证（此前仅为离线推断）**：**拒止档在两臂、两集均 100%**（`prompt v1` 上即达标）；**`4a` 明细 100% 落在澄清类**（主集全为 `v1-016`、迁移集全为 `v1r-002`）→ **"卡点是澄清而非拒止"**；`prompt v4` 的"最小拒止强化"**实际修的是澄清档（0% → 100%）**。
-- ⚠️ **第四处更正（撤回部分论据）**：上一轮据"`v1-001` 在两版提示词上均 3/3→0/3"推断其为**稳定副作用** —— **今日同日 `pv1` 的 `v1-001` 为 0/3**（10-06 为 3/3）→ **同一提示词跨日翻转、属漂移敏感项** → 撤回该表述并回归 `EXP-M02-010` 的"噪声"判定；`plan/H15-...md` §1.1「事实 1」的"互斥可复现"论据**部分撤回**（**仍成立**：`v1-016` 澄清修复在同日、两提示词上均复现）。
+- ⚠️ **第四处更正（撤回部分论据）**：上一轮据"`v1-001` 在两版提示词上均 3/3→0/3"推断其为**稳定副作用** —— **今日同日 `pv1` 的 `v1-001` 为 0/3**（10-06 为 3/3）→ **同一提示词跨日翻转、属漂移敏感项** → 撤回该表述并回归 `EXP-M02-010` 的"噪声"判定；`plan/p0-design-refusal-gate-decoupling.md` §1.1「事实 1」的"互斥可复现"论据**部分撤回**（**仍成立**：`v1-016` 澄清修复在同日、两提示词上均复现）。
 - ⚠️ **`ISS-028` 直接新证据**：净分差**跨日符号翻转**（10-06 **−0.05** → 10-07 **+0.05**）→ **不得以单日净分差判"哪个提示词更好"**，须以**档位结构**为决策依据。
 - ⚠️ **`M0.2` 仍为 No-Go**（主集无全档 Pass 臂）；迁移集单集全 Pass **不得**作为 `M0.2` 依据。
-- 文档：新增 `experiments/v1/EXP-M02-028-031.md`；`docs/known-issues.md` `ISS-028` 增补⑥（跨日翻转直接证据）；`reports/P0-summary.md` 新增**决策27**；`plan/H15-...md` 第四次更正；`experiments/v1/EXP-M02-024-025.md` 补更正。
+- 文档：新增 `experiments/v1/EXP-M02-028-031.md`；`docs/prj-ledger-known-issues.md` `ISS-028` 增补⑥（跨日翻转直接证据）；`reports/p0-gate-review.md` 新增**决策27**；`plan/p0-design-refusal-gate-decoupling.md` 第四次更正；`experiments/v1/EXP-M02-024-025.md` 补更正。
 
 ### 分析（H17：单工具档专项，零成本）
 
-- 新增 **`reports/h17-single-tool-tier-audit.md`**：复用既有 raw（09-30／10-06／10-07 共 6 个主集臂），**零云端调用、零代码/判据/用例改动**。
+- 新增 **`reports/p0-audit-v1-single-tool-tier-2026-10-07.md`**：复用既有 raw（09-30／10-06／10-07 共 6 个主集臂），**零云端调用、零代码/判据/用例改动**。
 - 主集「单工具」类仅 **6 条用例**（18 样本/臂）。**逐例稳定性**：
   - **稳定基线**：`v1-002` / `v1-003` / `v1-006`（**6 臂 × 9 样本全对**）→ 可作**跨日比较锚点**
   - **`v1-001`＝纯漂移**：同一 `prompt v1` 跨日 **3/3 → 0/3**，且 `pv4` 亦随日期漂移 → **与提示词无关**（失败值恒为 `15m`）→ **不得用于单日归因**
@@ -328,7 +358,7 @@
 - 🔁 **第五次更正（换正确例子，恢复"有代价"论据）**：上一轮因 `v1-001` 属纯漂移而撤回的"拒止强化有代价"论据，**改用 `v1-004` 恢复** → **"云端修澄清要付单工具档代价"重新获得稳定证据支撑**；同时**保留** `v1-016` 澄清修复为稳定的**收益**侧证据。
 - **对 `M0.2` 的含义**：`pv4` 唯一非 Pass 档（单工具 77.8%）**主要由 `v1-004` 造成** → 该档若要过线，须**专门针对 `v1-004`**（拓扑关系类的 `depth`/`direction` 措辞）而非重试整批。
 - ⚠️ **口径注意**：09-30 两臂 raw **内嵌 path B 之前的 expected**（`v1-002` `top_k` / `v1-005` `window` 当时仍在比对）→ 09-30 档位非严格同口径；但 `v1-004` 的成败方向一致，结论不受影响。
-- 文档：`docs/known-issues.md` `ISS-028` 增补 ⑧（用例级漂移刻画）；`reports/P0-summary.md` 新增**决策28**；`plan/H15-...md` 第五次更正；`reports/README.md` 登记。
+- 文档：`docs/prj-ledger-known-issues.md` `ISS-028` 增补 ⑧（用例级漂移刻画）；`reports/p0-gate-review.md` 新增**决策28**；`plan/p0-design-refusal-gate-decoupling.md` 第五次更正；`reports/README.md` 登记。
 
 ### 实验（`v1-004` 专项 2×2 因子归因）
 
@@ -346,7 +376,7 @@
 - **归因**：**示例 4 单独无影响**（D−A = +0）；**规则强化本身即致害（主因）**（C−A = −4）；**示例 4 有贡献但不单独解释**（C−B = +3）；整体代价 **B−A = −7**。**失败模式被放大**：仅规则时只错 `direction`；再加示例后**同时**错 `depth` → **交互效应** ✓
 - **可控性**：**"删示例"只能部分缓解（仍 5/9）** → 代价源自**规则强化本身** → **提示词层面难以两全** → 支持 **H15/H18 架构路线**。
 - ⚠️ **适用范围严格限定为 `v1-004` 单用例**（1×9），**不得**外推、**不得**用于 `M0.2` 判定；**未改动**任何既有提示词/判据/用例。
-- 文档：`docs/known-issues.md` `ISS-026` 增补 ⑥（因子实验确证）；`reports/P0-summary.md` 新增**决策29**；`plan/H15-...md` 第六次更新。
+- 文档：`docs/prj-ledger-known-issues.md` `ISS-026` 增补 ⑥（因子实验确证）；`reports/p0-gate-review.md` 新增**决策29**；`plan/p0-design-refusal-gate-decoupling.md` 第六次更新。
 
 ### 实验（H18：拒止/澄清前置门三元版 + 管线模拟 → **负结果**）
 
@@ -359,7 +389,7 @@
 - ✅ **但架构的另一半被证实**：管线下 **拒止档仍 100%**、**不可解析 0**、**`v1-004` 随云端回 `prompt v1` 而恢复** → "云端回 `prompt v1` 以免除 `v1-004` 代价"成立；**失败只在门这一环** ✓
 - **结论与下一步**：**门的实现不能交给"7B + 提示词"** —— "标识是否存在"与"越界动作关键词"本质是**可判定的模式问题**，应由**规则层**承担（标识检测：正则/白名单 + **本轮与历史一并扫描**；越界关键词），模型仅作**未决时兜底** → **H18b**（**本地、零云端**）；通过后再做端到端实测（H20）。
 - 观察项 **`OBS-H18-1`**：`v1-018` 的门输出**理由与结论自相矛盾**（"需确认 **PUMP-A-01** 具体标识"）→ 判"指令遵循"时**不能只看结论字段**，理由字段可作内部一致性检查依据（登记备查）。
-- 文档：`reports/P0-summary.md` 新增**决策30**；`plan/H15-...md` 更新（§五.3「规则优先」由建议升为**必需**）。
+- 文档：`reports/p0-gate-review.md` 新增**决策30**；`plan/p0-design-refusal-gate-decoupling.md` 更新（§五.3「规则优先」由建议升为**必需**）。
 
 ### 工具与实验（H18b：规则优先的前置门 —— **正面结果**）
 
@@ -372,7 +402,7 @@
 - 🔍 **唯一剩余缺口性质已定**：单工具 **15/18 = 83.3%**，Pass 需 **16/18** → **仅差 1 个样本**；失败正是 **`v1-001` 的漂移**（`H17`：纯漂移、与提示词/门无关）。
 - ⚠️ **未决风险（须在 H20 检验）**：规则"处处给判定"，使"未决"表现为**默认 `allow`** → **分布外的越界表达会被放行**；考虑"规则未命中且含动作词 → 交模型兜底"的收紧策略。
 - 回归测试 **+14**（`tests/test_gate_rules.py`：**留出集逐条锁定**、允许类零误拦、编号识别通用性、**规则模块不得镜像用例文本**），`tests/` 共 **163** 全绿。
-- 文档：新增 `experiments/v1/EXP-M02-037.md`；`reports/P0-summary.md` 新增**决策31**；`plan/H15-...md` 记录门的实现已定（规则优先）。
+- 文档：新增 `experiments/v1/EXP-M02-037.md`；`reports/p0-gate-review.md` 新增**决策31**；`plan/p0-design-refusal-gate-decoupling.md` 记录门的实现已定（规则优先）。
 
 ### 端到端与对抗（H20：**端到端实测** —— 离线合成被复现，OOV 门层确认）
 
@@ -386,12 +416,12 @@
 - ⚠️ **不可依赖云端兜底**：云端拒止属**未受控的模型行为**（无条款保障、可能随 provider 漂移，见 `ISS-028`）→ 下一步：① **扩规则**；② 强化"**规则未命中且含动作词 → 二次判定**"；③ **`M0.2` 维持 No-Go**（但**所有档位均非 No-Go**）。
 - ⚠️ **撤回本人一处错误结论**：曾以 `result["content"]` 读云端正文（**该键不存在**，正文在 `content_clean`/`content_raw`）→ 误判为"云端返回空响应"→ **已撤回**（实测 A 类正文 217–370 字；全臂 **286 条"未调用工具"中 265 条（93%）有实质文本**）→ 登记 **`ISS-037`**（原始记录字段无 schema 约束、键名易误读）并**钉进回归测试**。
 - 回归测试 **+7**（`tests/test_run_e2e.py`：门短路不计云端、对抗集排除出分档、OOV 标记、**记录字段名钉死**、A 类无工具调用），`tests/` 共 **170** 全绿。
-- 文档：新增 `experiments/v1/EXP-M02-038.md`；`reports/P0-summary.md` 新增**决策32**；`docs/known-issues.md` 新增 **`ISS-037`**（收录范围 → **ISS-001 – ISS-037**）；`plan/H15-...md` 回填 H20；`README.md` 脚本计数更新。
+- 文档：新增 `experiments/v1/EXP-M02-038.md`；`reports/p0-gate-review.md` 新增**决策32**；`docs/prj-ledger-known-issues.md` 新增 **`ISS-037`**（收录范围 → **ISS-001 – ISS-037**）；`plan/p0-design-refusal-gate-decoupling.md` 回填 H20；`README.md` 脚本计数更新。
 
 ### 版本控制（建立基线）
 
 - **`git init -b main` + 基线提交**（**此前仓库无 `.git`**）：commit **`672143e`**（全量 `672143eacf08acf9255cccb7f9fa5bf0cf1f27ff`），作者 `dev`，标签 **`baseline-2026-10-06`**；入库 **265 个文件**。
-  - **消除的缺陷**：`docs/experiment-log-template.md` 强制要求 `code_commit` 字段，而仓库无版本控制 → 该字段**长期无法填写**（在 2026-09-30、10-05 的状态核查中均被列为未闭环项）。现已在模板中说明填写方式与基线哈希。
+  - **消除的缺陷**：`docs/prj-template-experiment-log.md` 强制要求 `code_commit` 字段，而仓库无版本控制 → 该字段**长期无法填写**（在 2026-09-30、10-05 的状态核查中均被列为未闭环项）。现已在模板中说明填写方式与基线哈希。
   - **密钥安全**：`env/cloud.json`（含 API key）由 `.gitignore` 拦截，**未入库**；已用 `git check-ignore -v` 逐条验证命中规则（密钥仅存在于该文件，全仓扫描确认无第二处）。
   - **新增 `.gitattributes`（`* -text`）**：关闭 EOL 转换。原因：本机全局 `core.autocrlf = true`，而仓库行尾**本就混杂**（`README.md` / `CHANGELOG.md` 为 CRLF，`.gitignore` / `scripts/*.py` / `docs/*.md` 为 LF）→ 若不声明，checkout 时会改写字节。**已验证 9/9 代表文件的工作区哈希与库内 blob 哈希逐字节一致**。
   - **已知遗留（未同时解决，如实记录）**：仓库含 **89 MB** 原始实验数据，其中 `experiments/v2/raw/corpora_v2/corpus_100000.jsonl` 单文件 **54.6 MB**（由 `scripts/v2_synth_corpus.py` 生成，可再生成）。是否改用 Git LFS 或移出版本控制，留待决策。
@@ -399,13 +429,13 @@
 
 ### 文档
 
-- 新增 `reports/regression-suite-2026-10-06.md`；`docs/known-issues.md` 新增 **ISS-030**；`reports/P0-summary.md` §三新增**决策17**；`README.md` 快速开始补 pytest 步骤；`reports/README.md` 登记新报告；`docs/experiment-log-template.md` 的 `code_commit` 补填写说明与基线哈希。
+- 新增 `reports/p0-report-regression-suite-2026-10-06.md`；`docs/prj-ledger-known-issues.md` 新增 **ISS-030**；`reports/p0-gate-review.md` §三新增**决策17**；`README.md` 快速开始补 pytest 步骤；`reports/README.md` 登记新报告；`docs/prj-template-experiment-log.md` 的 `code_commit` 补填写说明与基线哈希。
 
 ---
 
 ## 2026-10-05 — V1 破局路径 H3（负结果）+ H5（云端原生 tools 通道）+ 云端方法论缺陷暴露
 
-> 目标：执行 `plan/V1-破局路径方案对比.md` §9.4 的 **H3**（`tools_v5` 补 `aggregation` 描述，针对 H0 暴露的"多工具档 50% 跨 prompt 硬阻塞"）
+> 目标：执行 `plan/p0-design-v1-breakthrough-paths.md` §9.4 的 **H3**（`tools_v5` 补 `aggregation` 描述，针对 H0 暴露的"多工具档 50% 跨 prompt 硬阻塞"）
 > 与 **H5**（云端改走原生 function calling 通道，针对 H3 暴露的 `ISS-027`）。两轮均**同日配对照臂**以排除 `ISS-028` 的 provider 漂移。
 
 ### 配置
@@ -423,16 +453,16 @@
 - ⚠️ **意外暴露两个方法论级缺陷（本轮最重要产出）**：
   - **`ISS-027` / `R-V1-9`：云端 `response_format: json_schema`（`strict: true`）未被强制** —— 实测返回形态在「数组 / 裸单对象 / **裸 arguments（丢 `name`）**」间漂移，后者无法被 `_normalize_structured_calls` 还原 → 判「格式退化」。10-05 两臂共 **8 / 15 条**，而 09-30 为 **0 条** → **云端"约束解码"名存实亡**，与本地（Ollama `format` 确实生效）**不可同口径比较**。
   - **`ISS-028` / `R-V1-10`：云端 provider 漂移 → 云端路径不可复现** —— **逐字相同配置**在 **2026-09-30** 与 **2026-10-05** 结果显著不同（可解析率 **1.0000→0.8431**、格式退化 **0→8 条**、`v1-001` **3/3→0/3**、`v1-010` **0/3→3/3**）→ **此前所有跨日期云端 delta（如 `EXP-M02-001` vs `EXP-M02-006`）不得作为干净归因**。
-- **下一步优先级调整（方法论 > 调参）**：**H5** = 云端改走 **OpenAI 原生 `tools` + `tool_choice="required"`**（`env/cloud.json` 声明 `supports_tools_function_calling: true`）以消除"裸 arguments"漂移；**H6** = 同日重复对照量化**日内**漂移；**H7** = `version-lock.md` 增设"云端模型不可 digest 化"声明。
+- **下一步优先级调整（方法论 > 调参）**：**H5** = 云端改走 **OpenAI 原生 `tools` + `tool_choice="required"`**（`env/cloud.json` 声明 `supports_tools_function_calling: true`）以消除"裸 arguments"漂移；**H6** = 同日重复对照量化**日内**漂移；**H7** = `prj-ledger-version-lock.md` 增设"云端模型不可 digest 化"声明。
 
 ### 文档
 
 - 新增 `experiments/v1/EXP-M02-013-014.md`；`schemas/tools_v5.json`（未采纳）
-- `docs/known-issues.md`：新增 **ISS-027 / ISS-028**（收录范围 **ISS-001 – ISS-028**）
-- `docs/risk-register.md`：新增 **R-V1-9 / R-V1-10**（§三.3.2）+ §五.5.2 对照表 + §五.5.3 闭环状态 + 修订记录
-- `docs/version-lock.md`：§三第 10 行（云端 baseline 模型）增补"**云端不可 digest 化 + `response_format` 未强制**"声明
-- `reports/P0-summary.md` §三：新增**决策13**
-- `plan/V1-破局路径方案对比.md` §9.4：H3 结果回填 + H5/H6/H7 下一步
+- `docs/prj-ledger-known-issues.md`：新增 **ISS-027 / ISS-028**（收录范围 **ISS-001 – ISS-028**）
+- `docs/prj-ledger-risk-register.md`：新增 **R-V1-9 / R-V1-10**（§三.3.2）+ §五.5.2 对照表 + §五.5.3 闭环状态 + 修订记录
+- `docs/prj-ledger-version-lock.md`：§三第 10 行（云端 baseline 模型）增补"**云端不可 digest 化 + `response_format` 未强制**"声明
+- `reports/p0-gate-review.md` §三：新增**决策13**
+- `plan/p0-design-v1-breakthrough-paths.md` §9.4：H3 结果回填 + H5/H6/H7 下一步
 
 ### 代码（H5：新增云端原生 function calling 通道）
 
@@ -457,9 +487,9 @@
 
 ### 结论（H8：考点声明 ↔ 判据范围核对）
 
-- ✅ **`ISS-029` / `R-V1-11` 确证**（`reports/v1-review-v4.md`，**零调用**）：`judge_tools.compare_arguments` 的规则是"可选参数**缺省不判错、但显式给出不同值即判错**"，而 **20 用例中 13 条**在**未被 `notes` 声明为考点的可选参数**上被严格比对，涉及 **19 个字段**。**证据最强两条**：`v1-008`（`notes` 明写考点是"同时抽取两个工具的**必填参数**"，判据却在 4 个**可选参数**上严格比对）、`v1-011`（`notes` 明写"**`window` 枚举精确匹配是唯一考点**"，判据却同时比对 `aggregation`）。
+- ✅ **`ISS-029` / `R-V1-11` 确证**（`reports/p0-review-v1-criteria-r4.md`，**零调用**）：`judge_tools.compare_arguments` 的规则是"可选参数**缺省不判错、但显式给出不同值即判错**"，而 **20 用例中 13 条**在**未被 `notes` 声明为考点的可选参数**上被严格比对，涉及 **19 个字段**。**证据最强两条**：`v1-008`（`notes` 明写考点是"同时抽取两个工具的**必填参数**"，判据却在 4 个**可选参数**上严格比对）、`v1-011`（`notes` 明写"**`window` 枚举精确匹配是唯一考点**"，判据却同时比对 `aggregation`）。
 - **影响量化（补充分析，不替代官方口径）**：按"仅比考点字段"重判（复用官方判分器，仅过滤 `expected`）—— H5 **0.7000 → 0.8500（+0.15）**、H3 0.5667→0.6500、H0-A 0.8667→0.9167、同日对照臂 **Δ=0**（其失败以格式退化为主）；**`v1-007` 在全部 4 个臂上均由失败翻为通过** → 该用例唯一失败原因是 `aggregation`（非考点字段）→ **H0/H3/H5 三轮"多工具档硬阻塞"的结论，很大一部分建立在该字段上**。
-- **自我修正**：上一轮 `EXP-M02-015.md` §三 把 `v1-001` 的 `window` 列为"超出考点"的**首要例证**属**取证不准确** → 已更正为**有据判错**（`notes` 明确讨论 window 且配 `lenient=['5m']` 白名单），`docs/known-issues.md` 的 `ISS-029` 举证同步修正为以 `v1-008` / `v1-011` 为首。
+- **自我修正**：上一轮 `EXP-M02-015.md` §三 把 `v1-001` 的 `window` 列为"超出考点"的**首要例证**属**取证不准确** → 已更正为**有据判错**（`notes` 明确讨论 window 且配 `lenient=['5m']` 白名单），`docs/prj-ledger-known-issues.md` 的 `ISS-029` 举证同步修正为以 `v1-008` / `v1-011` 为首。
 - **处置路径**：**路径 C 已立即采用**（不改判据，仅单列该类失败、禁止以"参数值正确率"单独作能力结论）；**路径 B（推荐，不改代码，仅补用例 `notes`/`lenient` 元数据）** 与 **路径 A（改 `compare_arguments` 为"仅比考点字段"）** 均**需授权**，且修订后须**重跑全部 V1 实验并升版判据**。
 - **未改动任何判据、用例与阈值**（本项为复核报告）。
 
@@ -484,11 +514,11 @@
 
 ### 文档（路径 B 补充）
 
-- 新增 `reports/v1-cases-revision-2026-10-05.md`；`docs/known-issues.md` **ISS-029 → 已修复**；`docs/risk-register.md` **R-V1-11 → 已关闭**（按 §5.1 规则 4 说明根因已消除）+ 修订记录；`reports/P0-summary.md` §三新增**决策16**；`reports/README.md` 登记新报告。
+- 新增 `reports/p0-report-v1-cases-revision-2026-10-05.md`；`docs/prj-ledger-known-issues.md` **ISS-029 → 已修复**；`docs/prj-ledger-risk-register.md` **R-V1-11 → 已关闭**（按 §5.1 规则 4 说明根因已消除）+ 修订记录；`reports/p0-gate-review.md` §三新增**决策16**；`reports/README.md` 登记新报告。
 
 ### 文档（H5 补充）
 
-- 新增 `experiments/v1/EXP-M02-015.md`；`docs/known-issues.md` 新增 **ISS-029**（收录范围 → **ISS-001 – ISS-029**）；`docs/risk-register.md` 新增 **R-V1-11** 并回填 R-V1-9 的处置结果；`reports/P0-summary.md` §三新增**决策14**；`plan/V1-破局路径方案对比.md` §9.4 回填 H5 并列出 H8/H9。
+- 新增 `experiments/v1/EXP-M02-015.md`；`docs/prj-ledger-known-issues.md` 新增 **ISS-029**（收录范围 → **ISS-001 – ISS-029**）；`docs/prj-ledger-risk-register.md` 新增 **R-V1-11** 并回填 R-V1-9 的处置结果；`reports/p0-gate-review.md` §三新增**决策14**；`plan/p0-design-v1-breakthrough-paths.md` §9.4 回填 H5 并列出 H8/H9。
 
 ### 预算
 
@@ -498,7 +528,7 @@
 
 ## 2026-09-30 — V1 判据/用例口径复审收口 + 混合形态实测
 
-> 目标：执行 `docs/role-decision.md` §四 处置链遗留项与 V1 判据/用例口径复审（F1–F6），并落地 P6 拆步 / P7 混合形态两条验证路径。
+> 目标：执行 `docs/p0-decision-model-role.md` §四 处置链遗留项与 V1 判据/用例口径复审（F1–F6），并落地 P6 拆步 / P7 混合形态两条验证路径。
 
 ### 代码
 
@@ -529,8 +559,8 @@
 
 - **M0.2 维持 No-Go**。处置链 ①②③④ 全部执行仍 No-Go；复审 F1–F6 重判 11 实验 19 组 + F2 四臂重测后，
   **整体档位无一翻 Pass**；归因修订为「判据口径缺陷 + 任务信息不足 + 模型部分错」混合归因。
-- `docs/known-issues.md` 新增 **ISS-024**（已修复）/ **ISS-025**（云端路径亦 No-Go，已闭环处置）/ **ISS-026**（拒止行为对 prompt 文本敏感且不可迁移）。
-- 新增 `reports/v1-review-v2.md`、`reports/v1-review-v3.md`（复审终稿）；同步 `docs/gate-criteria.md`、`docs/role-decision.md`、`reports/P0-summary.md`、`docs/handover-p1.md`、`docs/daily-checklist.md`、`docs/version-lock.md`、`plan/Phase 0 任务总结.md`、`plan/V1-schema-v2-复审建议.md`、`plan/M02-V1-混合形态方案.md`。
+- `docs/prj-ledger-known-issues.md` 新增 **ISS-024**（已修复）/ **ISS-025**（云端路径亦 No-Go，已闭环处置）/ **ISS-026**（拒止行为对 prompt 文本敏感且不可迁移）。
+- 新增 `reports/p0-review-v1-criteria-r2.md`、`reports/p0-review-v1-criteria-r3.md`（复审终稿）；同步 `docs/p0-spec-gate-criteria.md`、`docs/p0-decision-model-role.md`、`reports/p0-gate-review.md`、`docs/p0-handover-p1.md`、`docs/p0-checklist-daily.md`、`docs/prj-ledger-version-lock.md`、`reports/p0-summary-phase0-2026-09-30.md`、`plan/p0-review-schema-v2.md`、`plan/p0-design-m02-hybrid-form.md`。
 
 ### 文件整理与文档同步（本轮）
 
@@ -541,17 +571,17 @@
 - **修复配置缺陷**：`docker/compose.base.yml` 的 Redis 配置挂载原写作 `./configs/redis.conf`（相对 compose 文件位于 `docker/`，解析为 `docker/configs/redis.conf` —— 即上述空目录），
   与同一文件中 Mosquitto 的 `../configs/mosquitto.conf` 口径不一致，**运行时会挂载空目录导致 `redis-server` 读不到配置**；
   已统一改为 `../configs/redis.conf`，`docker compose config` 实测解析为 `<REPO>\configs\redis.conf`。
-- **修正命名**：`experiments/v1/detail-EXP-V1-006.jsonl` → **`detail-EXP-V1-006.csv`**（内容实为 CSV，与同目录其余 10 个 `.csv` 一致）；同步修正 `reports/v1-report.md` 的引用。
+- **修正命名**：`experiments/v1/detail-EXP-V1-006.jsonl` → **`detail-EXP-V1-006.csv`**（内容实为 CSV，与同目录其余 10 个 `.csv` 一致）；同步修正 `reports/p0-report-v1-tool-call.md` 的引用。
 - **移除冗余**：删除 `experiments/v1/summary-EXP-V1-004-tiered.csv`（**零文档引用**且与 `summary-EXP-V1-004.csv` **字节相同**；SHA256 = `AD487E57…0B2BA`，可用 `judge_tools.py` 再生）。
   - **保留不删**：`summary-normalize.csv` / `detail-normalize.csv` —— 二者与 EXP-V1-004 的乘积相同**正是 EXP-V1-NORM「uplift = 0」结论的举证**，被 `experiments/v1/EXP-V1-NORM.md` 引用，属证据而非冗余。
 - **文档同步**：`README.md`（目录结构块补全 + 脚本数 16→18 + 自检 10→12 + 常用入口补 R-4 命令）；`reports/README.md`（报告索引补 5 份 + 目录范式 + 评测集 3→6 项 + 执行器口径）；
-  `docs/risk-register.md`（**§5.3 闭环状态表严重过期已更正**：原称 ISS-001~013 未闭环、「需换方案」条目为空，与 §二 主表矛盾；并回填 D7/D8 占位行）；
-  `docs/known-issues.md`（ISS-011 / ISS-013 状态列由「🔲 待 D2–D3 填入」更正为「已修复」，消除与页头声明的自相矛盾）。
-- **新增**：`reports/status-audit-2026-09-30.md`（整理前后对比 + 变更清单）。
+  `docs/prj-ledger-risk-register.md`（**§5.3 闭环状态表严重过期已更正**：原称 ISS-001~013 未闭环、「需换方案」条目为空，与 §二 主表矛盾；并回填 D7/D8 占位行）；
+  `docs/prj-ledger-known-issues.md`（ISS-011 / ISS-013 状态列由「🔲 待 D2–D3 填入」更正为「已修复」，消除与页头声明的自相矛盾）。
+- **新增**：`reports/p0-audit-status-2026-09-30.md`（整理前后对比 + 变更清单）。
 
 ### 方案对比（新增）
 
-- 新增 `plan/V1-破局路径方案对比.md`：M0.2 破局路径**全量对比**——判据基线 + 各档现状基线（**参数校验 qwen 100% 已 Pass**；单工具 57%/67%、多工具 40% 为仅存短板）+ **9 条已试路径复盘**（①②③④ / P5 `tools_v3` / P6 拆步 / P7 云编排 / F1–F6 重判 / F2 四臂，全部未破局）+ **10 条未试/待决路径**（含**单工具档专项**这一唯一无方案覆盖的缺口）+ 五维对比矩阵 + 推荐执行顺序（口径清零 → 单工具档专项 → 汇总复核，并列出**工程兜底备选**：重试后成功率实测 0.90–1.00）。
+- 新增 `plan/p0-design-v1-breakthrough-paths.md`：M0.2 破局路径**全量对比**——判据基线 + 各档现状基线（**参数校验 qwen 100% 已 Pass**；单工具 57%/67%、多工具 40% 为仅存短板）+ **9 条已试路径复盘**（①②③④ / P5 `tools_v3` / P6 拆步 / P7 云编排 / F1–F6 重判 / F2 四臂，全部未破局）+ **10 条未试/待决路径**（含**单工具档专项**这一唯一无方案覆盖的缺口）+ 五维对比矩阵 + 推荐执行顺序（口径清零 → 单工具档专项 → 汇总复核，并列出**工程兜底备选**：重试后成功率实测 0.90–1.00）。
 
 ### 云端 D1 / D2 实测（M0.2 收口推进）
 
@@ -567,9 +597,9 @@
   **但引入 3 处回退**：`v1-004`（单工具）/ `v1-010`（多工具）/ **`v1-019`（多轮，格式退化）** →
   单工具 **100%→83%**、多轮 **100%→67%**，首次成功率 0.8500（净 −1）→ **整体仍 No-Go（卡点换为多轮）**。
   → **`ISS-026`「prompt 文本条件化效应不可迁移」被直接实证**（修好 2 条、弄坏 3 条）。
-  → 机制线索：think token 831.8→**878.2** 逼近 `max_tokens=1024` → `v1-019` 判为**截断型格式退化**（`role-decision.md` §4.2 列为待实测代价，**本次首次证实**）。
-- **配置**：`env/cloud.json` 的 `budget_lock.per_day_calls` **20 → 40**（**调锁**，文档载明动作 `plan/M02-V1-混合形态方案.md` §六「超限须先调锁」）；当日累计调用 **40 次**，未超调锁值；原因与依据已写入其 `note`。
-- **文档**：新增 `experiments/v1/EXP-M02-006.md` / `EXP-M02-007.md`；`reports/P0-summary.md` §三 新增**决策7 / 决策8**；`plan/V1-破局路径方案对比.md` §9.4 按实测修正实验顺序（换模型降为条件性 D4，新增 H0/H1/H2 三个可证伪假设实验）。
+  → 机制线索：think token 831.8→**878.2** 逼近 `max_tokens=1024` → `v1-019` 判为**截断型格式退化**（`p0-decision-model-role.md` §4.2 列为待实测代价，**本次首次证实**）。
+- **配置**：`env/cloud.json` 的 `budget_lock.per_day_calls` **20 → 40**（**调锁**，文档载明动作 `plan/p0-design-m02-hybrid-form.md` §六「超限须先调锁」）；当日累计调用 **40 次**，未超调锁值；原因与依据已写入其 `note`。
+- **文档**：新增 `experiments/v1/EXP-M02-006.md` / `EXP-M02-007.md`；`reports/p0-gate-review.md` §三 新增**决策7 / 决策8**；`plan/p0-design-v1-breakthrough-paths.md` §9.4 按实测修正实验顺序（换模型降为条件性 D4，新增 H0/H1/H2 三个可证伪假设实验）。
 
 - **H2 · `EXP-M02-008`**（`prompt v2` + **`max_tokens` 1024→2048**）：首次成功率 0.85→**0.75**，**格式退化条数与可解析率均不变** → **"think 打满 max_tokens 致截断"假设被证否**（经查 `v1-019` 实为「未调用 `generate_report`」）。**撤回 `EXP-M02-007` 的截断判读**。
 - **H1 · `EXP-M02-009`**（新增候选 `prompts/tool_call_prompt_v4.md` = v1 + 强化规则 6a + 1 条**齿轮箱越界示例**，**刻意不使用与 `v1-016` 镜像的示例**）：
@@ -581,13 +611,13 @@
   机制：`v1-010` 的 `time_range` **1h→24h**（疑似 few-shot `24h` 锚定，同类见 `OBS-F2-3`）；`v1-004` 的 `depth`/`direction` 枚举偏差（**与规格多解性相关**）。
 - **下一步（优先级已定）**：① **架构解耦 = 拒止前置门（R-1 职责，本地 qwen）**，工具调用侧保持 `prompt v1` → 可同时取得两侧最优（**须声明为架构层测试、判据适用对象随之变化**）；② **U3 口径清零**（`direction`/`depth` 多解，**零模型成本**）；③ **H0 repeat=3 降噪**（**判 M0.2 前必做**）。
 - **配置**：`env/cloud.json` 的 `budget_lock.per_day_calls` **40 → 100**（第二次调锁，原因与依据已写入其 `note`）；当日累计调用 **80 次**，未超调锁值。
-- **文档**：新增 `experiments/v1/EXP-M02-008.md` / `EXP-M02-009.md`、`prompts/tool_call_prompt_v4.md`（候选，未采纳）；`reports/P0-summary.md` §三 新增**决策9 / 决策10**。
+- **文档**：新增 `experiments/v1/EXP-M02-008.md` / `EXP-M02-009.md`、`prompts/tool_call_prompt_v4.md`（候选，未采纳）；`reports/p0-gate-review.md` §三 新增**决策9 / 决策10**。
 
 - **复现校验 · `EXP-M02-010`（**关键负向发现**）**：对 `EXP-M02-006` 的配置**逐字复跑**（模型/endpoint/用例集/`tools_v4`/prompt v1/seed 42/temp 0/`num_ctx`/`top_p`/`max_tokens`/repeat 1 全同）—— **首次成功率 0.90 → 0.80（未复现）**，单工具 100%→**83%**、多工具 75%→**50%**；仅**参数校验 4/4、多轮 3/3、无效拒绝 2/3 两轮一致**。
   **5 轮横向对照**（D1_v1 / **R_v1** / D2_v2 / H2 / H1）显示：`v1-001`/`v1-006`/`v1-007`/`v1-009`/`v1-019` **在同一 prompt 下正反均出现 → 噪声**；**`v1-010` 在 `prompt v1` 两次运行中一成功一失败 → 与 prompt 版本无关**；**仅 `v1-016`（拒止）稳健相关**（v1 族 0/2 ❌ / 强化族 3/3 ✅，含 `v4` 非镜像）。
-  → **📌 结论撤回与修正**：**撤回**"两个提示词族系统性互斥"（见 `EXP-M02-009.md` §2.1、本文件上一条、`P0-summary` 决策10）；**修正** `EXP-M02-006` 的"4/5 档 Pass、唯一卡点 = 拒止"表述。**根因 = `repeat=1` 且每档仅 3–6 例 → 档位不确定度 ±17–33pp**。
+  → **📌 结论撤回与修正**：**撤回**"两个提示词族系统性互斥"（见 `EXP-M02-009.md` §2.1、本文件上一条、`p0-gate-review` 决策10）；**修正** `EXP-M02-006` 的"4/5 档 Pass、唯一卡点 = 拒止"表述。**根因 = `repeat=1` 且每档仅 3–6 例 → 档位不确定度 ±17–33pp**。
   → **`H0（repeat≥3）` 升为最高优先级**：`M0.2` 判定前，须对候选配置各做 **20 用例 × repeat 3 = 60 次**；**在此之前不得宣称任何配置的档位结论**。
-- **文档**：新增 `experiments/v1/EXP-M02-010.md`；更正 `EXP-M02-006.md` / `EXP-M02-009.md`（撤回与打折）；`reports/P0-summary.md` §三 新增**决策11**。
+- **文档**：新增 `experiments/v1/EXP-M02-010.md`；更正 `EXP-M02-006.md` / `EXP-M02-009.md`（撤回与打折）；`reports/p0-gate-review.md` §三 新增**决策11**。
 - **预算**：当日累计云端调用 **100 次 = 调锁后上限**（D1/D2/H2/H1/R 各 20），**当日不可再调**。
 
 - **H0 · `EXP-M02-011` / `EXP-M02-012`（双臂 × `repeat=3`，**决定性实验**）**：各 20 用例 × repeat 3 = 各 60 次。
@@ -599,7 +629,7 @@
   → **修正** `EXP-M02-006` 的"0.90 / 4 档 Pass"（`repeat=3` 下不成立）；**阻塞由"多档不明"收敛为单点**。
   → **根因**：`tools_v4` 的 F2 **只补了 `sensor_ids`，未补 `aggregation` 描述** → 存在**与 F2 同类的"任务信息不足"缺口**。
   → **下一步 H3（推荐）**：拟 `schemas/tools_v5.json` = `tools_v4` + **扩写 `aggregation` 的 `description`**（同 F2 做法，不改 enum/required/结构，判分语义不变）+ `prompt v1`。
-- **文档**：新增 `experiments/v1/EXP-M02-011-012.md`；`reports/P0-summary.md` §三 新增**决策12**。
+- **文档**：新增 `experiments/v1/EXP-M02-011-012.md`；`reports/p0-gate-review.md` §三 新增**决策12**。
 - **预算**：**当日累计 220 次 = 调锁后上限**（D1/D2/H2/H1/R 各 20 + H0 双臂各 60），**当日不可再调**。
 
 ### 验证
@@ -612,24 +642,24 @@
 
 > 目标：使 P0 门禁相关文档的状态表与实测结论完全一致（原存在"结论已出、状态表未回填"的系统性偏差）。
 
-- `reports/P0-summary.md`
+- `reports/p0-gate-review.md`
   - §三 标题「**空表待填**」→「已回填」；§3.1 当前状态更正为「**已无未闭环中间区间项**」（V4b 已升 Pass、V2/V3 已闭环，仅剩 V1 No-Go）。
-  - §四.1 交付物核对 **6 行**「⚠️ 待填 / 待实测」→ **✅ 已实测**（V1 报告 / V2 参数基线表 / V5 报告 / 联合决策 / V4b 资源实测 / `checkpoint-decision.md` §2.1）。
+  - §四.1 交付物核对 **6 行**「⚠️ 待填 / 待实测」→ **✅ 已实测**（V1 报告 / V2 参数基线表 / V5 报告 / 联合决策 / V4b 资源实测 / `p0-decision-checkpoint.md` §2.1）。
   - §二 V2 判定由「条件 Pass」更正为 **Pass**（压力档 EXP-V2-LOAD 已闭环），同步 §〇 状态声明与 §8.2 可用性判定。
   - §1.3 / §八.1 执行器口径「五个脚本」→ **18 个 Python 脚本（12 个含 `--selftest`）+ 2 个 PowerShell**。
   - §八.1 环境基线版本号笔误 `v1` → **`v2`**；§七.2 缺陷登记「ISS-001~ISS-013」→ **ISS-001~ISS-026**、版本锁定口径更新为「已收敛」。
   - **待裁决清单全部勾销**：§3.3（= 四步）、§5.2（= 6 项）、§6.4（`R-新2`/`R-新3` **经复核无冲突**）、§6.5（= 口径 B）、§6.6 第 3 条（compose 裸 tag **实测已清零**，8 镜像全部 `tag@digest`）。
-- `docs/handover-p1.md`
-  - §2.6 `known-issues.md` 收录范围 **ISS-018 → ISS-026**；`scope-mvp` / `gate-criteria` / `daily-checklist` / `risk-register` / `schema-mapping` 五行「待回填」→ **已回填**。
+- `docs/p0-handover-p1.md`
+  - §2.6 `prj-ledger-known-issues.md` 收录范围 **ISS-018 → ISS-026**；`p0-spec-scope-mvp` / `p0-spec-gate-criteria` / `p0-checklist-daily` / `prj-ledger-risk-register` / `prj-spec-schema-mapping` 五行「待回填」→ **已回填**。
   - §2.7 报告状态 **v1 / v2 / v3 / v4b / v5** 五行「待实测 / 未执行 / 当前不可执行」→ **已实测回填**（v3 已封板、v4b 已升 Pass）。
   - §三 P0-3「`.wslconfig` 当前未落地」→ **已安装并核验**。
   - §四.1 **L-02 / L-04 / L-06 / L-07 / L-10** 由「阻塞 / 决策未做 / 未执行 / 待定义」→ **已裁决 / 已决 / 已闭环 / 已裁决**。
   - §4.2 **ISS-001 – ISS-008** 由「待 D7 判定」→ 实际结论（**ISS-005 = 需换方案已切 PG**，其余为可规避 / 已修复 / 已裁决）；**ISS-015–018 → ISS-015–023** 并新增 **ISS-024–026** 行。
   - §6.2 阻塞项交接清单与 §6.6 验证项判定（原写「V1/V2/V3/V4b/V5 = **无法判定**」，**与同文件 §5.2 直接矛盾**）已更正；页头状态声明与 §5.3 承接事项同步；修订记录中 **3 条过期占位行**（【待 M0.6 评审】/【待各验证项实测】/【待 L-01/L-03 闭环】）回填为实际完成记录。
-- `plan/Phase 0 任务总结.md`：§2.3 待裁决 **D-01 ~ D-04** 的「确认结果」列由空 → **✅ 已裁定**（四步 / 6 项 / 编号无冲突 / 口径 B + 干净机 17.89GB 升 Pass）。
-- `docs/role-decision.md`：**经复核无需修改** —— 其 §5.3 已使用 `R-新3`，全仓 `R-新2` 仅指 GPU 直通（ISS-008）。
+- `reports/p0-summary-phase0-2026-09-30.md`：§2.3 待裁决 **D-01 ~ D-04** 的「确认结果」列由空 → **✅ 已裁定**（四步 / 6 项 / 编号无冲突 / 口径 B + 干净机 17.89GB 升 Pass）。
+- `docs/p0-decision-model-role.md`：**经复核无需修改** —— 其 §5.3 已使用 `R-新3`，全仓 `R-新2` 仅指 GPU 直通（ISS-008）。
 
-> **红线声明**：本次同步只回填**已由实测得出的结论**，未新增任何未实测数字；`reports/P0-summary.md` 与 `docs/handover-p1.md` 的修订记录均**追加**一行，未删除任何历史记录。
+> **红线声明**：本次同步只回填**已由实测得出的结论**，未新增任何未实测数字；`reports/p0-gate-review.md` 与 `docs/p0-handover-p1.md` 的修订记录均**追加**一行，未删除任何历史记录。
 
 ---
 
@@ -644,10 +674,10 @@
     改为实际实现 `st_device_status.online=FALSE + reason='rebirth_rollback'`；
     新增 `rebirth_authority` 声明 M6 的 bdSeq 基准取自内存 `DeviceRegistry`。
   - 补全 `device_id_validation`：新增 `applies_to` / `scope_note`，说明解码侧宽松口径与
-    工具契约严格口径并存（见 `docs/schema-mapping.md` §6.1）。
+    工具契约严格口径并存（见 `docs/prj-spec-schema-mapping.md` §6.1）。
 - `configs/redis.conf`
   - 补写「网络与安全」段：说明 `bind 127.0.0.1` 的适用形态，并给出 Docker 容器形态的注释化替代块
-    （`bind 0.0.0.0` / `protected-mode no`）；新增 `docs/known-issues.md` **ISS-015** 跟踪。
+    （`bind 0.0.0.0` / `protected-mode no`）；新增 `docs/prj-ledger-known-issues.md` **ISS-015** 跟踪。
   - 修正措辞：`maxmemory-policy 带 ttl` → `volatile-* 系列策略`。
 - `docker/compose.ingest.yml`
   - 删除代码**不读取**的死环境变量：`SPB_GROUP_ID`、`SPB_EDGE_NODE_ID`、`DECODER_DB_NAME`、
@@ -709,27 +739,27 @@
 
 ### 文档
 
-- `docs/schema-mapping.md`：TDengine 版本 `3.3.6 LTS` → **`3.3.8.0`**；子表命名示例 `d_plant1_PUMPA` → `d_plant1_PUMP-A`；
+- `docs/prj-spec-schema-mapping.md`：TDengine 版本 `3.3.6 LTS` → **`3.3.8.0`**；子表命名示例 `d_plant1_PUMPA` → `d_plant1_PUMP-A`；
   补齐 `pump_speed` 行缺失的列类型单元格；R-V3-5 标为**已实现**、R-V3-6 标为**已闭环**；
   标注时间戳优先序已实现、**心跳兜底未实现**（ISS-017）；NDEATH 数据来源改为内存 registry；
   新增 §6.1 「`device_id` 两套校验口径」说明。
-- `docs/known-issues.md`：页头收录范围更正为 ISS-001 – ISS-018；回填 ISS-007（已修复 2026-09-24）、
+- `docs/prj-ledger-known-issues.md`：页头收录范围更正为 ISS-001 – ISS-018；回填 ISS-007（已修复 2026-09-24）、
   ISS-008（已裁决）、ISS-009（已锁定 0.34.2）；修正 ISS-013 规避手段描述；
   **新增 ISS-015（Redis 容器网络）/ ISS-016（多工具指标命名）/ ISS-017（心跳兜底未实现）/
   ISS-018（`env/hardware.json` 停留在 v1 口径）**。
-- `docs/scope-mvp.md`、`docs/handover-p1.md`、`plan/Phase 1 详细开发计划…md`：
+- `docs/p0-spec-scope-mvp.md`、`docs/p0-handover-p1.md`、`plan/Phase 1 详细开发计划…md`：
   工具名 `retrieve_knowledge` → **`search_knowledge`**（与冻结 Schema 一致）。
-- `docs/handover-p1.md`、`reports/P0-summary.md`：`六类失败归类` → **`七类失败归类`**（与判分器一致）。
-- `docs/version-lock.md`：ParadeDB 宿主端口 `5927` → **`5433`**；真 BM25 状态更新为已闭环；修正修订记录中的采集时间引用。
-- `reports/project-overview.md`：V3 聚合 P95 `10.2 ms` → **`26.2 ms`**（实测）；ParadeDB 端口更正为 5433；
+- `docs/p0-handover-p1.md`、`reports/p0-gate-review.md`：`六类失败归类` → **`七类失败归类`**（与判分器一致）。
+- `docs/prj-ledger-version-lock.md`：ParadeDB 宿主端口 `5927` → **`5433`**；真 BM25 状态更新为已闭环；修正修订记录中的采集时间引用。
+- `reports/p0-summary-project-2026-09-28.md`：V3 聚合 P95 `10.2 ms` → **`26.2 ms`**（实测）；ParadeDB 端口更正为 5433；
   删除已过期的"尚余裸 tag `eclipse-mosquitto:2`"结论（2026-09-29 已清零）。
-- `reports/v2-report.md`：PostgreSQL 宿主端口更正为最终值 5433；修正笔误 `19630` → `19530`。
-- `reports/project-summary-2026-09-29.md`：新增并作为最新全景总结。
+- `reports/p0-report-v2-hybrid-retrieval.md`：PostgreSQL 宿主端口更正为最终值 5433；修正笔误 `19630` → `19530`。
+- `reports/p0-summary-project-2026-09-29.md`：新增并作为最新全景总结。
 
 ### 新增文件
 
 - `README.md`（根）：项目入口、当前状态速览、目录结构、快速开始、迭代纪律。
-- `requirements.txt`：Python 依赖锁，版本全部取自 `docs/version-lock.md` §二.2.7 / 2.8 / 2.9。
+- `requirements.txt`：Python 依赖锁，版本全部取自 `docs/prj-ledger-version-lock.md` §二.2.7 / 2.8 / 2.9。
 - `CHANGELOG.md`：本文件。
 
 ### 验证
@@ -742,15 +772,15 @@
 
 ### 补遗（同日第二轮）
 
-- `docs/known-issues.md`：回填 §六 复现记录区的 **ISS-009（已锁定 0.34.2）/ ISS-011（已修复，可解析率 1.00）/
+- `docs/prj-ledger-known-issues.md`：回填 §六 复现记录区的 **ISS-009（已锁定 0.34.2）/ ISS-011（已修复，可解析率 1.00）/
   ISS-012（可规避，P1 补测量化档）/ ISS-013（已修复，本地 0 次退化、云端 2 次且已单独归类）**；页头总体状态同步。
-- `docs/handover-p1.md`：§2.5 脚本资产清单由 5 个补全为 **15 个**（含 `gbnf_grammar` / `param_normalizer` /
+- `docs/p0-handover-p1.md`：§2.5 脚本资产清单由 5 个补全为 **15 个**（含 `gbnf_grammar` / `param_normalizer` /
   `run_cloud_baseline` / V2 压力档 / V3 三个验证脚本，并如实标注哪些无 `--selftest`）；§2.6 文档状态由
   "待实测回填"回填为已定稿；ISS-007–013 状态同步并补登 ISS-015–018。
-- `docs/scope-mvp.md`：**Must 链 13 项的"当前状态"列**由"框架就绪，实测未执行"回填为按 V1–V5 实测结果
+- `docs/p0-spec-scope-mvp.md`：**Must 链 13 项的"当前状态"列**由"框架就绪，实测未执行"回填为按 V1–V5 实测结果
   逐项标注（含 3 项缺口：`p95`/`anomaly` 未实现、业务表与审计日志待 P1）。
-- `reports/v5-report.md`：缺陷清单范围更新为 ISS-001 – ISS-018。
-- `reports/P0-summary.md`、`reports/project-overview.md`：版本锁定待办口径与已完成整改项同步。
+- `reports/p0-report-v5-checkpoint.md`：缺陷清单范围更新为 ISS-001 – ISS-018。
+- `reports/p0-gate-review.md`、`reports/p0-summary-project-2026-09-28.md`：版本锁定待办口径与已完成整改项同步。
 
 ### 补遗（同日第三轮：采集链路 D-1）
 
@@ -762,13 +792,13 @@
 
 **数据 / 事实裁定**
 
-- **主机名裁定（方向与初判相反）**：实测 `hostname` / `%COMPUTERNAME%` / `Win32_ComputerSystem.Name` / DNS **四路一致为 `<WORKSTATION>`**，`<HOST_ALIAS>` 不可解析 → 是 **`env/env-baseline-v2.md` 写错**，`env/hardware.json` 正确。已更正 9 份文档：`env/env-baseline-v2.md`、`env/env-baseline-v1.md`、`docs/version-lock.md`、`docs/daily-checklist.md`、`reports/daily/D1-status.md`、`reports/project-overview.md`、`reports/project-summary-2026-09-29.md`、`reports/P0-summary.md`（原"待核实"项已裁定）。
+- **主机名裁定（方向与初判相反）**：实测 `hostname` / `%COMPUTERNAME%` / `Win32_ComputerSystem.Name` / DNS **四路一致为 `<WORKSTATION>`**，`<HOST_ALIAS>` 不可解析 → 是 **`env/env-baseline-v2.md` 写错**，`env/hardware.json` 正确。已更正 9 份文档：`env/env-baseline-v2.md`、`env/env-baseline-v1.md`、`docs/prj-ledger-version-lock.md`、`docs/p0-checklist-daily.md`、`reports/daily/D1-status.md`、`reports/p0-summary-project-2026-09-28.md`、`reports/p0-summary-project-2026-09-29.md`、`reports/p0-gate-review.md`（原"待核实"项已裁定）。
 - **重采验证（未覆盖原文件）**：修复后 `collect_env.ps1` 实测跑通并产出 14 KB JSON，关键值与基线交叉验证一致——GPU `RTX 4060 Laptop / 8188 MiB / 驱动 616.56 / CC 8.9`、Docker `19.53 GB / NCPU 10`、工具链 `python 3.12.8 / node v24.19.0 / git 2.45.1 / docker 29.6.2 / wsl 2.7.11.0 / nvidia-smi 616.56` 全部有值。**因重采时 `docker-desktop` 发行版为 `Stopped`（WSL live 配额与 GPU 直通会落 `SKIPPED`），未覆盖 `env/hardware.json`**，待发行版 Running 后再重采。
 
 **文档**
 
-- `docs/known-issues.md`：新增 **ISS-019（发行版 Stopped 导致采集挂起）/ ISS-020（含 NUL 字符串导致 ConvertTo-Json 挂起或 OOM）/ ISS-021（`.ps1` 非 ASCII 注释损坏解析）**；ISS-018 更新为"缺陷已修、快照待刷新"并附交叉验证值；收录范围更新为 ISS-001 – ISS-021。
-- `reports/project-summary-2026-09-29.md` 附录 A：新增 C-17（主机名更正）/ C-18（ASCII 约束）/ C-19（WSL 挂起）/ C-20（序列化挂起），并把 D-1 更新为实际进展与阻塞原因。
+- `docs/prj-ledger-known-issues.md`：新增 **ISS-019（发行版 Stopped 导致采集挂起）/ ISS-020（含 NUL 字符串导致 ConvertTo-Json 挂起或 OOM）/ ISS-021（`.ps1` 非 ASCII 注释损坏解析）**；ISS-018 更新为"缺陷已修、快照待刷新"并附交叉验证值；收录范围更新为 ISS-001 – ISS-021。
+- `reports/p0-summary-project-2026-09-29.md` 附录 A：新增 C-17（主机名更正）/ C-18（ASCII 约束）/ C-19（WSL 挂起）/ C-20（序列化挂起），并把 D-1 更新为实际进展与阻塞原因。
 
 - `scripts/check_ports.ps1`（WSL2 段）：**修复 WSL2 侧端口探活在 `docker-desktop` 中完全不可用**。busybox `sh` 不支持 `/dev/tcp`（恒报 `free`，假阴性），`bash` 又未安装（`bash: not found`，恒报 `unknown`），因此 T1.3 的"WSL2 侧端口可用性"结论此前**没有有效依据**。改为：先判发行版状态 → 在发行版内执行**一次** `netstat -ltn` → 在 PowerShell 侧解析监听端口集合后逐个比对（12 次 `wsl` 调用降为 1 次）。实测 `distro state: Running`、12 端口逐个判定，且与发行版内实际监听的 5 个端口自洽；登记 **ISS-022**。
 
@@ -803,10 +833,10 @@
 **文档**
 
 - `env/env-baseline-v2.md`：新增"重采核验（2026-09-29）"说明块（含重采时间、逐项一致结论、Ollama 未运行说明、旧快照留档位置）。
-- `docs/version-lock.md`：硬件来源更新为"已于 2026-09-29 重采"。
-- `docs/known-issues.md`：**ISS-018 标记为已修复闭环**（附重采前后差异）。
-- **采集时间口径更正**：`env/hardware.json` 的初采时间为 `2026-09-23T20:59:50`（原多处误记为 20:51；20:51 是 `env/ports.md` 的 T1.3 端口检查时间，属另一项测量且本身正确）。已更正 `reports/daily/D1-status.md`（2 处）、`docs/handover-p1.md`、`docs/daily-checklist.md`、`reports/v1-report.md`、`reports/v4b-report.md`。
-- `reports/project-summary-2026-09-29.md` 附录 A：新增 C-22（BOM 写盘 / ollama 探针）、C-23（采集时间口径），D-1 标记完成。
+- `docs/prj-ledger-version-lock.md`：硬件来源更新为"已于 2026-09-29 重采"。
+- `docs/prj-ledger-known-issues.md`：**ISS-018 标记为已修复闭环**（附重采前后差异）。
+- **采集时间口径更正**：`env/hardware.json` 的初采时间为 `2026-09-23T20:59:50`（原多处误记为 20:51；20:51 是 `env/ports.md` 的 T1.3 端口检查时间，属另一项测量且本身正确）。已更正 `reports/daily/D1-status.md`（2 处）、`docs/p0-handover-p1.md`、`docs/p0-checklist-daily.md`、`reports/p0-report-v1-tool-call.md`、`reports/p0-report-v4b-resources.md`。
+- `reports/p0-summary-project-2026-09-29.md` 附录 A：新增 C-22（BOM 写盘 / ollama 探针）、C-23（采集时间口径），D-1 标记完成。
 
 ### 补遗（同日第五轮：D-5 汇总表治理 + D-6 矛盾裁决落地）
 
@@ -816,25 +846,25 @@
 
 **数据**
 
-- `experiments/v2/summary.csv` **由 2 行还原为 7 行**（用 `raw/EXP-V2-*.jsonl` 首行重建），`recall / mrr / p95` 与 `reports/v2-report.md` §4.4 **逐项一致**；并修正了残留 `EXP-V2-milvus-hybrid` 行的**延迟口径**（原 mean 158.7872 / p95 110.0240 来自另一次 run，实为 p95 **9.4800**）。无原始文件可还原的 `EXP-V2-pgvector-hybrid-paradedb` 行原样保留（出处为 `experiments/v2/raw/EXP-V2-BM25.md`）。原表留档 `experiments/v2/summary-pre-2026-09-29.csv`。
+- `experiments/v2/summary.csv` **由 2 行还原为 7 行**（用 `raw/EXP-V2-*.jsonl` 首行重建），`recall / mrr / p95` 与 `reports/p0-report-v2-hybrid-retrieval.md` §4.4 **逐项一致**；并修正了残留 `EXP-V2-milvus-hybrid` 行的**延迟口径**（原 mean 158.7872 / p95 110.0240 来自另一次 run，实为 p95 **9.4800**）。无原始文件可还原的 `EXP-V2-pgvector-hybrid-paradedb` 行原样保留（出处为 `experiments/v2/raw/EXP-V2-BM25.md`）。原表留档 `experiments/v2/summary-pre-2026-09-29.csv`。
 
 **文档（D-6 上游矛盾裁决落地）**
 
-- V1 中间区间处置步骤数（2 vs 4）：在 `reports/v1-report.md` §7.2 就地标注——本表为"两步加固 + 两步兜底"的精简表述、缺"Schema 简化"一级，权威清单为 `docs/role-decision.md` §四 的**四步**；`reports/P0-summary.md` 的"待裁决"改为**已裁定闭环**。
-- M0.1 通过条件项数（3 vs 6）：在 `plan/Phase 0 详细开发计划（D1-D10 可执行版）.md` §五 的 M0.1 行标注——该行为精简表述，权威为 `reports/daily/D1-status.md` §六 的 **6 项**。
-- `docs/known-issues.md`：新增 **ISS-023**；收录范围更新为 ISS-001 – ISS-023。
-- `reports/project-summary-2026-09-29.md` 附录 A：新增 C-24（汇总表覆盖写与还原）、C-25（两处上游矛盾的裁决落地），D-5 标记完成。
+- V1 中间区间处置步骤数（2 vs 4）：在 `reports/p0-report-v1-tool-call.md` §7.2 就地标注——本表为"两步加固 + 两步兜底"的精简表述、缺"Schema 简化"一级，权威清单为 `docs/p0-decision-model-role.md` §四 的**四步**；`reports/p0-gate-review.md` 的"待裁决"改为**已裁定闭环**。
+- M0.1 通过条件项数（3 vs 6）：在 `plan/p0-plan-detailed-d1-d10.md` §五 的 M0.1 行标注——该行为精简表述，权威为 `reports/daily/D1-status.md` §六 的 **6 项**。
+- `docs/prj-ledger-known-issues.md`：新增 **ISS-023**；收录范围更新为 ISS-001 – ISS-023。
+- `reports/p0-summary-project-2026-09-29.md` 附录 A：新增 C-24（汇总表覆盖写与还原）、C-25（两处上游矛盾的裁决落地），D-5 标记完成。
 
 ---
 
 ## 2026-09-28
 
 - **V2 真 BM25 对标闭环**（EXP-V2-BM25）：ParadeDB ngram BM25 sparse `Recall@5` 0.90 vs Milvus 0.92，hybrid 打平 0.91；
-  tsvector 路线淘汰（中文 `Recall@5 = 0`）。见 `docs/version-lock.md` §二.2.8。
+  tsvector 路线淘汰（中文 `Recall@5 = 0`）。见 `docs/prj-ledger-version-lock.md` §二.2.8。
 - **V2 压力档闭环**（EXP-V2-LOAD）：10 万块 Milvus 查询 P95 5.6 ms / 1.28 GB；pgvector 170.6 ms / 0.33 GB。
   新增 `scripts/v2_synth_corpus.py`、`scripts/v2_load_test.py`。
 - **V1 参数归一化纠错否决**（EXP-V1-NORM）：217 条逐条 diff 变化 0 条、**uplift = 0**，该路径关闭。
-- **V1 判据分档重校**（`docs/gate-criteria.md` §3.1.1）：多工具为结构性硬限，单独设低线；新增
+- **V1 判据分档重校**（`docs/p0-spec-gate-criteria.md` §3.1.1）：多工具为结构性硬限，单独设低线；新增
   `judge_tools.judge_verdict_tiered`。
 - **提示词 v2 落地**（`prompts/tool_call_prompt_v2.md`，EXP-V1-004）：few-shot 3 → 8 条 + 拒止专项 + `--constrain`。
 - 巡检整改：`docker/compose.v2.yml` ParadeDB 端口 5927 → 5433。
@@ -842,7 +872,7 @@
 ## 2026-09-24
 
 - **V5 checkpoint 全流程完成，M0.4 达成**：T5.1–T5.7 全 Pass。因 **B7**（redis-py ↔ redis-stack 握手被服务端关闭，
-  非缺 RediSearch）弃候选 A，采纳 **PostgreSQL checkpointer**。见 `docs/checkpoint-decision.md` §2.1、`reports/v5-report.md`。
+  非缺 RediSearch）弃候选 A，采纳 **PostgreSQL checkpointer**。见 `docs/p0-decision-checkpoint.md` §2.1、`reports/p0-report-v5-checkpoint.md`。
 - **T1.1 `.wslconfig` 落地并核验**（20 GB / 10 vCPU / swap 8 GB），**ISS-007 闭环**；
   `env/env-baseline-v2.md` v2 发布。
 - **ISS-008 裁决**：GPU 直通不可用 → 改走宿主 Ollama（`127.0.0.1:11434`）。
@@ -859,5 +889,5 @@
 
 ## 版本约定
 
-- **Phase 0 期间不发布语义化版本号**：以日期 + 验证项为变更粒度，权威记录为 `docs/version-lock.md` 的修订记录表。
+- **Phase 0 期间不发布语义化版本号**：以日期 + 验证项为变更粒度，权威记录为 `docs/prj-ledger-version-lock.md` 的修订记录表。
 - 组件 / 模型版本一律以 **digest** 表述，禁止裸 tag 与 `latest`（纪律 1）；变更即升版环境基线（纪律 2）。

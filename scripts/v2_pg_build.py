@@ -114,7 +114,7 @@ def main() -> int:
 
     print(f"完成：表 kb_chunks 共 {cnt} 行；实测维度 = {dim if dim else 'NULL(压力档 sparse)'}"
           + ("" if (dim is None or dim == EMBED_DIM_EXPECTED) else
-             f" ⚠️ ≠ 期望 {EMBED_DIM_EXPECTED}（须回填 v2-report §五）"))
+             f" ⚠️ ≠ 期望 {EMBED_DIM_EXPECTED}（须回填 p0-report-v2-hybrid-retrieval §五）"))
     print(f"kb_bm25 索引存在：{'✅' if has_bm25 else '❌ 缺失'}")
     return 0
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """自建 Sparkplug B 模拟器（验证工具，不进 compose）。
 
-连 Mosquitto 1883，发布 Sparkplug B 报文灌数，覆盖五类边界（docs/sparkplug-b-decoder.md §8）：
+连 Mosquitto 1883，发布 Sparkplug B 报文灌数，覆盖五类边界（docs/p0-design-sparkplug-decoder.md §8）：
   birth      正常 DBIRTH + DDATA（建表 + 写入）
   new_metric DDATA 里新增未知 metric `VIB_BAND_1`（-> st_unmapped_metrics + schema_drift）
   rebirth    重发 DBIRTH，bdSeq 递增（正常 re-birth）
@@ -14,7 +14,7 @@
 用法：
     自检（不发布）：       python scripts/spb_simulator.py --selftest
     灌数：                python scripts/spb_simulator.py --scenario birth,new_metric,rebirth,offline
-参考：docs/sparkplug-b-decoder.md §八；configs/decoder_schema_mapping.json。
+参考：docs/p0-design-sparkplug-decoder.md §八；configs/decoder_schema_mapping.json。
 """
 
 from __future__ import annotations

@@ -1,12 +1,12 @@
 # 云侧工业 IoT 诊断 Agent 系统 —— Python 依赖锁（Phase 0）
 #
-# 版本唯一来源：`docs/version-lock.md`
+# 版本唯一来源：`docs/prj-ledger-version-lock.md`
 #   - §二.2.7 自研 Sparkplug B 解码器（protobuf / grpcio / grpcio-tools / paho-mqtt / taospy）
 #   - §二.2.8 V2 检索方案新增锁定项（pymilvus / psycopg / jieba）
 #   - §二.2.9 V5 LangGraph checkpoint 依赖（2026-09-24）
 #
 # 安装：uv pip install -r requirements.txt   （或 pip install -r requirements.txt）
-# 纪律：本文件与本机实装不一致即视为环境漂移；改动须同步 `docs/version-lock.md`
+# 纪律：本文件与本机实装不一致即视为环境漂移；改动须同步 `docs/prj-ledger-version-lock.md`
 #       并升版 `env/env-baseline-v2.md`（纪律 2：变更即升版）。
 #
 # 说明：`scripts/` 下 V1 判分链路（llm_adapter / judge_tools / run_v1 /
@@ -34,7 +34,7 @@ langgraph-checkpoint-postgres==3.1.2
 langgraph-sdk==0.4.5
 langchain-core==1.6.4
 # 候选 A（Redis checkpointer）：已锁版本但未采用，B7 阻塞后切 PG
-# 保留仅为复现 B7 与审计可追溯，见 docs/checkpoint-decision.md §2.1
+# 保留仅为复现 B7 与审计可追溯，见 docs/p0-decision-checkpoint.md §2.1
 langgraph-checkpoint-redis==0.5.2
 redis==6.3.0
 redisvl==0.27.2

@@ -14,5 +14,5 @@ __pycache__/
 #   python scripts/v2_synth_corpus.py --n 100000 --seed 42
 # 说明（2026-10-06）：仅移出版本控制，**文件仍保留在磁盘**；
 # 基线提交 672143e 已含这 3 个 blob，故 .git 体积不会因此下降（需历史重写才能回收）。
-# 详见 reports/vcs-baseline-2026-10-06.md
+# 详见 reports/p0-report-vcs-baseline-2026-10-06.md
 experiments/v2/raw/corpora_v2/

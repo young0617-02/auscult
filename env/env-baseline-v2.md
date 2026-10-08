@@ -3,12 +3,12 @@
 > **文件编号**：`env-baseline-v2.md`
 > **对应任务**：T1.1（`.wslconfig` 落地）＋ T1.4（组件版本登记）
 > **版本**：**v2**（取代 v1；v1 的 WSL2 配额段已作废）
-> **采集时间**：2026-09-24（+08:00）
+> **采集时间**：2026-09-24（+08:00）｜ **状态复核**：2026-10-08（**环境唯一事实源**；V3 / V4b 实测后镜像清单与 digest 已全部锁定，见 `docs/prj-ledger-version-lock.md` §二.2.1）
 > **采集方式**：自动化采集（`scripts/collect_env.ps1` + `docker`/`wsl`/`nvidia-smi`/`ollama` 实测）
 > **升版原因**：T1.1 `.wslconfig` 已安装并核验生效，WSL2 配额由 15.51GB → ≈20GB / 10 vCPU。触发升版条件 4（见 §引用纪律）。
 > **状态**：M0.1 产出（T1.1 已闭环，live 值已核验）
 > **重采核验（2026-09-29）**：`env/hardware.json` 已用修复后的采集脚本重采（`collected_at = 2026-09-29T11:49:36+08:00`，**零警告**），与本基线**逐项一致**——GPU `RTX 4060 Laptop / 8188 MiB / 驱动 616.56 / CC 8.9`、Docker `29.6.2 / Compose 5.3.1 / 19.53 GB / NCPU 10`、WSL2 `live = 10 | Mem 20001`、三模型 layer digest 齐全。
-> 重采当时 **Ollama 服务未运行**，故 `toolchain.ollama` 记为 `UNKNOWN`（版本仍以 §四 与 `docs/version-lock.md` 锁定的 **0.34.2** 为准，不因本次未取到而漂移）。
+> 重采当时 **Ollama 服务未运行**，故 `toolchain.ollama` 记为 `UNKNOWN`（版本仍以 §四 与 `docs/prj-ledger-version-lock.md` 锁定的 **0.34.2** 为准，不因本次未取到而漂移）。
 > 重采前的旧快照（`gpu=null` / `wslconfig_present=false` / Docker `15.51 GB` / `ncpu=20`，属 T1.1 落地前的 v1 口径）已另存为 `env/hardware-v1-2026-09-23.json`，仅供追溯。
 
 ---
@@ -62,7 +62,7 @@
 | WSL2 **当前实际**配额 | **20 GB**（`docker info` MemTotal = 20972691456 bytes；`free -m` Mem ≈ 20001 MiB） |
 | P0 门禁线（V4 判据） | 峰值 ≤ 24 GB（32 × 75%） |
 
-> **v2 变更**：WSL2 实际配额已从 v1 的 15.51GB 提升至 **≈20GB**，与设计值一致，`.wslconfig` 已生效。20GB 仍 < 24GB 门禁线，V4 判据需在容器内口径下评估（见 `docs/gate-criteria.md`）。
+> **v2 变更**：WSL2 实际配额已从 v1 的 15.51GB 提升至 **≈20GB**，与设计值一致，`.wslconfig` 已生效。20GB 仍 < 24GB 门禁线，V4 判据需在容器内口径下评估（见 `docs/p0-spec-gate-criteria.md`）。
 
 ## 四、GPU
 
@@ -106,7 +106,7 @@
 | WSL2 实测内存总量 | **20001 MiB ≈ 20 GB**（`free -m`） |
 | WSL2 实测可用内存 | ≈ 17.5 GB（`free -m` available） |
 | Swap | **8192 MiB ≈ 8 GB**（`free -m` Swap） |
-| GPU 直通状态 | ⚠️ **未验证**（无通用 Linux 发行版） |
+| GPU 直通状态 | ✅ **已裁决为「不需要」**（2026-09-24 U-03 / `ISS-008`）：推理改走**宿主原生 Ollama**，容器内 GPU 直通不再是判据前置分支，UNVERIFIED 不阻塞 |
 
 ### 6.1 T1.1 `.wslconfig` 已闭环（v2 变更核心）
 
@@ -120,7 +120,7 @@ v1 记录的"`.wslconfig` 从未创建"已解除。2026-09-24 已执行：
 | `docker info` NCPU | 10 | **10** | ✅ |
 | `free -m` Swap | 8GB | **8192 MiB** | ✅ |
 
-**T1.1 阻塞已解除。** V4b 的 24GB 门禁判据现可在容器内口径下评估（20GB 容器配额 < 24GB 宿主门禁线，须明确口径，见 `docs/gate-criteria.md`）。
+**T1.1 阻塞已解除。** V4b 的 24GB 门禁判据现可在容器内口径下评估（20GB 容器配额 < 24GB 宿主门禁线，须明确口径，见 `docs/p0-spec-gate-criteria.md`）。
 
 > 回滚路径见 `env/wslconfig.bak` §三（删除文件 + `wsl --shutdown`）。
 
@@ -163,7 +163,7 @@ wsl -d Ubuntu-24.04 -- nvidia-smi
 | mysql | 8.4 | `sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb` | 1.12 GB | ⚠️ 非本项目 |
 | mongodb/mongodb-atlas-local | 8.0 | `sha256:33de960ef58be32fddba97edaea2dc6976dc10caf11b4e38b32c3c67ade96c91` | 2.02 GB | ⚠️ 非本项目 |
 
-> ⚠️ **注意**：本机镜像中**没有** Neo4j、TDengine、Mosquitto。这些需在 D4/D6 拉取，**拉取后必须立即回填本表并锁 digest**。**BGE-M3 不在此列**：向量模型经 ModelScope 本地加载（§八.1.1），非 Docker 镜像。**2026-09-29 已删除 Ollama `bge-m3`（1.2GB），Ollama 仅保留 2 个生成模型。**
+> ✅ **已闭环（2026-09-24 实测回填）**：Neo4j `5-community`（≈1.0 GB，V4b 压测拉取，实测内存 ≈871 MiB）、TDengine `tdengine/tsdb:3.3.8.0`（1.68 GB）、`eclipse-mosquitto:2`（41.8 MB）**三个镜像均已拉取并逐条锁 digest** —— 见 `docs/prj-ledger-version-lock.md` §二.2.1 第 6/7/8 行。**BGE-M3 不在此列**：向量模型经 ModelScope 本地加载（§八.1.1），非 Docker 镜像。**2026-09-29 已删除 Ollama `bge-m3`（1.2GB），Ollama 仅保留 2 个生成模型。**
 > ⚠️ `milvusdb/milvus:v3.0.0` 与计划 §二 Q3 的裁决一致（v3.0.0 + 服务端 `FunctionType.BM25`），✅ 无偏差。
 
 ## 八、模型（未变）
@@ -185,11 +185,11 @@ wsl -d Ubuntu-24.04 -- nvidia-smi
 | **deepseek-r1:7b** | `sha256:96c415656d377afbff962f6cdb2394ab092ccbcbaab4b82525bc4ca800fe8a49` | `sha256:40fb844194b25e429204e5163fb379ab462978a262b86aadd73d8944445c09fd` | 4.68 GB |
 
 > **V1 报告必须原样引用上表 digest**，否则结论无法复现。
-> **建议**：V1 开跑前先 `ollama pull` 升级到 0.34.3 并重新登记 digest，避免验证中途版本漂移（已在 risk-register 登记）。
+> **裁决（覆盖本行原建议，2026-09-24 U-04 / `ISS-009`）**：**锁定维持 Ollama 0.34.2，不升级 0.34.3 / 0.34.4**，理由 = 已安装运行 + V1 全流程固定同版本以**防行为漂移**；digest 见 `docs/prj-ledger-version-lock.md` §二.2.1 与 §九。**本行原「建议升级到 0.34.3 并重登 digest」作废**（若日后升级，须按纪律 2 变更即升版并重新登记 digest，且 V1 结论须按 §3.1.3 同口径复测）。
 
 ### 8.1.1 ModelScope 本地向量模型（BGE-M3，2026-09-29 迁移）
 
-> **2026-09-29：BGE-M3 从 Ollama 迁移到 ModelScope 本地加载**（与 `docs/version-lock.md` §2.2.1 一致）。原经 Ollama `/v1/embeddings`（blob `sha256:daec91ff…3062c`）加载，现由 sentence-transformers 直接加载本地目录，**已删除 Ollama `bge-m3` 模型（1.2GB）**，Ollama 不再承担向量化。
+> **2026-09-29：BGE-M3 从 Ollama 迁移到 ModelScope 本地加载**（与 `docs/prj-ledger-version-lock.md` §2.2.1 一致）。原经 Ollama `/v1/embeddings`（blob `sha256:daec91ff…3062c`）加载，现由 sentence-transformers 直接加载本地目录，**已删除 Ollama `bge-m3` 模型（1.2GB）**，Ollama 不再承担向量化。
 
 | 模型 | 路径 | 维度 | 大小 | 用途 |
 |---|---|---|---|---|

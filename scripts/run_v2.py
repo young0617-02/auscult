@@ -1,8 +1,8 @@
 """V2 混合检索验证器（T3.1–T3.3）
 
-对应交付物：`Phase 0 详细开发计划（D1-D10 可执行版）.md` §三 D4–D5 · T3.1 / T3.2 / T3.3
-判据依据：`reports/v2-report.md` §四 / §八 ｜ 评测集：`evals/golden_set_v1.jsonl`（50 条）
-实验登记：`docs/experiment-log-template.md`
+对应交付物：`p0-plan-detailed-d1-d10.md` §三 D4–D5 · T3.1 / T3.2 / T3.3
+判据依据：`reports/p0-report-v2-hybrid-retrieval.md` §四 / §八 ｜ 评测集：`evals/golden_set_v1.jsonl`（50 条）
+实验登记：`docs/prj-template-experiment-log.md`
 
 本脚本一次覆盖三件事：
   1. **`--check-analyzer`**：jieba 中文分词有效性抽检（≥20 条工业术语，R-V2-1 强制动作）；
@@ -44,7 +44,7 @@ RAW_DIR = PROJECT_ROOT / "experiments" / "v2" / "raw"
 
 DENSE_TOP_K = 5
 RRF_K = 60                       # 报告 §五 候选值；实测选定值须回填基线表
-EMBED_DIM_EXPECTED = 1024        # BGE-M3 维度（已实测确认，见 reports/v2-report.md §四）
+EMBED_DIM_EXPECTED = 1024        # BGE-M3 维度（已实测确认，见 reports/p0-report-v2-hybrid-retrieval.md §四）
 ROUTES = ("milvus", "pgvector")
 MODES = ("dense", "sparse", "hybrid")
 PG_SPARSE_IMPLS = ("tsvector", "paradedb")
@@ -277,7 +277,7 @@ class EmbeddingClient:
         vectors = [self.cache[t] for t in texts]
         if vectors and len(vectors[0]) != EMBED_DIM_EXPECTED:
             print(f"⚠️  向量维度 {len(vectors[0])} ≠ 期望 {EMBED_DIM_EXPECTED}"
-                  f"（须回填 v2-report §五 参数基线表）")
+                  f"（须回填 p0-report-v2-hybrid-retrieval §五 参数基线表）")
         return vectors
 
 
@@ -412,7 +412,7 @@ class PgvectorRetriever:
         if mode in ("sparse", "hybrid"):
             if pg_sparse is None:
                 raise ValueError(
-                    "pgvector 侧稀疏检索必须显式声明实现路线（v2-report §4.3 强制）：\n"
+                    "pgvector 侧稀疏检索必须显式声明实现路线（p0-report-v2-hybrid-retrieval §4.3 强制）：\n"
                     "  --pg-sparse tsvector   # 路线 B：PostgreSQL 原生全文检索，**非 BM25**\n"
                     "  --pg-sparse paradedb   # 路线 A：ParadeDB pg_search 真 BM25\n"
                     "未声明即对比不公平（R-V2-3），拒绝执行。")
@@ -428,7 +428,7 @@ class PgvectorRetriever:
     def declaration(self) -> str:
         if self.pg_sparse == "paradedb":
             return ("pgvector 侧对照采用【路线 A：ParadeDB pg_search 真 BM25】，"
-                    "版本 + digest 见 v2-report §二.2.3")
+                    "版本 + digest 见 p0-report-v2-hybrid-retrieval §二.2.3")
         if self.pg_sparse == "tsvector":
             return ("pgvector 侧对照【仅代表 tsvector 路线】，非原生 BM25；因此本对比**不能**"
                     "等同为『BM25 实现之间的对比』，结论适用范围限于"
@@ -561,7 +561,7 @@ def write_raw(result: dict[str, Any], out_dir: Path) -> Path:
 def write_summary(results: list[dict[str, Any]], path: Path) -> None:
     """写 V2 汇总对比表（**按 `experiment_id` 合并**，不抹掉其它已实测路线）。
 
-    历史缺陷（`docs/known-issues.md` ISS-023）：早期实现每次 run 都以 "w" 模式整体重写，
+    历史缺陷（`docs/prj-ledger-known-issues.md` ISS-023）：早期实现每次 run 都以 "w" 模式整体重写，
     只跑单条路线时会把其它路线的已实测结果一并清掉——`experiments/v2/summary.csv`
     一度只剩 2 行（milvus-hybrid / pgvector-hybrid-paradedb），需要回 raw/*.jsonl 才能还原。
     现在先读回既有表，用本次结果覆盖同 `experiment_id` 的行、其余保留，列集合取并集后重写。
@@ -625,7 +625,7 @@ def print_results(results: list[dict[str, Any]]) -> None:
         print(f"{r['experiment_id']:<28}{_fmt(m['recall_at_5']):>10}{_fmt(m['mrr']):>10}"
               f"{_fmt(m['precision_at_5']):>10}{_fmt(m['p95_latency_ms']):>10}")
     print("=" * 78)
-    print("判据对照（v2-report §八）：Milvus 侧 Recall@5 不低于 pgvector 侧 → Pass")
+    print("判据对照（p0-report-v2-hybrid-retrieval §八）：Milvus 侧 Recall@5 不低于 pgvector 侧 → Pass")
 
 
 # ---------------------------------------------------------------- 自检
@@ -726,7 +726,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--top-k", type=int, default=DENSE_TOP_K)
     parser.add_argument("--rrf-k", type=int, default=RRF_K, help="RRF k 值（候选 60）")
     parser.add_argument("--pg-sparse", choices=PG_SPARSE_IMPLS, default=None,
-                        help="pgvector 侧稀疏实现路线（必填声明，见 v2-report §4.3）")
+                        help="pgvector 侧稀疏实现路线（必填声明，见 p0-report-v2-hybrid-retrieval §4.3）")
     parser.add_argument("--milvus-uri", default="http://127.0.0.1:19531")
     parser.add_argument("--dsn", default="postgresql://root:123456@127.0.0.1:5433/auscult_v2",
                         help="PostgreSQL DSN（默认 auscult_v2 库，与 v2_pg_build.py 建库一致）")
@@ -762,7 +762,7 @@ def main(argv: list[str] | None = None) -> int:
     if "pgvector" in routes and any(m in ("sparse", "hybrid") for m in modes) \
             and args.pg_sparse is None:
         parser.error("pgvector 侧稀疏检索必须显式声明 --pg-sparse tsvector|paradedb"
-                     "（v2-report §4.3 强制，R-V2-3）")
+                     "（p0-report-v2-hybrid-retrieval §4.3 强制，R-V2-3）")
 
     queries = load_golden(args.eval_path)
     docs = load_corpus(args.corpus)

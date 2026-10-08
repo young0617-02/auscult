@@ -1,6 +1,6 @@
 """V2 压力档批量语料合成器（仅供延迟/内存实测，不追求语义准确性）。
 
-仅用于 V2 压力档（`reports/v2-report.md` §六），目标是从同一套工业模板/术语
+仅用于 V2 压力档（`reports/p0-report-v2-hybrid-retrieval.md` §六），目标是从同一套工业模板/术语
 合成大规模**中文文本块**，固定 seed 可复现，保证语料多样性与规模（1万/3万/10万）。
 
 字段结构与 `run_v2.load_corpus` 兼容：`{chunk_id, text, category, doc_title}`。

@@ -1,4 +1,4 @@
-"""V2 压力档压测脚本（只测延迟与内存，不做质量，纪律见 v2-report §六）。
+"""V2 压力档压测脚本（只测延迟与内存，不做质量，纪律见 p0-report-v2-hybrid-retrieval §六）。
 
 对给定规模 × 两 BM25 实现（Milvus 服务端 BM25 / ParadeDB 真 BM25）依次：
   1. **建库**：ParadeDB 侧子进程调 `v2_pg_build.py`（sparse，embedding=NULL）；Milvus 侧

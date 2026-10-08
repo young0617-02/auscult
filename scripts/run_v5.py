@@ -1,8 +1,8 @@
 """V5 Checkpoint 可靠性验证器（T5.1–T5.7）
 
-对应交付物：`Phase 0 详细开发计划（D1-D10 可执行版）.md` §三 D6–D7 · T5.1–T5.7
-判据依据：`docs/gate-criteria.md` V5 行 ｜ 决策依据：`docs/checkpoint-decision.md` §五
-实验编号：`EXP-V5-001` ~ `EXP-V5-007`（与 `docs/checkpoint-decision.md` §6.1 一一对应）
+对应交付物：`p0-plan-detailed-d1-d10.md` §三 D6–D7 · T5.1–T5.7
+判据依据：`docs/p0-spec-gate-criteria.md` V5 行 ｜ 决策依据：`docs/p0-decision-checkpoint.md` §五
+实验编号：`EXP-V5-001` ~ `EXP-V5-007`（与 `docs/p0-decision-checkpoint.md` §6.1 一一对应）
 
 覆盖的 7 个步骤：
   T5.1 最小工作流（3–4 节点 + 1 个 `interrupt()` 审核节点，**关键词命中触发**）
@@ -39,9 +39,9 @@ RAW_DIR = PROJECT_ROOT / "experiments" / "v5" / "raw"
 
 REDIS_URL = "redis://127.0.0.1:6379/0"
 # 候选 B（PostgreSQL checkpointer）连接串 —— 项目库 auscult_v2（一项目一库纪律）
-# 端口 5433 = docker/compose.v2.yml 的 paradedb 宿主映射（见 docs/version-lock.md §二.2.8）
+# 端口 5433 = docker/compose.v2.yml 的 paradedb 宿主映射（见 docs/prj-ledger-version-lock.md §二.2.8）
 POSTGRES_URL = "postgresql://root:123456@127.0.0.1:5433/auscult_v2"
-REVIEW_LOCK_TTL = 30                 # 秒，见 checkpoint-decision §3.3
+REVIEW_LOCK_TTL = 30                 # 秒，见 p0-decision-checkpoint §3.3
 CKPT_KEY_PATTERN = "ckpt:*"
 CKPT_BYTES_LIMIT = 1 * 1024 * 1024   # 单 thread 体积告警线（1MB，须实测后回填 §6.2）
 MEMORY_WARN_RATIO = 0.80             # 内存告警阈值（80% / 95%）
@@ -61,9 +61,9 @@ STEPS: dict[str, dict[str, str]] = {
     "t5.7": {"experiment_id": "EXP-V5-007", "title": "TTL/驱逐：noeviction + 无 TTL 验证"},
 }
 
-# 阻塞缺陷（B1–B7，见 checkpoint-decision §5.1）→ 检查项编号
+# 阻塞缺陷（B1–B7，见 p0-decision-checkpoint §5.1）→ 检查项编号
 # ⚠️ B7（第三方实现兼容性缺陷）**没有任何步骤会赋值**：它是"候选 A 环境不可用"的
-#    人工判定结论（Redis 路线握手被服务端关闭，见 docs/checkpoint-decision.md §2.1），
+#    人工判定结论（Redis 路线握手被服务端关闭，见 docs/p0-decision-checkpoint.md §2.1），
 #    本执行器不自动触发。因此 `blocking_defects()` 的返回值中**不会**出现 B7。
 BLOCKING_CHECKS: dict[str, str] = {
     "B1": "重启后状态不完整",
@@ -87,7 +87,7 @@ def idempotency_key(thread_id: str, report_type: str, content: str,
                     schema_version: str = SCHEMA_VERSION) -> str:
     """幂等键 = sha256(thread_id + report_type + content_digest + schema_version)。
 
-    逐字采用 `docs/checkpoint-decision.md` §4.3 的构成。
+    逐字采用 `docs/p0-decision-checkpoint.md` §4.3 的构成。
     """
     content_digest = hashlib.sha256(content.encode("utf-8")).hexdigest()
     raw = f"{thread_id}{report_type}{content_digest}{schema_version}"
@@ -307,7 +307,7 @@ def build_checkpointer(kind: str, redis_url: str):
                 "缺少 langgraph-checkpoint-redis（第三方实现，候选 A），请安装："
                 "uv pip install langgraph-checkpoint-redis") from exc
         # ⚠️ B7：当前 vanilla redis:8 缺 RediSearch 模块，RedisSaver 连接即被服务端断开。
-        #     该路径在 V5 实测中被判为 No-Go（见 reports/v5-report.md §六 B7）。
+        #     该路径在 V5 实测中被判为 No-Go（见 reports/p0-report-v5-checkpoint.md §六 B7）。
         with RedisSaver.from_conn_string(redis_url) as saver:
             yield saver
         return
@@ -330,7 +330,7 @@ def build_graph(checkpointer: Any, side_effects: Path) -> Any:
     """最小工作流：告警解析 → 只读工具 → 诊断推理 → interrupt() 审核。
 
     ★ 只读工具留在图内（天然幂等）；`generate_report` 写操作**移出图内**
-      （见 `docs/checkpoint-decision.md` §四）。工具执行次数落盘到 `side_effects`，
+      （见 `docs/p0-decision-checkpoint.md` §四）。工具执行次数落盘到 `side_effects`，
       供 T5.4 检测恢复后的重复执行。
     """
     api = _require_langgraph()
@@ -751,7 +751,7 @@ def main(argv: list[str] | None = None) -> int:
                         help="原始数据落盘（默认 experiments/v5/raw/<EXP 编号>.jsonl）")
     parser.add_argument("--checkpointer", choices=("redis", "memory", "postgres"),
                         default="postgres",
-                        help="已采纳路线=postgres（候选 B，docs/checkpoint-decision.md §2.1）｜"
+                        help="已采纳路线=postgres（候选 B，docs/p0-decision-checkpoint.md §2.1）｜"
                              "redis=候选 A，仅用于复现 B7｜memory=本地联调桩")
     parser.add_argument("--redis-url", default=REDIS_URL)
     parser.add_argument("--thread-id", default=None, help="不指定则按步骤自动生成")
@@ -775,7 +775,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.step in ("t5.5", "t5.6", "t5.7"):
         print("⚠️ t5.5–t5.7 是 Redis 侧检查（审核锁 SETNX / 体积 / TTL·驱逐策略），"
               "**不随 --checkpointer 切换**；")
-        print("   PG 路线下这三项的结论取自 PG 侧核验（见 reports/v5-report.md §六）。")
+        print("   PG 路线下这三项的结论取自 PG 侧核验（见 reports/p0-report-v5-checkpoint.md §六）。")
     print("=" * 78)
 
     try:

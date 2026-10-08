@@ -1,7 +1,7 @@
 """R-4 本地证据归纳/诊断 判分器（ISS-014 专项）
 
 对应验证项：R-4（读证据 → 写根因/结论 → 带 evidence_refs 引用）
-判据依据：`docs/gate-criteria.md` §3.7（R4）｜ 专项登记：`docs/known-issues.md` ISS-014
+判据依据：`docs/p0-spec-gate-criteria.md` §3.7（R4）｜ 专项登记：`docs/prj-ledger-known-issues.md` ISS-014
 合规锁死：R-4 本地执行，本判分器不落库、不转云。
 
 职责（与 `scripts/judge_tools.py` 架构对齐，但独立实现，本文件与 R-4 纯生成型归纳耦合）：

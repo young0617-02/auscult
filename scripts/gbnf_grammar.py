@@ -1,10 +1,10 @@
 """约束解码 Schema 生成器（V1 步骤① · JSON Schema 结构化输出）
 
-★ 命名说明：文件名与函数名沿用早期「GBNF」口径（见 `docs/role-decision.md` §四 步骤①），
+★ 命名说明：文件名与函数名沿用早期「GBNF」口径（见 `docs/p0-decision-model-role.md` §四 步骤①），
    但实际载体是 **JSON Schema**，不是 GBNF 字符串（原因见下方「载体说明」）。
    本文件不产出、不消费任何 GBNF 文本。
 
-对应交付物：`docs/role-decision.md` §四 步骤①「约束解码（载体=JSON Schema）」
+对应交付物：`docs/p0-decision-model-role.md` §四 步骤①「约束解码（载体=JSON Schema）」
 输入：`schemas/tools_v1.json`（FROZEN）
 输出：一个 JSON Schema dict，供 Ollama 原生 `/api/chat` 的 `format` 字段使用。
 

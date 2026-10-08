@@ -1,7 +1,7 @@
 """R-4 本地证据归纳/诊断 实验执行器（ISS-014 专项）
 
 对应验证项：R-4（读证据 → 写根因/结论 → 带 evidence_refs 引用）
-判据依据：`docs/gate-criteria.md` §3.7（R4）｜ 专项登记：`docs/known-issues.md` ISS-014
+判据依据：`docs/p0-spec-gate-criteria.md` §3.7（R4）｜ 专项登记：`docs/prj-ledger-known-issues.md` ISS-014
 提示词：`prompts/r4_prompt_v1.md` ｜ 用例：`evals/r4_cases.jsonl`
 
 易与 V1 执行器耦合，故同构重写而不 import run_v1（避免后续互相牵连）。
@@ -16,7 +16,7 @@
   - `judge_r4.judge_case` 判定失败时，按维度回灌具体问题（引用幻觉 / 漏引 / 根因关键词缺失等）重试，
     上限 `--max-retry`（默认 3）；**首次即幻觉即便重试改正也须单独计数（红线）**；
   - 原始逐条 append 落盘 `experiments/r4/raw/EXP-R4-<序号>.jsonl`（只增不改），`--resume` 断点续跑；
-  - 元数据写入同目录 `.meta.json`，字段对齐 `docs/experiment-log-template.md`。
+  - 元数据写入同目录 `.meta.json`，字段对齐 `docs/prj-template-experiment-log.md`。
 
 自检：`python scripts/run_r4.py --selftest`
 用法：`python scripts/run_r4.py --models qwen2.5:7b --repeat 3 --seed 42 --num-ctx 8192 \

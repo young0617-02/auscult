@@ -16,13 +16,13 @@
         本地 /venv python 直跑（不再经 compose 容器），默认即连 127.0.0.1
         的 Mosquitto(1883) / TDengine(6041)：
         .venv\\Scripts\\python.exe scripts\\self_decoder.py \
-            --schema-mapping configs/decoder_schema_mapping.json \
+            --prj-spec-schema-mapping configs/decoder_schema_mapping.json \
             --mqtt-host 127.0.0.1 --td-host 127.0.0.1
         # sub-topic 默认取 env SPB_SUB_TOPIC，未设时落到代码默认值
 说明：
     曾由 docker/compose.ingest.yml 以容器方式常驻（Dockerfile.decoder），
     2026-09-29 裁决改为本地直跑；Dockerfile.decoder 保留（弃用注释）供审计追溯。
-参考：docs/sparkplug-b-decoder.md（M1–M6、四类边界）；docs/schema-mapping.md §5.1–§5.4。
+参考：docs/p0-design-sparkplug-decoder.md（M1–M6、四类边界）；docs/prj-spec-schema-mapping.md §5.1–§5.4。
 """
 
 from __future__ import annotations
@@ -116,7 +116,7 @@ class TopicParser:
     `device_id_validation.regex`（R-V3-5）。该正则是**解码侧宽松口径**：
     只拦"非法标识符 / SQL 注入面"（反引号、空格、引号等），
     与 `schemas/tools_v1.json` 面向用户的**严格命名口径**
-    `^[A-Z][A-Z0-9-]{2,31}$` 用途不同，两者并存关系见 `docs/schema-mapping.md` §六。
+    `^[A-Z][A-Z0-9-]{2,31}$` 用途不同，两者并存关系见 `docs/prj-spec-schema-mapping.md` §六。
     """
 
     def __init__(self, cfg: DecoderConfig):
@@ -171,7 +171,7 @@ def metric_value_raw(metric) -> object:
 
 
 # =====================================================================
-# SQL 组装（INSERT ... USING ... TAGS()，schema-mapping §4.4）
+# SQL 组装（INSERT ... USING ... TAGS()，prj-spec-schema-mapping §4.4）
 # =====================================================================
 def _quote(s: str) -> str:
     return "'" + str(s).replace("'", "''") + "'"
@@ -446,7 +446,7 @@ class SelfDecoder:
             # 回退语义：st_device_status 没有 quality_ok 列，故用其可落地的等效字段表达
             # "该设备数据不可信"：online=FALSE + reason='rebirth_rollback'。
             # 与 configs/decoder_schema_mapping.json boundary_handling.rebirth_conflict
-            # 及 docs/schema-mapping.md §五 同步表述。
+            # 及 docs/prj-spec-schema-mapping.md §五 同步表述。
             self._alert(topic, f"bdSeq 回退: old={old_bdseq} new={bdseq}，"
                                 "置 st_device_status.online=FALSE reason='rebirth_rollback'")
             status_columns["online"] = False
@@ -673,7 +673,7 @@ def main():
     ap.add_argument("--td-port", type=int, default=int(os.environ.get("TD_HTTP_PORT", "6041")))
     ap.add_argument("--td-user", default=os.environ.get("TD_USER", "root"))
     ap.add_argument("--td-password", default=os.environ.get("TD_PASSWORD", "taosdata"))
-    ap.add_argument("--schema-mapping", default=os.environ.get("SCHEMA_MAPPING", ""),
+    ap.add_argument("--prj-spec-schema-mapping", default=os.environ.get("SCHEMA_MAPPING", ""),
                     help="configs/decoder_schema_mapping.json 路径")
     ap.add_argument("--sub-topic", default=os.environ.get(
         "SPB_SUB_TOPIC", "spBv1.0/plant1/+/gw-pump-01/#"))

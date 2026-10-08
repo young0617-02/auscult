@@ -1,4 +1,4 @@
-"""云端 baseline 上界校准执行器（V1 · role-decision §七）
+"""云端 baseline 上界校准执行器（V1 · p0-decision-model-role §七）
 
 一次性跑「20 用例 × 1 重复」作为**上界校准**：仅衡量用例难度与本地差距定位，
 **不作为 Pass/No-Go 判据依据**（判据只针对本地模型）。
@@ -78,7 +78,7 @@ def main(argv: list[str] | None = None) -> int:
     tag = f"cloud-{cfg.get('provider', 'unknown')}-" + \
           ("native-constrained" if args.constrain else "upper-bound")
 
-    # V1 固定实验参数显式传入，不依赖类默认值（防静默漂移；见 docs/version-lock.md §2.5）
+    # V1 固定实验参数显式传入，不依赖类默认值（防静默漂移；见 docs/prj-ledger-version-lock.md §2.5）
     adapter = LLMAdapter(
         endpoint=cfg["endpoint"], api_key=cfg["api_key"],
         temperature=llm_adapter.DEFAULT_TEMPERATURE,
@@ -148,7 +148,7 @@ def _selftest() -> int:
     if (llm_adapter.DEFAULT_TEMPERATURE, llm_adapter.DEFAULT_SEED,
             llm_adapter.DEFAULT_NUM_CTX, llm_adapter.DEFAULT_TOP_P,
             llm_adapter.DEFAULT_MAX_TOKENS) != (0.0, 42, 8192, 1.0, 1024):
-        failures.append("V1 固定实验参数被改动（见 docs/version-lock.md §2.5）")
+        failures.append("V1 固定实验参数被改动（见 docs/prj-ledger-version-lock.md §2.5）")
 
     cases = load_cases()
     if len(cases) != 20:

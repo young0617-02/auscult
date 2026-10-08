@@ -1,7 +1,7 @@
 """V1 自动判分器（T2.2）
 
-对应交付物：`Phase 0 详细开发计划（D1-D10 可执行版）.md` §三 D2–D3 · T2.2
-判据依据：`reports/v1-report.md` §3.3、§四（8 项指标定义逐字来自上游计划）
+对应交付物：`p0-plan-detailed-d1-d10.md` §三 D2–D3 · T2.2
+判据依据：`reports/p0-report-v1-tool-call.md` §3.3、§四（8 项指标定义逐字来自上游计划）
 
 判分逻辑（四步，顺序不可颠倒）：
   1. **工具名匹配**：`tool_calls[0].name` vs 期望名（指标 1 的定义）；
@@ -9,7 +9,7 @@
      —— 即**多重集精确相等**（顺序不限，但**多给工具即判否**）。
      ⚠️ 该口径严于下方第 3 步的「数组超集可接受」：多工具调用的**工具集合**必须精确一致，
      而单个工具的**数组类参数**允许超集。指标名中的「覆盖」为历史命名，实际语义以本行为准
-     （见 `docs/known-issues.md` ISS-016）。
+     （见 `docs/prj-ledger-known-issues.md` ISS-016）。
   2. **JSON Schema 校验**：参数是否符合 `schemas/tools_v1.json` v1（指标 2）。
   3. **参数值比对**：`time_range` → **±10% 语义等价**；数组参数 → **超集可接受**
      （actual 覆盖 expected 全部项即可，多给项不判错）；其余标量 → 精确匹配。
@@ -20,7 +20,7 @@
   - **语义缺省**：仅 schema `required` 键缺失判「参数缺失」；`expected` 中的可选键
     若实际缺失，视为采用默认值，不判错，已存在才比对值。
   - **数组超集**：`category_filter` / `sensor_ids` 等数组按集合覆盖判，多给项可接受。
-  -（该口径取代旧的「expected 列出则必显」与「数组精确相等」，详见 v1-report §四/§10.3 扩张）
+  -（该口径取代旧的「expected 列出则必显」与「数组精确相等」，详见 p0-report-v1-tool-call §四/§10.3 扩张）
   - **自由长文本宽松（2026-09-24 第二轮修订）**：`search_knowledge.query` 走语义匹配
     （精确 / 子串 / 关键词 bigram 交叠 / 域概念覆盖，见 `_query_semantic_match`）；
     `generate_report.diagnosis_summary` 仅判「非空文本」（见 `_free_text_ok`，长度下限由
@@ -67,7 +67,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PROJECT_ROOT / "schemas" / "tools_v2.json"  # P5 缩描述实测为负结果（EXP-V1-008），已回退至 v2
 CASES_PATH = PROJECT_ROOT / "evals" / "v1_cases.jsonl"
 
-# 判据（逐字采用上游计划 §五 / reports/v1-report.md §7.1）
+# 判据（逐字采用上游计划 §五 / reports/p0-report-v1-tool-call.md §7.1）
 PASS_FIRST_SUCCESS = 0.90
 PASS_PARSEABLE = 0.95
 MID_LOWER = 0.70
@@ -75,7 +75,7 @@ MID_LOWER = 0.70
 TIME_TOLERANCE = 0.10          # time_range ±10% 语义等价
 MAX_RETRY = 3                  # 重试上限（≤3 次内全对记为「重试后成功」）
 
-# 失败归类枚举（与 reports/v1-report.md §3.3 第 5 条一一对应）
+# 失败归类枚举（与 reports/p0-report-v1-tool-call.md §3.3 第 5 条一一对应）
 FAIL_TOOL_NAME = "工具名错"
 FAIL_JSON = "JSON 不可解析"
 FAIL_MISSING_PARAM = "参数缺失"
@@ -220,7 +220,7 @@ def parse_iso(text: str) -> float | None:
 def time_range_equivalent(a: Any, b: Any, tolerance: float = TIME_TOLERANCE) -> bool:
     """判断两个 `time_range` 是否语义等价（±tolerance）。
 
-    规则（判分口径，须与 reports/v1-report.md §3.3 一致）：
+    规则（判分口径，须与 reports/p0-report-v1-tool-call.md §3.3 一致）：
       - 两侧都可解析为「窗口长度」时，长度差 ≤ tolerance 即等价
         （如 `{"start": "24h"}` 与 `{"start": "24 小时"}` / `{"start": "1d"}`）；
       - 两侧都是绝对时间时，除窗口长度外还比较起点，起点差 ≤ tolerance × 窗口长度。
@@ -841,7 +841,7 @@ def _by_dimension(rows: list[dict[str, Any]], key: str) -> dict[str, float | Non
 def judge_verdict(first_success: float | None, parseable: float | None) -> str:
     """按判据给出 Pass / 中间区间 / No-Go（适用对象 = 首次成功率）。
 
-    单线判据（遗留）：`docs/gate-criteria.md` §3.1 保留为整体下界口径，
+    单线判据（遗留）：`docs/p0-spec-gate-criteria.md` §3.1 保留为整体下界口径，
     分档判定见 `judge_verdict_tiered`（2026-09-28 重校后为权威口径）。
     """
     if first_success is None:
@@ -854,8 +854,8 @@ def judge_verdict(first_success: float | None, parseable: float | None) -> str:
 
 
 # ---------------------------------------------------------------- 判据按类型分档（2026-09-28 重校）
-# 依据：`docs/gate-criteria.md` §3.1 修订版 + EXP-V1-003 分层实测 + 云端 baseline 实测。
-# 口径（分层定位，见 gate-criteria §3.1 与 v1-report §7.3）：
+# 依据：`docs/p0-spec-gate-criteria.md` §3.1 修订版 + EXP-V1-003 分层实测 + 云端 baseline 实测。
+# 口径（分层定位，见 p0-spec-gate-criteria §3.1 与 p0-report-v1-tool-call §7.3）：
 #   - 本地可达成类型（单工具/参数校验/多轮/拒止/澄清）沿用高线：本地启动值
 #     单工具 0.33–0.39、参数校验 0.50–0.67、多轮 0.22–0.67、拒止/澄清 0.33–0.78，
 #     经「约束解码 + few-shot」有上扬空间，pass 线沿用原全局 0.85；
@@ -864,7 +864,7 @@ def judge_verdict(first_success: float | None, parseable: float | None) -> str:
 # 云端 baseline 实测（仅供参考，不作本地判据）：
 #   - EXP-V1-002 无约束裸跑：整体首次成功率 0.60；
 #   - EXP-V1-005 约束解码：整体首次成功率 0.55、参数可解析率 0.88
-#     （约束解码对云端反而降分，见 reports/v1-report.md §7.3）。
+#     （约束解码对云端反而降分，见 reports/p0-report-v1-tool-call.md §7.3）。
 TIER_CRITERIA: dict[str, dict[str, float]] = {
     "单工具":   {"pass": 0.85, "mid": 0.70},
     "参数校验": {"pass": 0.85, "mid": 0.70},
@@ -873,7 +873,7 @@ TIER_CRITERIA: dict[str, dict[str, float]] = {
     # 依据：该档原先以"未产生工具调用"为唯一通过条件，而 `expect_reject=True` 的用例内
     #       混装两类不同考点 —— `notes` 要求「明确拒绝」者（拒止）与要求「追问/补充信息」者（澄清）。
     # 档线：**沿用原「无效拒绝」档线**（`0.90` / `0.70`），**未做任何放宽**；
-    #       离线量化见 `reports/iss036-tier-split-analysis.md`（拆档只会变严）。
+    #       离线量化见 `reports/p0-analysis-iss036-tier-split-2026-10-06.md`（拆档只会变严）。
     "拒止":     {"pass": 0.90, "mid": 0.70},
     "澄清":     {"pass": 0.90, "mid": 0.70},
     "多工具":   {"pass": 0.70, "mid": 0.50},

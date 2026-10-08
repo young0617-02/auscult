@@ -13,7 +13,7 @@
     python scripts/v3_ingest_direct.py [--hours 2 --interval-ms 1000 \
 --devices PUMP-A,PUMP-B,PUMP-C]
     （告警设备固定为 --devices 的首个元素，本脚本无 --alert-device 参数）
-参考：docs/schema-mapping.md §4.5；reports/v3-auth.md §七/§八。
+参考：docs/prj-spec-schema-mapping.md §4.5；reports/p0-report-v3-ingest-license.md §七/§八。
 """
 
 from __future__ import annotations

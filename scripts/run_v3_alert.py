@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""V3 告警路线 A（阈值 + 滑动窗口）验证（reports/v3-auth.md §八 / 用户确认主场景阈值型判据）。
+"""V3 告警路线 A（阈值 + 滑动窗口）验证（reports/p0-report-v3-ingest-license.md §八 / 用户确认主场景阈值型判据）。
 
 从 TDengine 逐设备读指定测点时序 → 按 window-min 分窗口取均值 → 状态机滑动判定：
   Must#1  超限：连续 >= must_windows 个窗口均值 > threshold → 触发告警（定位设备/测点/窗口），

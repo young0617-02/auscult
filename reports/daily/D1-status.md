@@ -1,7 +1,7 @@
 # D1 当日状态记录（基线建立 · 硬门禁）
 
 > 日期：D1
-> 对应计划：`Phase 0 详细开发计划（D1-D10 可执行版）.md` §三 · D1
+> 对应计划：`p0-plan-detailed-d1-d10.md` §三 · D1
 > 出口里程碑：**M0.1（约束与基线锁定）**
 > 环境数据采集时间：2026-09-23 20:59:50（+08:00）（`env/hardware.json`；端口检查 `env/ports.md` 为 20:51，两者是不同测量）
 > 项目根：`<REPO>`
@@ -27,9 +27,9 @@
 | **T1.4** 组件版本登记 | `docker images --digests` + `ollama list` + `nvidia-smi`，记录 digest | ✅ **已完成（实测采集）** | `env/env-baseline-v1.md` | 含 **8 个镜像 digest + 2 个模型 digest**；本报告只引用其中已当面核对的部分，完整清单以 `env/env-baseline-v1.md` 为准 |
 | **T1.5** 目录初始化 | 按计划 §六 建立工程目录 | ✅ **已完成** | 目录树 | 实测已建成 `configs/ docker/ docs/ env/ evals/ experiments/{v1,v2,v5}/raw/ prompts/ reports/daily/ schemas/ scripts/` |
 | **T1.6** Schema v1 冻结 | 编写 5 工具 Pydantic ↔ JSON Schema，落盘并打版本号 | ✅ **已完成** | `schemas/tools_v1.json` | 5 工具已冻结为 v1；后续任何改动**必须升版** |
-| **T1.7** 数据来源盘点 | 逐类盘点手册/工单/传感器：名称/格式/体量/获取方式/许可/替代 | ✅ **已完成** | `docs/data-sources-v1.md` | 含**自编模拟数据兜底路线**（应对版权/隐私判定延迟，对应 R15） |
-| **T1.8** 实验登记规范 | 定稿模板字段（digest/seed/prompt 版本/num_ctx/temperature/commit） | ✅ **已完成** | `docs/experiment-log-template.md` | 模板可用，D2 起所有实验必须登记 |
-| **T1.9** TDengine 授权确认 | 查证社区版（OSS）是否含 SparkplugB 接入；不通过则立即启降级评估 | ❌ **未完成，待查证** | 落点 `reports/v3-auth.md` 第一段 | **D1 唯一未闭环项**；详见 `reports/v3-auth.md` 的查证清单 |
+| **T1.7** 数据来源盘点 | 逐类盘点手册/工单/传感器：名称/格式/体量/获取方式/许可/替代 | ✅ **已完成** | `docs/p1-spec-data-sources.md` | 含**自编模拟数据兜底路线**（应对版权/隐私判定延迟，对应 R15） |
+| **T1.8** 实验登记规范 | 定稿模板字段（digest/seed/prompt 版本/num_ctx/temperature/commit） | ✅ **已完成** | `docs/prj-template-experiment-log.md` | 模板可用，D2 起所有实验必须登记 |
+| **T1.9** TDengine 授权确认 | 查证社区版（OSS）是否含 SparkplugB 接入；不通过则立即启降级评估 | ❌ **未完成，待查证** | 落点 `reports/p0-report-v3-ingest-license.md` 第一段 | **D1 唯一未闭环项**；详见 `reports/p0-report-v3-ingest-license.md` 的查证清单 |
 
 **状态统计**：已完成 7 项（T1.2/T1.3/T1.4/T1.5/T1.6/T1.7/T1.8）、部分完成 1 项（T1.1）、未完成 1 项（T1.9）。
 
@@ -108,7 +108,7 @@
 | `qwen2.5:7b` | `sha256:2bada8a7450677000f678be90653b85d364de7db25eb5ea54136ada5f3933730` |
 | `deepseek-r1:7b` | `sha256:96c415656d377afbff962f6cdb2394ab092ccbcbaab4b82525bc4ca800fe8a49` |
 
-> **T1.4 待办**：计划建议 V1 开跑前把 Ollama 升到 **0.34.3**，避免版本漂移；若升级，必须重新登记 digest 并同步 `docs/version-lock.md`。
+> **T1.4 待办**：计划建议 V1 开跑前把 Ollama 升到 **0.34.3**，避免版本漂移；若升级，必须重新登记 digest 并同步 `docs/prj-ledger-version-lock.md`。
 
 ### 3.7 端口实测
 
@@ -135,11 +135,11 @@
 |---|---|---|---|---|
 | D1-P1 | **`.wslconfig` 从未安装**，Docker 仅 15.51GB（默认 50%） | V4b 24GB 门禁判据不成立；全组件压测无法得出有效结论 | 安装动作待用户执行（会中断 WSL2 与正在运行的 nacos 容器）→ 见 `env/wslconfig.proposed`；回滚路径见 `env/wslconfig.bak` §三 | **R2、R3、R9** |
 | D1-P2 | **GPU 直通未验证**（无通用 Linux 发行版，工具发行版内无 `nvidia-smi`） | V4 判据中"GPU 可直通"一半无法判定 | 安装 Ubuntu 发行版后执行 `nvidia-smi` 验证；在此期间 GPU 直通结论保持 UNVERIFIED | **R2、R10** |
-| D1-P3 | **T1.9 TDengine 授权未查证** | 时序接入路线可能整体作废（唯一不可控外部依赖） | 按 `reports/v3-auth.md` 的查证清单（官方文档 / license 文件 / 社区商务口径）执行；**不通过即立即启降级评估**（自研解码器 ≤2 天） | **R8、R15** |
-| D1-P4 | Ollama 0.34.2，存在 0.34.3 可升级 | 若在 V1 中途升级会造成版本漂移、结论失效 | 在 V1 开跑**之前**决定升/不升，并把最终版本与 digest 写进 `docs/version-lock.md` | **R7** |
+| D1-P3 | **T1.9 TDengine 授权未查证** | 时序接入路线可能整体作废（唯一不可控外部依赖） | 按 `reports/p0-report-v3-ingest-license.md` 的查证清单（官方文档 / license 文件 / 社区商务口径）执行；**不通过即立即启降级评估**（自研解码器 ≤2 天） | **R8、R15** |
+| D1-P4 | Ollama 0.34.2，存在 0.34.3 可升级 | 若在 V1 中途升级会造成版本漂移、结论失效 | 在 V1 开跑**之前**决定升/不升，并把最终版本与 digest 写进 `docs/prj-ledger-version-lock.md` | **R7** |
 | D1-P5 | C 盘剩余仅 94.3GB | 镜像/模型/交换文件堆积可能撑爆系统盘 | 交换文件已规划落 D 盘（`D:\wsl-swap.vhdx`）；模型盘已在 D 盘 | R15 |
 
-> 建议：D1-P1 / D1-P2 / D1-P3 均应登记进 `docs/risk-register.md`（R2、R8、R10 的实例化）。
+> 建议：D1-P1 / D1-P2 / D1-P3 均应登记进 `docs/prj-ledger-risk-register.md`（R2、R8、R10 的实例化）。
 
 ---
 
@@ -157,10 +157,10 @@
    docker info --format '{{.MemTotal}} {{.NCPU}}'   # 期望 ≈ 20GB / 10
    ```
    > ⚠️ 会在执行瞬间停掉 `nacos-standalone` 等所有容器，需自行选择时机。
-2. **解除 D1-P3**：按 `reports/v3-auth.md` 第一段的查证清单落地 TDengine 授权结论（可用 / 需降级 / No-Go）。
+2. **解除 D1-P3**：按 `reports/p0-report-v3-ingest-license.md` 第一段的查证清单落地 TDengine 授权结论（可用 / 需降级 / No-Go）。
 3. **D2 上午按计划推进 V1 准备（不占 GPU）**：20 条用例（`evals/v1_cases.jsonl`，难度分层 + 5 类型，对齐"离心泵轴承振动"主场景）、自动判分器（`scripts/judge_tools.py`）、统一适配层（`scripts/llm_adapter.py`，统一剥离 `think`）、落盘与断点续跑（`scripts/run_v1.py`）。
 4. **并行推进 V7**：50 条种子评测集 + 标注规范 v1。
-5. **D2 开工前自检**（计划 §八 通用规则）：今日 V 项判据是否已定稿 → V1 判据已在 `reports/v1-report.md` 定稿；实验登记模板是否可用 → ✅（T1.8）。
+5. **D2 开工前自检**（计划 §八 通用规则）：今日 V 项判据是否已定稿 → V1 判据已在 `reports/p0-report-v1-tool-call.md` 定稿；实验登记模板是否可用 → ✅（T1.8）。
 6. 决定 Ollama 是否升级到 0.34.3，并同步 digest。
 
 ### 5.2 阻塞项
@@ -179,9 +179,9 @@
 |---|---|
 | `env-baseline-v1.md` 字段完整（OS/Docker/WSL2/GPU/CUDA/Python/Node/各镜像与模型 digest） | ✅ 已完成采集（8 镜像 + 2 模型 digest）；但 **WSL2 段落记录的是"未配置状态"**，T1.1 落地后须升版 |
 | `schemas/tools_v1.json` 落盘并标注 v1 | ✅ 已完成（5 工具冻结） |
-| `data-sources-v1.md` 含兜底路线（默认自编模拟数据） | ✅ 已完成 |
-| `experiment-log-template.md` 可用 | ✅ 已完成 |
-| TDengine 授权结论已出（可用 / 需降级） | ❌ **未出**，T1.9 待查证 → ✅ **已闭环（2026-09-24，见 `reports/v3-auth.md`）：需降级（OSS + 自研解码器 ≤2 天），授权不阻塞** |
+| `p1-spec-data-sources.md` 含兜底路线（默认自编模拟数据） | ✅ 已完成 |
+| `prj-template-experiment-log.md` 可用 | ✅ 已完成 |
+| TDengine 授权结论已出（可用 / 需降级） | ❌ **未出**，T1.9 待查证 → ✅ **已闭环（2026-09-24，见 `reports/p0-report-v3-ingest-license.md`）：需降级（OSS + 自研解码器 ≤2 天），授权不阻塞** |
 | （T1.1）`.wslconfig` 生效、`docker info` 确认内存上限 | ⚠️ **部分完成**：方案与回滚就绪，安装动作未执行 → ✅ **已闭环（2026-09-24）：安装并核验 ≈20GB/10vCPU（ISS-007，见 `env/env-baseline-v2.md`）** |
 
 ### 判定结论
@@ -194,7 +194,7 @@
 >
 > 除上述两项外，M0.1 其余条件（环境基线字段、Schema v1 冻结、数据来源清单含兜底、实验登记模板）**均已就绪**。
 >
-> ⚠️ 依据"顺序不可跳"铁律：**T1.1 未落地前，V4b 压测与 24GB 门禁判据均不具备有效性**，不得据此下任何放行结论。—— 两个缺口均已闭环，**本段为采集当下快照**；M0.1 最终结论由 `reports/P0-summary.md` §5.2 裁决为「✅ 达成（2026-09-29）」，此历史快照不追改。
+> ⚠️ 依据"顺序不可跳"铁律：**T1.1 未落地前，V4b 压测与 24GB 门禁判据均不具备有效性**，不得据此下任何放行结论。—— 两个缺口均已闭环，**本段为采集当下快照**；M0.1 最终结论由 `reports/p0-gate-review.md` §5.2 裁决为「✅ 达成（2026-09-29）」，此历史快照不追改。
 
 ---
 
@@ -203,4 +203,4 @@
 | 日期 | 修订人 | 原因 | 影响范围 |
 |---|---|---|---|
 | D1 | 单人（本人） | 初始建立 | — |
-| 2026-09-29 | 单人（本人） | **M0.1 收尾追认**：§六 两个缺口（T1.1 `.wslconfig`、T1.9 授权）均已随后闭环（2026-09-24）；原「条件通过」判定为采集当下快照，**不追改历史**；M0.1 最终结论由 `reports/P0-summary.md` §5.2 裁决为「✅ 达成（2026-09-29）」。本文补追认标注与修订记录，保证可追溯 | §六 |
+| 2026-09-29 | 单人（本人） | **M0.1 收尾追认**：§六 两个缺口（T1.1 `.wslconfig`、T1.9 授权）均已随后闭环（2026-09-24）；原「条件通过」判定为采集当下快照，**不追改历史**；M0.1 最终结论由 `reports/p0-gate-review.md` §5.2 裁决为「✅ 达成（2026-09-29）」。本文补追认标注与修订记录，保证可追溯 | §六 |

@@ -85,7 +85,7 @@ def test_aggregate_does_not_count_unparsed_as_refuse():
     (0.11, "No-Go"),
 ])
 def test_gate_verdict_pre_registered_lines(rate, prefix):
-    """判定线须与 `plan/H15-...md` §5.0 的预登记一致（0% / (0%,10%] / >10%）。"""
+    """判定线须与 `plan/p0-design-refusal-gate-decoupling.md` §5.0 的预登记一致（0% / (0%,10%] / >10%）。"""
     assert rg.gate_verdict(rate).startswith(prefix)
 
 

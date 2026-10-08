@@ -2,7 +2,7 @@
 
 作用：防止 (a) 用例集被静默改动、(b) 「非考点参数」被重新塞回 `expected` 而使
      `ISS-029` 复发、(c) `lenient_param_defaults` 多解机制失效。
-依据：`reports/v1-review-v4.md`、`reports/v1-cases-revision-2026-10-05.md`
+依据：`reports/p0-review-v1-criteria-r4.md`、`reports/p0-report-v1-cases-revision-2026-10-05.md`
 """
 import json
 from pathlib import Path

@@ -1,5 +1,9 @@
 # T1.3 端口检查报告
 
+> **⚠️ 时点声明（2026-10-08 文档同步加注，实测数据未改）**：本表为 **2026-09-23 20:51** 的一次性快照，**晚于 T1.1 `.wslconfig` 安装（2026-09-24）**，因此 `env/env-baseline-v2.md` 引用的环境基线**并未重采端口**。表中「实测状态」与**瞬时 PID 仅供当时的冻结依据**，不得作为今日端口占用结论使用。
+> **两处已知过期**：① 6379 Redis 原列「checkpoint」用途 —— V5 已因 B7 切换 **PostgreSQL checkpointer**，Redis 仅作候选留档（见 `docs/p0-decision-checkpoint.md` §2.1）；② 文中 PID（80484 / 109044 等）为当日进程号，**现已失效**。
+> **P1 动作**：起容器前先跑 `scripts/check_ports.ps1` **重采**，并按 `docs/prj-spec-document-standard.md` 的新命名登记为 `env/p1-audit-ports-<YYYY-MM-DD>.md`。
+
 > 采集时间：2026-09-23 20:51（+08:00）
 > 采集方式：`Get-NetTCPConnection -State Listen`（Windows 宿主）+ WSL2 内 `/dev/tcp` 探活
 > 项目根：`<REPO>`

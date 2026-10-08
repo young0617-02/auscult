@@ -178,7 +178,7 @@ wsl -d Ubuntu-24.04 -- nvidia-smi
 | **deepseek-r1:7b** | `sha256:96c415656d377afbff962f6cdb2394ab092ccbcbaab4b82525bc4ca800fe8a49` | `sha256:40fb844194b25e429204e5163fb379ab462978a262b86aadd73d8944445c09fd` | 4.68 GB |
 
 > **V1 报告必须原样引用上表 digest**，否则结论无法复现。
-> **建议**：V1 开跑前先 `ollama pull` 升级到 0.34.3 并重新登记 digest，避免验证中途版本漂移（已在 risk-register 登记）。
+> **建议**：V1 开跑前先 `ollama pull` 升级到 0.34.3 并重新登记 digest，避免验证中途版本漂移（已在 prj-ledger-risk-register 登记）。
 
 ## 九、运行时与工具链
 

@@ -1,7 +1,7 @@
 # R-4 实验登记（EXP-R4-<序号>）
 
-> 对应 `docs/gate-criteria.md` §3.7（R4）、`docs/known-issues.md` ISS-014
-> 登记规范：`docs/experiment-log-template.md` §六（P1 专项用 `EXP-R4-<序号>`）
+> 对应 `docs/p0-spec-gate-criteria.md` §3.7（R4）、`docs/prj-ledger-known-issues.md` ISS-014
+> 登记规范：`docs/prj-template-experiment-log.md` §六（P1 专项用 `EXP-R4-<序号>`）
 
 ## EXP-R4-001 — 本地证据归纳/诊断 首次成功率调研
 
@@ -30,7 +30,7 @@
 
 辅助：首次成功率 0.741、重试后 1.0、平均延迟 3.96s、P95 5.08s。
 
-**conclusion**：R-4 本地证据归纳/诊断六维全 Pass，幻觉红线 = 0。ISS-014 闭环，role-decision §6.1 R-4 由「未验证」升为「Pass」。
+**conclusion**：R-4 本地证据归纳/诊断六维全 Pass，幻觉红线 = 0。ISS-014 闭环，p0-decision-model-role §6.1 R-4 由「未验证」升为「Pass」。
 
 **anomalies**：3 次结构退化、3 次证据漏引、6 次根因错、9 次 severity 错 —— 均不影响整体 Pass；首次成功率未达 100% 为首次通过但可经重试矫正，判据以维度率为准（§3.7）。
 
