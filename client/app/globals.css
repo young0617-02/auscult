@@ -1,0 +1,145 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/tokens.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+ * Tailwind 语义类映射（L2 绑定层）：
+ *   bg-surface-* / border-edge-* / text-fg-* / bg-accent-* /
+ *   text-risk-* / text-state-* / bg-confidence-seg-* / bg-health-* …
+ * 组件内禁止直接写色值（tokens.css 头部硬规则）。
+ * ============================================================ */
+@theme inline {
+  /* shadcn 基础映射 */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* ---- L1 语义槽位 → Tailwind 工具类 ---- */
+  /* A. 结构与表面 */
+  --color-surface-base: var(--surface-base);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-overlay: var(--surface-overlay);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-selected: var(--surface-selected);
+  --color-edge-subtle: var(--edge-subtle);
+  --color-edge-strong: var(--edge-strong);
+  --color-edge-focus: var(--edge-focus);
+  /* B. 文本与图标（text-fg-*） */
+  --color-fg-primary: var(--text-primary);
+  --color-fg-secondary: var(--text-secondary);
+  --color-fg-tertiary: var(--text-tertiary);
+  --color-fg-inverse: var(--text-inverse);
+  --color-fg-link: var(--text-link);
+  /* C. 品牌与强调 */
+  --color-accent-primary: var(--accent-primary);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle-surface);
+  --color-accent-on-primary: var(--accent-on-primary);
+  /* D1. 风险 */
+  --color-risk-high: var(--risk-high);
+  --color-risk-high-surface: var(--risk-high-surface);
+  --color-risk-high-text: var(--risk-high-text);
+  --color-risk-high-edge: var(--risk-high-edge);
+  --color-risk-medium: var(--risk-medium);
+  --color-risk-medium-surface: var(--risk-medium-surface);
+  --color-risk-medium-text: var(--risk-medium-text);
+  --color-risk-medium-edge: var(--risk-medium-edge);
+  --color-risk-low: var(--risk-low);
+  --color-risk-low-surface: var(--risk-low-surface);
+  --color-risk-low-text: var(--risk-low-text);
+  --color-risk-low-edge: var(--risk-low-edge);
+  /* D2. 流程状态 */
+  --color-state-pending: var(--state-pending);
+  --color-state-running: var(--state-running);
+  --color-state-success: var(--state-success);
+  --color-state-degraded: var(--state-degraded);
+  --color-state-failed: var(--state-failed);
+  --color-state-skipped: var(--state-skipped);
+  /* D3. 置信度 */
+  --color-confidence-seg-1: var(--confidence-seg-1);
+  --color-confidence-seg-2: var(--confidence-seg-2);
+  --color-confidence-seg-3: var(--confidence-seg-3);
+  --color-confidence-seg-4: var(--confidence-seg-4);
+  --color-threshold-line: var(--threshold-line);
+  --color-threshold-over: var(--threshold-over);
+  --color-threshold-under: var(--threshold-under);
+  /* D4. 健康 */
+  --color-health-ok: var(--health-ok);
+  --color-health-degraded: var(--health-degraded);
+  --color-health-down: var(--health-down);
+  /* D5. 降级提示 */
+  --color-notice-warning-surface: var(--notice-warning-surface);
+  --color-notice-warning-text: var(--notice-warning-text);
+  --color-notice-warning-edge: var(--notice-warning-edge);
+  /* D6. 引用锚点 */
+  --color-citation-idle: var(--citation-idle);
+  --color-citation-hover: var(--citation-hover);
+  --color-citation-active: var(--citation-active);
+  /* D7. 图表 */
+  --color-chart-line: var(--chart-line);
+  --color-chart-baseline-band: var(--chart-baseline-band);
+  --color-chart-anomaly-point: var(--chart-anomaly-point);
+  --color-chart-grid: var(--chart-grid);
+  /* D8. 图谱 */
+  --color-graph-node-fault: var(--graph-node-fault);
+  --color-graph-node-part: var(--graph-node-part);
+  --color-graph-node-symptom: var(--graph-node-symptom);
+  --color-graph-node-location: var(--graph-node-location);
+  --color-graph-node-action: var(--graph-node-action);
+  --color-graph-link-high: var(--graph-link-high);
+  --color-graph-link-low: var(--graph-link-low);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}

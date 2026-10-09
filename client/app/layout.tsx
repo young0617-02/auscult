@@ -1,0 +1,19 @@
+import type { Metadata } from "next";
+import { AppProviders } from "@/components/providers/AppProviders";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "工业设备诊断 Agent",
+  description: "云侧工业 IoT 诊断 Agent 系统 · 告警监盘 / 诊断 / 审核工作台",
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    // 工业中控场景暗色为默认（UI 方案 §9.1）；换肤仅切 data-theme 属性
+    <html lang="zh-CN" data-theme="dark" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col">
+        <AppProviders>{children}</AppProviders>
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,294 @@
+/**
+ * tokens.css —— L1 语义槽位定义（UI 方案 §9.2 主题层作业面）
+ *
+ * 三层架构（§9.1）：
+ *   L2 组件绑定层   → Tailwind 语义类（globals.css @theme inline 映射）
+ *   L1 语义槽位层   → 本文件（唯一赋值入口，:root = 工业暗色默认，[data-theme="light"] = 明色）
+ *   L0 基础尺度层   → 本文件底部（间距/字号/圆角/动效档位，无需主题层参与）
+ *
+ * 硬规则（§9.1）：
+ *   1. 组件内禁止出现色值字面量，只能使用 Tailwind 语义类；
+ *   2. --risk-* 与 --state-* 必须可区隔（风险=业务属性暖色相，状态=系统状态冷/中性色相）；
+ *   3. 两套赋值均需满足 WCAG AA（正文 ≥ 4.5:1）。
+ * 换肤方式：切换 html[data-theme] 属性，无需改任何组件代码。
+ */
+
+/* ============================================================
+ * 暗色（工业中控默认主题）
+ * ============================================================ */
+:root,
+.dark {
+  /* ---- A. 结构与表面 ---- */
+  --surface-base: #0b0f14;          /* 应用最底层背景 */
+  --surface-raised: #121a22;        /* 卡片/面板 */
+  --surface-sunken: #0d141b;        /* 内嵌区域（代码/原始 payload/表格斑马） */
+  --surface-overlay: #101a24;       /* 抽屉/浮层/模态 */
+  --surface-hover: #1a2530;         /* 悬停态 */
+  --surface-selected: #21303f;      /* 选中态 */
+  --edge-subtle: #1e2833;           /* 边框/分隔线（弱） */
+  --edge-strong: #33424f;           /* 边框/分隔线（强） */
+  --edge-focus: #58a6ff;            /* 焦点环 */
+
+  /* ---- B. 文本与图标 ---- */
+  --text-primary: #e8eef4;
+  --text-secondary: #9fb0bf;
+  --text-tertiary: #66788a;
+  --text-inverse: #0b0f14;
+  --text-link: #58a6ff;
+
+  /* ---- C. 品牌与强调 ---- */
+  --accent-primary: #2f81f7;
+  --accent-hover: #4d9fff;
+  --accent-subtle-surface: rgba(47, 129, 247, 0.15);
+  --accent-on-primary: #ffffff;
+
+  /* ---- D1. 风险等级（业务属性，暖色相） ---- */
+  --risk-high: #f85149;
+  --risk-high-surface: rgba(248, 81, 73, 0.14);
+  --risk-high-text: #ff8583;
+  --risk-high-edge: rgba(248, 81, 73, 0.5);
+  --risk-medium: #d29922;
+  --risk-medium-surface: rgba(210, 153, 34, 0.14);
+  --risk-medium-text: #e3b341;
+  --risk-medium-edge: rgba(210, 153, 34, 0.5);
+  --risk-low: #3fb950;
+  --risk-low-surface: rgba(63, 185, 80, 0.13);
+  --risk-low-text: #5ad168;
+  --risk-low-edge: rgba(63, 185, 80, 0.5);
+
+  /* ---- D2. 流程状态（系统状态，冷/中性色相，与风险可区隔） ---- */
+  --state-pending: #8b98a5;
+  --state-running: #58a6ff;
+  --state-success: #3fb950;
+  --state-degraded: #d29922;
+  --state-failed: #f85149;
+  --state-skipped: #5a6b7a;
+
+  /* ---- D3. 置信度分段（检索/传感/图谱/自评） ---- */
+  --confidence-seg-1: #58a6ff;
+  --confidence-seg-2: #3fb950;
+  --confidence-seg-3: #bc8cff;
+  --confidence-seg-4: #d29922;
+  --threshold-line: #e3b341;        /* 0.50 / 0.75 刻度线 */
+  --threshold-over: #3fb950;        /* ≥0.75 本地命中 */
+  --threshold-under: #f85149;       /* <0.50 降级 */
+
+  /* ---- D4. 数据源健康 ---- */
+  --health-ok: #3fb950;
+  --health-degraded: #d29922;
+  --health-down: #f85149;
+
+  /* ---- D5. 降级提示（DegradedBanner / SystemNotice） ---- */
+  --notice-warning-surface: rgba(210, 153, 34, 0.12);
+  --notice-warning-text: #e3b341;
+  --notice-warning-edge: rgba(210, 153, 34, 0.45);
+
+  /* ---- D6. 引用锚点 ---- */
+  --citation-idle: #58a6ff;
+  --citation-hover: #79c0ff;
+  --citation-active: #2f81f7;
+
+  /* ---- D7. 图表专用 ---- */
+  --chart-line: #58a6ff;
+  --chart-baseline-band: rgba(63, 185, 80, 0.12);
+  --chart-anomaly-point: #f85149;
+  --chart-grid: #1e2833;
+
+  /* ---- D8. 图谱专用（节点按类型 / 边按置信度分档） ---- */
+  --graph-node-fault: #f85149;      /* 故障模式 */
+  --graph-node-part: #58a6ff;       /* 部件 */
+  --graph-node-symptom: #d29922;    /* 症状 */
+  --graph-node-location: #8b98a5;   /* 位置 */
+  --graph-node-action: #3fb950;     /* 措施 */
+  --graph-link-high: #79c0ff;
+  --graph-link-low: #2c3743;
+
+  /* ---- E. 动效时长档位 ---- */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+
+  /* ---- 字体（系统栈，含中文回退；不依赖构建期外网字体） ---- */
+  --font-sans: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei",
+    system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  --font-mono: "Cascadia Mono", Consolas, "JetBrains Mono", ui-monospace,
+    "SFMono-Regular", monospace;
+
+  /* ============================================================
+   * shadcn/ui 基础变量 → 绑定到本主题语义槽位（组件跟随换肤）
+   * ============================================================ */
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
+  --primary-foreground: var(--accent-on-primary);
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--text-primary);
+  --muted: #18222c;
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-hover);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--risk-high);
+  --border: var(--edge-subtle);
+  --input: var(--edge-strong);
+  --ring: var(--edge-focus);
+  --chart-1: var(--confidence-seg-1);
+  --chart-2: var(--confidence-seg-2);
+  --chart-3: var(--confidence-seg-3);
+  --chart-4: var(--confidence-seg-4);
+  --chart-5: #66788a;
+  --sidebar: var(--surface-base);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent-primary);
+  --sidebar-primary-foreground: var(--accent-on-primary);
+  --sidebar-accent: var(--surface-hover);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--edge-subtle);
+  --sidebar-ring: var(--edge-focus);
+}
+
+/* ============================================================
+ * 明色主题（html[data-theme="light"] 切换生效）
+ * ============================================================ */
+[data-theme="light"] {
+  --surface-base: #f4f6f9;
+  --surface-raised: #ffffff;
+  --surface-sunken: #eef1f5;
+  --surface-overlay: #ffffff;
+  --surface-hover: #e9eef4;
+  --surface-selected: #d8e6f8;
+  --edge-subtle: #d7dee6;
+  --edge-strong: #b9c4cf;
+  --edge-focus: #1f6feb;
+
+  --text-primary: #182029;
+  --text-secondary: #465664;
+  --text-tertiary: #7d8b99;
+  --text-inverse: #ffffff;
+  --text-link: #0969da;
+
+  --accent-primary: #1f6feb;
+  --accent-hover: #184fc4;
+  --accent-subtle-surface: rgba(31, 111, 235, 0.12);
+  --accent-on-primary: #ffffff;
+
+  --risk-high: #cf222e;
+  --risk-high-surface: rgba(207, 34, 46, 0.1);
+  --risk-high-text: #a40e26;
+  --risk-high-edge: rgba(207, 34, 46, 0.45);
+  --risk-medium: #9a6700;
+  --risk-medium-surface: rgba(154, 103, 0, 0.1);
+  --risk-medium-text: #7d5300;
+  --risk-medium-edge: rgba(154, 103, 0, 0.45);
+  --risk-low: #1a7f37;
+  --risk-low-surface: rgba(26, 127, 55, 0.1);
+  --risk-low-text: #116329;
+  --risk-low-edge: rgba(26, 127, 55, 0.45);
+
+  --state-pending: #6e7781;
+  --state-running: #0969da;
+  --state-success: #1a7f37;
+  --state-degraded: #9a6700;
+  --state-failed: #cf222e;
+  --state-skipped: #8c959f;
+
+  --confidence-seg-1: #0969da;
+  --confidence-seg-2: #1a7f37;
+  --confidence-seg-3: #8250df;
+  --confidence-seg-4: #9a6700;
+  --threshold-line: #9a6700;
+  --threshold-over: #1a7f37;
+  --threshold-under: #cf222e;
+
+  --health-ok: #1a7f37;
+  --health-degraded: #9a6700;
+  --health-down: #cf222e;
+
+  --notice-warning-surface: rgba(154, 103, 0, 0.08);
+  --notice-warning-text: #7d5300;
+  --notice-warning-edge: rgba(154, 103, 0, 0.4);
+
+  --citation-idle: #0969da;
+  --citation-hover: #0550ae;
+  --citation-active: #1f6feb;
+
+  --chart-line: #0969da;
+  --chart-baseline-band: rgba(26, 127, 55, 0.1);
+  --chart-anomaly-point: #cf222e;
+  --chart-grid: #d7dee6;
+
+  --graph-node-fault: #cf222e;
+  --graph-node-part: #0969da;
+  --graph-node-symptom: #9a6700;
+  --graph-node-location: #6e7781;
+  --graph-node-action: #1a7f37;
+  --graph-link-high: #0550ae;
+  --graph-link-low: #d7dee6;
+
+  --background: var(--surface-base);
+  --foreground: var(--text-primary);
+  --card: var(--surface-raised);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-overlay);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--accent-primary);
+  --primary-foreground: var(--accent-on-primary);
+  --secondary: var(--surface-hover);
+  --secondary-foreground: var(--text-primary);
+  --muted: #e4e9ef;
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--surface-hover);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--risk-high);
+  --border: var(--edge-subtle);
+  --input: var(--edge-strong);
+  --ring: var(--edge-focus);
+  --chart-1: var(--confidence-seg-1);
+  --chart-2: var(--confidence-seg-2);
+  --chart-3: var(--confidence-seg-3);
+  --chart-4: var(--confidence-seg-4);
+  --chart-5: #7d8b99;
+  --sidebar: var(--surface-base);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--accent-primary);
+  --sidebar-primary-foreground: var(--accent-on-primary);
+  --sidebar-accent: var(--surface-hover);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--edge-subtle);
+  --sidebar-ring: var(--edge-focus);
+}
+
+/* ============================================================
+ * L0 基础尺度层（§9.4，无需主题层参与）
+ * ============================================================ */
+:root {
+  --radius: 0.5rem; /* 卡片 8px；radius-xl=1.4x≈12px 面板；胶囊用 rounded-full */
+
+  /* 层级（§9.4）：0 内容 / 10 吸顶工具条 / 20 浮层 / 30 抽屉 / 40 Toast / 50 模态
+     由 Tailwind z-index 语义类承载：z-10/z-20/z-30/z-40/z-50 */
+}
+
+/* 新告警高亮脉冲（1–3 次，不循环——监盘场景长脉冲是干扰，§9.2.E） */
+@keyframes alarm-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 var(--risk-high-surface); }
+  50% { box-shadow: 0 0 0 4px var(--risk-high-surface); }
+}
+.alarm-pulse {
+  animation: alarm-pulse 1s ease-in-out 3;
+  animation-delay: calc(var(--motion-base) * 2);
+}
+
+/* 推理节点流转（呼吸，避免旋转 loading，§9.2.E） */
+@keyframes node-breath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.node-breath { animation: node-breath 1.6s ease-in-out infinite; }
+
+/* 暗色滚动条（工业观感，宽度收窄） */
+@media (prefers-color-scheme: dark), (min-width: 0) {
+  * { scrollbar-width: thin; }
+}
