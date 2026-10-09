@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "4d250b580174a3aebbd8a21429ffd479815fdd08234739465c1788cefb48b646",
+    "short_id": "4d250b5",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      19
+    ],
+    "created_parse_ids": [
+      19
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "4d250b580174a3aebbd8a21429ffd479815fdd08234739465c1788cefb48b646",
+    "short_id": "4d250b5",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 振动烈度判据要点表（合成样本）\n\n| 振动烈度 (m m/s) | 设备状态 | 建议处置 |\n| --- | --- | --- |\n| &lt; 1.8 | 优 | 正常运行 |\n| 1.8 ~ 4.5 | 良 | 加强监测 |\n| 4.5 ~ 11.2 | 注意 | 安排检修 |\n| 11.2 ~ 28.0 | 严重 | 尽快停机检查 |\n| > 28.0 | 危险 | 立即停机 |",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:4d250b5/tier:basic/page:1",
+        "end": "doc:4d250b5/tier:basic/page:1/block:2"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

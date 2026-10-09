@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "seed": 42,
+  "generator": "scripts/gen_sample_pdfs.py",
+  "note": "自编合成内容，取自公开工业常识骨架，不含任何真实手册原文；禁止以“现场数据”表述",
+  "samples": {
+    "text": {
+      "file": "sample_text.pdf",
+      "bytes": 4920,
+      "sha256": "3501c6d772188c5a85bbabec8531b2cfe271b433e496775e361453ddb3a0c175"
+    },
+    "scanned": {
+      "file": "sample_scanned.pdf",
+      "bytes": 11602698,
+      "sha256": "b10654a3f06c73e0a300fa711b3623c58fd73b762f5d85b5239b089e74a94e30"
+    },
+    "table": {
+      "file": "sample_table.pdf",
+      "bytes": 5163,
+      "sha256": "18944577b7cf68ba85200f0f56f942698cc20260c2096e8e21d8839e135cd673"
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{"trace_id": "d21-decorator-test", "span_id": "62668c95", "type": "event", "name": "mock_node.output", "ts": "2026-10-09T07:51:43.349521+00:00", "output_keys": ["result"]}
+{"trace_id": "d21-decorator-test", "span_id": "62668c95", "parent_id": null, "type": "span", "name": "mock_node", "start_ts": "2026-10-09T07:51:43.349521+00:00", "end_ts": "2026-10-09T07:51:43.349521+00:00", "duration_ms": 0.0, "input": "{'x': 1}"}
+{"trace_id": "d21-decorator-test", "span_id": "6541bc60", "type": "event", "name": "mock_node.output", "ts": "2026-10-09T07:55:33.336119+00:00", "output_keys": ["result"]}
+{"trace_id": "d21-decorator-test", "span_id": "6541bc60", "parent_id": null, "type": "span", "name": "mock_node", "start_ts": "2026-10-09T07:55:33.336119+00:00", "end_ts": "2026-10-09T07:55:33.336119+00:00", "duration_ms": 0.0, "input": "{'x': 1}"}
+{"trace_id": "d21-decorator-test", "span_id": "20e145e8", "type": "event", "name": "mock_node.output", "ts": "2026-10-09T07:55:46.380339+00:00", "output_keys": ["result"]}
+{"trace_id": "d21-decorator-test", "span_id": "20e145e8", "parent_id": null, "type": "span", "name": "mock_node", "start_ts": "2026-10-09T07:55:46.380339+00:00", "end_ts": "2026-10-09T07:55:46.380339+00:00", "duration_ms": 0.0, "input": "{'x': 1}"}
+{"trace_id": "d21-decorator-test", "span_id": "e2295e55", "type": "event", "name": "mock_node.output", "ts": "2026-10-09T07:58:30.769704+00:00", "output_keys": ["result"]}
+{"trace_id": "d21-decorator-test", "span_id": "e2295e55", "parent_id": null, "type": "span", "name": "mock_node", "start_ts": "2026-10-09T07:58:30.769704+00:00", "end_ts": "2026-10-09T07:58:30.770918+00:00", "duration_ms": 1.21, "input": "{'x': 1}"}

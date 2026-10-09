@@ -1,0 +1,2 @@
+{"trace_id": "d21-file-test", "span_id": "7100ee89", "parent_id": null, "type": "llm", "name": "llm1", "model": "model-x", "input_tokens": 10, "output_tokens": 20, "total_tokens": 30, "think_tokens": 0, "think_pct": 0.0, "duration_ms": 0.0, "ts": "2026-10-09T07:58:30.759623+00:00"}
+{"trace_id": "d21-file-test", "span_id": "f9a42fbc", "parent_id": null, "type": "span", "name": "node1", "start_ts": "2026-10-09T07:58:30.759623+00:00", "end_ts": "2026-10-09T07:58:30.759623+00:00", "duration_ms": 0.0, "input": "hello"}

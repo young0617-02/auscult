@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "7397b17f2cf58bdca748a37640f7012e64f958b8ad0b6d6f2d25fbc9fadbad0c",
+    "short_id": "7397b17",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      21
+    ],
+    "created_parse_ids": [
+      21
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "7397b17f2cf58bdca748a37640f7012e64f958b8ad0b6d6f2d25fbc9fadbad0c",
+    "short_id": "7397b17",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 轴温与电流判据要点表（合成样本）\n\n| 测点 | 正常区间 | 警戒值 | 建议处置 |\n| --- | --- | --- | --- |\n| 驱动端轴承温度 | ≤70 ℃ | >85 ℃ | 加强监测 |\n| 非驱动端轴承温度 | ≤70 ℃ | >85 ℃ | 加强监测 |\n| 电机定子电流 | ≤额定 | >额定×1.15 | 降低负荷核算裕量 |",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:7397b17/tier:basic/page:1",
+        "end": "doc:7397b17/tier:basic/page:1/block:2"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

@@ -1,0 +1,15 @@
+{"ts": "2026-10-09T07:35:13.684312+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T07:35:14.710802+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T07:35:32.516217+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T07:35:33.697215+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T07:39:09.446868+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T07:39:10.518056+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T07:39:55.525297+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T07:39:56.907675+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T07:46:22.725815+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T07:46:23.748910+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T08:03:06.986080+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T08:03:09.056088+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T08:03:27.693423+00:00", "event": "notify_backup_reviewer", "thread_id": "d18-notify", "payload_summary": {"risk_level": "high", "diagnosis": "需停机检查", "confidence": 0.8}}
+{"ts": "2026-10-09T08:03:29.846394+00:00", "event": "auto_timeout_resume", "thread_id": "d18-auto", "resume": {"action": "timeout", "comment": "24h 超时自动降级（lifecycle.auto_timeout_resume）"}, "report_id": "RPT-8cc0bba91c6e68e5"}
+{"ts": "2026-10-09T11:39:00.093687+00:00", "event": "notify_backup_reviewer", "thread_id": "thr-ca4fb72451cf4dfda0b9", "payload_summary": {"risk_level": "medium", "diagnosis": "主轴承磨损导致振动超标，建议立即停机检查", "confidence": 0.67}}

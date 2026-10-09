@@ -1,0 +1,39 @@
+{
+  "parse": {
+    "sha256": "3dfeb3958784adb968fa5dc203d8050df7473b7788e7aceaad034fb9b9edfe98",
+    "short_id": "3dfeb39",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": true,
+    "wait_parse_ids": [],
+    "created_parse_ids": [],
+    "reused_parse_ids": [],
+    "tip": "Cached. Use --force to re-parse."
+  },
+  "content": {
+    "sha256": "3dfeb3958784adb968fa5dc203d8050df7473b7788e7aceaad034fb9b9edfe98",
+    "short_id": "3dfeb39",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备故障案例分析（合成样本）\n\n故障案例 2:联轴器不对中\n\n现象:轴向 1×/2× 幅值增大，现场实测振动高于警戒值。\n\n分析:不对中谱出现 2× 转频成分，轴向与径向幅值比超常。\n\n处置:重新激光对中并复核。\n\n结论:经修复并返测，振动恢复至正常区间，建议纳入周期性巡检。",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:3dfeb39/tier:basic/page:1",
+        "end": "doc:3dfeb39/tier:basic/page:1/block:6"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "e661a7e0fb5572b7dea02e18738769c3c87ab9b2d0d785f2c8c6ff532f11e9ec",
+    "short_id": "e661a7e",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      38
+    ],
+    "created_parse_ids": [
+      38
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "e661a7e0fb5572b7dea02e18738769c3c87ab9b2d0d785f2c8c6ff532f11e9ec",
+    "short_id": "e661a7e",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## I M P-150 离心泵运行与结构手册（合成样本）\n\n## 1 安全须知\n\nI M P-150（编号 I M P-150）检修前必须切断电源并在配电柜悬挂“禁止合闸”标识。\n\n运行中严禁靠近联轴器防护罩，禁止在带压状态下拆卸法兰螺栓。\n\n## 2 结构原理\n\nI M P-150 由泵壳、叶轮、轴、机械密封与轴承箱组成，电机经联轴器驱动叶轮旋转。\n\n叶轮旋转使液体获得动能，经蜗壳扩压转化为压力能，实现液体输送。\n\n## 3 安装要求\n\n泵组基础应有足够刚度，地脚螺栓对角紧固，联轴器同轴度偏差不超过 0.05 m m。\n\n吸入管路尽量短且避免气囊，进口过滤器通流面积不小于吸入管截面的三倍。\n\n## 4 运行维护\n\n轴承温度正常不超过 70 摄氏度，振动烈度控制在 4.5 m m/s 以内。\n\n运行 2500 小时更换一次润滑油，检查机械密封泄漏量小于 5 滴每分钟。\n\n## 5 故障排查\n\n振动超标常见转子不平衡、联轴器不对中或轴承磨损，应结合频谱分析定位。\n\n流量不足多与叶轮磨损、进口堵塞或密封环间隙过大有关，需逐项排查。",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:e661a7e/tier:basic/page:1",
+        "end": "doc:e661a7e/tier:basic/page:1/block:16"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

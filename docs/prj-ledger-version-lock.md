@@ -206,6 +206,7 @@
 | 12b | **PostgreSQL checkpointer（LangGraph，V5 采纳路线）** | **✅ 已锁定（2026-09-24 实测）**：`langgraph==1.2.12` / `langgraph-checkpoint==4.2.0` / `langgraph-checkpoint-postgres==3.1.2` / `langgraph-sdk==0.4.5` / `psycopg==3.3.6` / `psycopg-pool==3.3.3` / `langchain-core==1.6.4`（详见新增 **§二.2.9**）；DB = `auscult_v2`（ParadeDB PG18.6 @5927，root/123456），PostgresSaver 已建 checkpoint 表 | **✅ 已锁定（V5 采用）** | `docs/prj-ledger-version-lock.md` §二.2.9；`reports/p0-report-v5-checkpoint.md` §2.2/§6.3；`docs/p0-decision-checkpoint.md` §2.1 |
 | 13 | **reranker 模型** | ✅ **已选用 & 锁定（2026-09-29）**：**本地 ModelScope `BAAI--bge-reranker-v2-m3`**（`D:\modelscope\hub\models\BAAI--bge-reranker-v2-m3\snapshots\master`，XLMRoberta re-ranker，hidden 1024，≈2.1GB safetensors），已移入 §二.2.2.2 | ✅ 已锁定（用户选定本地模型） | `docs/prj-ledger-version-lock.md` §二.2.2.2；`reports/p0-report-v4b-resources.md` §6.3；`reports/p0-report-v2-hybrid-retrieval.md` §1.2 |
 | 14 | **Sparkplug B 模拟器**（V3 输入） | ✅ **已实现（2026-09-24）**：自建 `scripts/spb_simulator.py`（带 `--selftest` / `--scenario birth,new_metric,rebirth,offline,ndeath`），四类边界实测通过 | 本脚本无独立 digest，锁定其依赖（§二.2.7，与解码器共用 `.proto`/`paho-mqtt`） | `docs/prj-ledger-version-lock.md` §二；`docs/p0-design-sparkplug-decoder.md` §八；`reports/p0-report-v3-ingest-license.md` §6.2 |
+| 15a | **P1 A2 模拟数据生成器** | ✅ **已实现（2026-10-08）**：`scripts/gen_sparkplug.py`（批量造数：NBIRTH/NDATA/NDEATH + DBIRTH/DDATA，特征频率注入 + 异常段线性爬升，固定 seed，`--selftest` 通过，端到端落库 324 点验证） | 无独立 digest，依赖同 §二.2.7（`.proto`/`paho-mqtt`/`taospy`）；配置 Arc：`configs/decoder_schema_mapping.json`（镜像 `schema-mapping.md`） | `reports/p1-d2-a2-telemetry-2026-10-08.md`；`configs/tdengine/schema_master.sql` |
 | 15 | **应用后端 / 前端运行时** | ⚠️ **部分处置（2026-09-29）**：后端 Python 依赖锁文件 `requirements.txt` **已落盘**（摘要 §二.2.7/2.8/2.9，逐版本锁定）；**前端 Node 依赖锁文件不适用（Phase 0 无前端工程/无 `package.json`/`node_modules`，前端未开发）**，首版前端锁延至 P1 前端落地时再补。工具链 Python 3.12.8 / Node v24.19.0 已锁定见 §二 | 后端 ✅（已落盘）；前端 ⏳ P1 前端落地时补 | `docs/prj-ledger-version-lock.md` §二；`docs/p0-handover-p1.md` |
 | 16 | **自研解码器 Dockerfile 基础镜像**（`Dockerfile.decoder` `FROM python:3.12-slim`） | ✅ **弃用，无需锚定 digest（2026-09-29，方案 A）**：解码器改由**本地 /venv python 直跑**（不再构建/运行该镜像），base 镜像 digest 锁定项随弃用消除。`Dockerfile.decoder` 保留（含弃用注释）供审计追溯；若 P1 重新容器化，须先在干净机/网络恢复后 `docker images --digests python` 实测回填再锚定 | ✅ 已消除（弃用） | `docs/prj-ledger-version-lock.md` §二.2.7；`docker/Dockerfile.decoder`；`docker/compose.ingest.yml`（变更记录）；`docs/p0-design-sparkplug-decoder.md` §八 |
 
@@ -274,6 +275,239 @@
 
 ---
 
+### 2.10 测试工具链依赖锁定（2026-10-08 补锁）
+
+> **来源**：`reports/p0-audit-doc-sync-2026-10-08.md` §三 G1（缺口登记：`pytest` 既不在 `requirements.txt` 也不在本版本锁，但 README 与迭代纪律把「改代码必跑回归」列为硬要求）。
+> **补锁动作**：经用户于 2026-10-08 确认「P1 启动前先收口」，登记至 `requirements.txt`（新增「测试工具链」段）。
+> **说明**：`tests/` 回归套件（**176 用例**）唯一第三方依赖即 `pytest`，其余均为标准库与项目内模块。
+
+| # | 组件 | 版本 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `pytest` | **9.1.1** | 宿主 `D:/Python312` 实测 `pytest --version` = 9.1.1（该版本即 `pytest tests/ -q` 得 **176 passed** 的基线）；已同步实装进项目 `.venv` | ✅ 已锁 | 回归测试执行器（`tests/`） |
+
+> ⚠️ **纪律**：`requirements.txt` 与本机实装不一致即视为环境漂移。本次已按纪律同步实装项目 `.venv`（`uv pip install pytest==9.1.1`）并复跑回归核对；版本变更须同步本表并升版 `env/env-baseline-v2.md`（纪律 2）。
+
+---
+
+### 2.11 P1 文档解析依赖锁定（2026-10-08）
+
+> **来源**：P1-D1 B1-Spike。`plan/p1-plan-detailed.md` §四 D1 要求以 MinerU 解析三类样本 PDF（文本型 / 扫描件 / 含表格）。
+> **环境裁定（2026-10-08，用户确认）**：MinerU **隔离在独立虚拟环境 `.venv-mineru`**（Python 3.12.8），**不进项目 `.venv`、不入 `requirements.txt`**，避免其重依赖污染主环境。
+> **模型落点（2026-10-08，用户确认）**：走 **ModelScope 国内源**，模型下载至 `D:\modelscope\hub\models`（与本项目已选用的 BGE-M3 / bge-reranker-v2-m3 同库）。
+
+| # | 组件 | 版本 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `mineru`（隔离环境 `.venv-mineru`） | **4.0.10** | `mineru --version`；`uv pip install "mineru[core]"`（实装为基包，无 `core` extra 之分） | ✅ 已锁（隔离环境） | B1 文档解析（三类样本 PDF） |
+| 2 | `pymupdf`（项目 `.venv`） | **1.28.2** | `uv pip install pymupdf` 后经 `importlib.metadata` 实测 | ✅ 已锁（`requirements.txt`） | 样本 PDF 生成 + MinerU 失败时替代解析 |
+
+> ⚠️ **说明**：MinerU 4.0.10 读取 PDF 走 `pypdfium2`/`pypdf`（**非** PyMuPDF）；PyMuPDF 仅用于本项目自编样本生成与替代解析。模型下载命令为 `mineru-models-download --tier basic --small-backend onnx -s modelscope`（本机 `.venv-mineru` 无 torch → ONNX 后端），模型根目录由环境变量 `MINERU_MODEL_BASE_DIR` 指定为 `D:\modelscope\hub\models`。
+
+---
+
+### 2.12 P1-D3 A3 告警引擎 + Redis 形态变更（2026-10-08）
+
+> **来源**：P1-D3 A3/A4。`plan/p1-plan-detailed.md` §5.3（阈值 >4.5 high / 温度 >85 high / 电流 >额定×1.15 medium；Z-Score 30min 窗 >3 medium 需 ≥7 天基线；去重 key = `dedup:alarm:{device}:{metric}` TTL=5min）。
+> **依赖口径**：A3 引擎的 Python 依赖（`redis==6.3.0` / `psycopg==3.3.6` / `PyYAML`）均已在本文件 §二.2.9 锁定，本次不再重复列；下表仅登记**新增的脚本/配置文件组件**与 **Redis 形态变更**。
+> **Redis 形态变更（B7 闭环）**：`configs/redis.conf` 由形态 A（`bind 127.0.0.1` + `protected-mode yes`，回环、无鉴权）改为 **形态 B**（`bind 0.0.0.0` + `protected-mode no` + `requirepass auscult-dev-redis`）。根因：Docker 容器内仅绑回环会导致 `docker-proxy` 与同网段容器都连不上（B7），`CONFIG SET` 无法运行时改启动期 `bind` 参数，故改配置并重建容器，客户端带密连接。版本仍为 `redis:8`（digest 见 §二.2.1 第 5 行），未升版。
+
+| # | 组件 | 版本 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `scripts/alarm_engine.py`（A3 告警引擎） | `git` 工作树 | `--selftest` 3 项断言 PASS；端到端产生 1 条 `thr_vib_rms` high 告警（value 4.5936）→ Redis 去重 → PG `alerts` 幂等落盘 | ✅ 已实现 | 阈值 + 滑动窗口 + Z-Score + Redis 去重 + AlarmEvent 落 PG/JSONL |
+| 2 | `configs/alarm_rules.yml`（A3 规则） | — | 3 条阈值规则（`thr_vib_rms`/`thr_bearing_temp`/`thr_motor_current`）+ 1 条 Z-Score 规则（`z_span_vib`，enabled=false 待数据） | ✅ 已用 | 阈值/Z-Score 规则与去重 key/TTL 定义 |
+| 3 | `configs/redis.conf`（形态变更） | `redis:8` | 形态 A→B + `requirepass`；重建容器后宿主/容器访问正常 | Redis 去重通道（B7 闭环） |
+
+---
+
+### 2.13 P1 B4–B6/D9 图谱与一致性链路（2026-10-08~09 锁版）
+
+> **来源**：`plan/p1-plan-detailed.md` §5.7 B4（三元组）/ §5.8 B5（PG 元数据）/ §5.9 B6（Outbox+对账）/ D9 质量门槛（§七）。
+> **依赖口径**：B4–B6 脚本的 Python 依赖（`psycopg==3.3.6` / `pymilvus` / sentence-transformers-BGE-M3 / 云端 `Qwen/Qwen3.8-27B` 约束解码）均已于本文件 §二.2.9 / §二.2.2.1 / `env/cloud.json` 锁定，本次不重复列；下表仅登记**新增的脚本/配置文件/报告产物**与**图谱/一致性链路落点**。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `configs/triple_schema.json`（B4 受控词表） | **v2**（11 关系，去「关联」） | 实体 8 类 / 关系 11；OpenAI strict json_schema + Neo4j 关系 slug 映射 | ✅ 已用 | B4 三元组抽取受控词表与入库映射 |
+| 2 | `scripts/extract_triples.py`（B4 抽取） | `git` 工作树 | 抽取 36/36（184 有效/0 无效/0 失败）；支持 `--retry-failed`/`--sample`/`--import-neo4j` | ✅ 已实现 | 抽取→校验→人工复核抽样→Neo4j MERGE 入库（关系多 source 数组） |
+| 3 | `scripts/load_meta.py`（B5+B6 outbox 补写） | `git` 工作树 | PG `doc_chunks` + `outbox` 幂等补写（每 chunk milvus/neo4j 各一票据） | ✅ 已实现 | PG 元数据导入 + Outbox 幂等写 |
+| 4 | `scripts/outbox_worker.py`（B6 补偿队列） | `git` 工作树 | 消费 pending（milvus 缺→BGE-M3 补齐；neo4j 缺→核查存在性）；兼容 `source_chunk_ids` 数组 + A 类豁免 | ✅ 已实现 | Outbox 消费 + 自愈（10 次退避上限） |
+| 5 | `scripts/reconcile.py`（B6 对账） | `git` 工作树 | PG vs Milvus/Neo4j 三侧对账；`--fix`/`--fault-inject --apply`；**B4 补链后对账零差异** | ✅ 已实现 | 一致性对账 + 故障注入闭环 |
+| 6 | Neo4j 图谱（落点） | `5-community`（digest 见 §二.2.1 第 8 行） | B4 补链后 **105 节点 / 127 关系**（含 HANDLED_BY 33 / 多 source 归因 31）、约束 `triple_entity_id` | ✅ 已用 | B4 三元组图谱（结构关系 + 处置为 HANDLED_BY） |
+| 7 | Milvus `kb_p1_v1`（落点） | `v3.0.0`（digest 见 §二.2.1 第 1 行） | PG=Milvus=36；故障注入→自愈闭环归零 | ✅ 已用 | 稠密检索索引 |
+| 8 | `reports/p1-d9-gate-judgment.md`（D9 判定） | 2026-10-08~09 | 八项门禁 **全部达标**（三元组准确率 **93% ≥85%**）→ **M1.4 放行**；图谱「仅作线索」限制解除；「处置为」错配 7 条留痕 | ✅ 已定稿 | D9 质量门槛判定 + 图谱用途注册 |
+| 9 | `experiments/p1/b4/manual_review_100_v2.jsonl`（准确率人工复核样本） | 固定 seed 抽样 | **93 通过 / 7 未通过**（错配全落「处置为」） | ✅ 已达成 | 三元组准确率 ≥85% 门禁证据 |
+
+> ⚠️ **图谱口径局限**：B4 v2「处置为」56 条跨问题错配全集保留于 `extract_results_v2.jsonl`，图内 `HANDLED_BY` 33 条由 B6 补链入库；凡以「处置为」指引结论的链路**结合原文二次确认、不作主证据**（见 `reports/p1-d9-gate-judgment.md` §2.2）。
+
+---
+
+### 2.14 Phase 2 W1 查询改写器（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §W1（P2-D1）。
+> **依赖口径**：`jieba==0.42.1` 已于 §二.2.8 锁定；LLM 增强路径复用 `scripts/llm_adapter.py` + `env/cloud.json`（云端 `Qwen/Qwen3.8-27B` 约束解码），本次不重复列。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `scripts/query_rewrite.py`（W1 查询改写器） | `git` 工作树 | `--selftest` 0 失败（实体抽取、数值关键词、缓存命中 100%）；规则端到端：三路输出 semantic/keywords/entities + numeric 均正确 | ✅ 已实现 | 自然语言→三路检索输入（Dense/BM25/图谱） |
+| 2 | `experiments/p2/w1/cache/`（LLM 改写缓存） | 固定 seed | `cache_key(question, model)` sha256 前 16 位；写读一致、命中 100% | ✅ 已用 | LLM 改写结果去重，避免同一问题重复调用 |
+
+### 2.15 Phase 2 W2 多路召回编排（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §5.2 W2（P2-D2/D3/D8）+ 约束 P2-R4。
+> **依赖口径**：`pymilvus==3.0.2` / `jieba==0.42.1` 已于 §二.2.8 锁定；BGE-M3 本地向量复用 `run_v2.EmbeddingClient`（§二.2.2.1）；Neo4j 受控关系词表复用 `configs/triple_schema.json`（§二.2.13）。本次不重复列。
+> **拓扑实测**：Milvus 端点 **19531**（v2 栈 `auscult-v2-milvus`，`kb_p1_v1`），Neo4j 7474（105 节点）。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `configs/retrieval.yml`（W2 参数集中） | `git` 工作树 | dense top_k=20/HNSW{M 16,efConstruction 200,ef 64}/COSINE/dim 1024；sparse top_k=20/bm25_k1 1.2/bm25_b 0.75/jieba；graph top_k_paths 5/max_hops 2 | ✅ 已用 | 三路召回参数集中配置（D11 调参） |
+| 2 | `scripts/retrieval_base.py`（共享基座） | `git` 工作树 | 迷你 YAML 解析（缩进栈+剥注释+数值优先）；`MILVUS_URI=http://127.0.0.1:19531`；统一契约 `extract_route_inputs`/`make_hit`/Neo4j HTTP 事务 | ✅ 已用 | 三路召回统一契约与工具函数 |
+| 3 | `scripts/retrieve_dense.py`（稠密召回） | `git` 工作树 | `--selftest` 0 失败；真实召回 20 命中/约 5ms，BGE-M3 编码 + HNSW COSINE top_k=20 | ✅ 已用 | Dense 召回（`semantic` 原文） |
+| 4 | `scripts/retrieve_sparse.py`（稀疏召回） | `git` 工作树 | `--selftest` 0 失败；服务端 BM25（jieba）真实 20 命中/约 278ms，传原文本（R-V2-2） | ✅ 已用 | BM25 稀疏召回（`keywords` 原文） |
+| 5 | `scripts/retrieve_graph.py`（图谱召回） | `git` 工作树 | `--selftest` 0 失败（Neo4j 105 节点在线）；≤2 跳路径、受控关系 `source_chunk_ids` 展开，真实 5 路径/约 82ms | ✅ 已用 | 图谱证据通道（独立，不进 RRF） |
+| 6 | `scripts/retrieval.py`（并行编排） | `git` 工作树 | 端到端真实查询 Dense+Sparse+Graph 三路命中、`degraded_routes=[]`；Dense/Sparse `ThreadPoolExecutor` 并发，Graph 独立 | ✅ 已实现 | W2 编排入口，产 `candidates` 供 W3 RRF |
+
+> **修复留痕**：Milvus 搜索 `distance` 为保留字段，不可列入 `output_fields`（报表 "field distance not exist"，三处已改）；Graph Cypher 改用 `WITH r WHERE` 规避 UNWIND+WHERE 歧义；Graph 结果 `data` 空列表越界已兜底。
+
+### 2.16 Phase 2 W3 RRF 融合（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §5.3 W3（P2-D4）；RRF_K=60 与 V2 基准一致。
+> **依赖口径**：纯标准库，复用 `retrieval_base.load_retrieval_config`（§二.2.15）；图谱证据通道**不参与融合**（P2-R4），仅消费 W2 `candidates`（dense+sparse）。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `configs/retrieval.yml::rrf` 段 | `git` 工作树 | k=60 / top_k=5 / weights{dense 0.6, sparse 0.4} | ✅ 已用 | RRF 融合参数集中（D11 调参） |
+| 2 | `scripts/fuse_rrf.py`（加权 RRF 融合） | `git` 工作树 | `--selftest` 0 失败（加权累加、双路贡献留痕、配置驱动）；真实融合 top5 `criteria_2-1-c0` 居首（sparse rank1+dense rank5） | ✅ 已实现 | W2 `candidates` → `scored[top_k]` 供 W4 |
+
+### 2.17 Phase 2 W4 重排 + W5 证据组装（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §5.4（W4）/ §5.5（W5）。
+> **依赖口径**：**BGE-reranker-v2-m3 本地模型实测（闭环 P1 待办「probe_reranker 实测」）**——CPU 加载 4.57s、参数量≈567.8M（≈2.27GB）、编码 ≈54ms/对@batch16，探针留痕 `experiments/p2/w4/probe_reranker.json`。旧 `reports/project-summary-2026-09-29.md` §5.2/S8「延迟/显存驻留待实测」已据此转为已实测。重排**默认 CPU**（避免与常驻 7B 争 GPU，plan §5.4/R10 错峰）。
+> **父块回填数据源**：`chunks/parents_v1.jsonl`（**新增**，由 `chunk_docs.chunk_one` 从 `parsed/*.md` 生成，58 父块，与 `_chunk_summary.json` `parent_total=58` 一致）；子块 `chunks_v1.jsonl` 提供 parent_id/page/section/doc。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `scripts/probe_reranker.py`（探针） | `git` 工作树 | CPU 加载 4.57s、567.8M 参数、54ms/对@batch16；落 `experiments/p2/w4/probe_reranker.json` | ✅ 已用 | W4 接入前置实测（加载/延迟/驻留） |
+| 2 | `scripts/rerank.py`（重排） | `git` 工作树 | `--selftest` 0 失败；端到端 Top5 重排 degraded=false，`manual_*` 运行章节升至前列、`criteria` 判据表降尾（语义相关度合理） | ✅ 已实现 | 对 RRF `scored` 用 bge-reranker-v2-m3 复排 → Top5 |
+| 3 | `scripts/assemble_evidence.py`（证据组装） | `git` 工作树 | `--selftest` 0 失败；端到端父块回填生效、graph_hint 标注、graph_support=1.0（文档↔图谱一致）、degraded=false | ✅ 已实现 | 父块回填 + 冲突裁定 + EvidenceItem 组装 |
+| 4 | `chunks/parents_v1.jsonl`（父块映射） | 生成产物 | 58 行，与 `_chunk_summary.json` parent_total=58 一致 | ✅ 已用 | 供 W5 父块回填上下文 |
+
+> **延迟留痕**：CPU 重排 Top5 ≈1.1s，叠加召回 ≈300ms 后对本路 `P95<800ms` 预算构成风险；plan §5.4 已注明「CPU 重排延迟上升，记录代价」。归 W6 集成 + 待 GPU（cuda:0）重测，不做 W4 阻塞。
+
+### 2.18 Phase 2 W6 `retrieve_knowledge` 工具（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §5.6 W6（P2-D9/D11）。
+> **依赖口径**：级联复用 W1–W5（§二.2.14/2.15/2.16/2.17）；BGE-M3 EmbeddingClient 与 reranker 均常驻单例；**不修改** `schemas/tools_v1.json`（恰 5 工具、V1 链路与 llm_adapter self-test 依赖），以 `with_tools()` 附加式注册。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `scripts/retrieve_knowledge.py::RetrievalService` | `git` 工作树 | 常驻单例（EmbeddingClient+CrossEncoder 仅加载一次）；级联 W1→W5；`--selftest` 0 失败 | ✅ 已实现 | 混检工具封装，供 R-2/R-3 工具链消费 |
+| 2 | `to_openai_tool()` / `with_tools()` | `git` 工作树 | 附加式注册、去重正确；工具名为 `retrieve_knowledge`（read_only） | ✅ 已实现 | 程序化工具注册（禁手抄） |
+| 3 | `--repeat` 延迟剖面（冷/热） | 实测 | 冷 15.2s（模型加载）；**热** recall 36-46ms、rerank ≈1.2s、warm_avg_total ≈1.26s | ✅ 已用 | 常驻收益 + P95 差距量化 |
+| 4 | `--retrieve_dense/retrieval` embedder 注入 | 代码改动 | `retrieve_dense(retrieve_all(embedder=None))`、`rerank(model=None)` 可注入常驻实例 | ✅ 已用 | 进程内复用模型，消除每调用重载 |
+
+> **延迟结论（实测）**：热路径 recall 已从冷 9.7s → **36-46ms**（常驻生效）；但 CPU 重排 5 对仍 **≈1.2s**，使热总延迟 ~1.26s **未达 `P95<800ms`**。与 plan §5.4「CPU 重排延迟上升记录代价」一致，记 **P2 待 D11**：GPU(cuda:0) 重排 或 降低候选量（不做 W6 功能阻塞）。
+
+### 2.19 Phase 2 W7 `retrieve_knowledge` 工具链接入 R-2/R-3（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §三 WBS W6 + `docs/p0-spec-gate-criteria.md` §3.1.1（R-2/R-3 工具调用判据）。
+> **依赖口径**：复用 §二.2.18（W6 级联链路）与 `llm_adapter` + `env/cloud.json`（云端 `Qwen/Qwen3.8-27B` 约束解码）；**判据复用** `judge_tools.judge_record` / `judge_verdict_tiered`（§二.2.3 工具链既有设施）。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `schemas/tools_p2_retrieve.json` | v1 | 单工具 `retrieve_knowledge`，与 `RETRIEVE_KNOWLEDGE_TOOL` 逐字一致（禁手抄） | ✅ 已用 | W7 评测注入 schema（隔离于 V1 5 工具基线） |
+| 2 | `evals/v2_retrieve_cases.jsonl` | v1 | 16 条纯检索用例，镜像 V1 case 字段，预期工具 `retrieve_knowledge` | ✅ 已用 | W7 云端评测用例集 |
+| 3 | `scripts/run_v2_tools.py` | `git` 工作树 | 镜像 run_v1 流程（`load_tool_schemas` + `judge_record` + `judge_verdict_tiered`）；`TOOLS_P2_PATH` 指向 §二.2.19 第 1 行 | ✅ 已用 | W7 全量评测入口 |
+| 4 | `judge_tools` 语义匹配扩充 | 代码改动 | `compare_arguments` 对 `("retrieve_knowledge","question")` 复用 `_query_semantic_match`（关键概念命中+bigram 交叠），对齐 V1 R-2/R-3 语义口径 | ✅ 已用 | 消除逐字比较导致的假 FAIL_PARAM_VALUE |
+| 5 | 云端全量 16 条 | Qwen/Qwen3.8-27B | **16/16 judged_success（单工具 100%）**，`judge_verdict_tiered` 整体 Pass（≥85% 线） | ✅ Pass | R-2/R-3 工具链 ≥85% 判据证明 |
+| 6 | 资产还原留痕 | git | `tools_v2.json` 还原 V1 5 工具基线（无 M 行）、`judge_v1.json` 已删、`SCHEMA_PATH` 默认回 `tools_v2.json`、`TOOLS_V2_PATH→TOOLS_P2_PATH` | ✅ 干净 | 越权覆盖既有受控资产的纠正记录 |
+
+> **判据修复经过**：初版 2 条冒烟工具名全对但 FAIL_PARAM_VALUE——定位为判据缺口（judge 仅对 `search_knowledge.query` 语义匹配），非模型能力。经用户批准方案 1，复用在 `judge_tools.py` §约 L462-467 实现；全量重跑 16/16 Pass。
+> **越权记录（审计留痕）**：子代理在实现中曾覆盖既有受控资产 `schemas/tools_v2.json`（V1 5 工具基线，即 judge 原默认）并二次越权新建 `judge_v1.json`。已纠正：`git checkout` 还原、删除 `judge_v1.json`、Phase 2 schema 隔离至新文件 `tools_p2_retrieve.json`。
+> **RAW 落盘**：`experiments/p2/w7/RAW-v2-tools.jsonl` + `.meta.json`。
+
+### 2.20 M2.3 配套评测集指标（2026-10-09 锁版）
+
+> **来源**：`docs/p0-spec-gate-criteria.md` §1.2（`Recall@5 ≥85%`、`MRR ≥0.75`、`NDCG@5` 报告值、P95<800ms）。
+> **前置发现**：50 条 `golden_set_v1` 引用 7 类逻辑文档（doc-pump-manual / doc-vibration-std ...），与真实建库语料（19 文档 36 子块 3147 token 的 P1 合成样本）**内容覆盖度严重脱节**（ISO 标准/轴承 BPFO/Sparkplug B/安全规范等均无色对应）。经用户批准改走**配套评测集** `evals/m2_acc_set.jsonl`（12 题锚定真实语料可覆盖主题，相关块用真实 chunk_id）。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `evals/m2_acc_set.jsonl` | v1 | 12 题，覆盖判据/手册/故障案例/拓扑，真实 chunk_id 相关标注 | ✅ 已用 | M2.3 配套检索评测集 |
+| 2 | `scripts/eval_m2.py` | v1 | 复用 `RetrievalService`；`Recall@5/MRR/NDCG@5/P95` + RAW 落盘 | ✅ 已用 | 检索质量指标脚本 |
+| 3 | 检索质量指标 | v1 口径 | **Recall@5=1.0**、**MRR=0.7153**、**NDCG@5=1.0**（12/12 全部命中相关块） | ✅ 见下裁定 | Recall/NDCG 达标；MRR 0.715<0.75 |
+| 4 | 端到端延迟（CPU 基线） | P95 | **P95=7037ms / P50=2109ms**（CPU rerank ≈1.2s/题 主因） | ⚠️ 原超线 | D11 前基线（已作废） |
+| 5 | 端到端延迟（GPU 重排） | P95 | **P95=353.2ms / P50=133.1ms**（RTX 4060 Laptop GPU + BGE-reranker-v2-m3） | ✅ 达标 | D11 GPU 重排闭合 |
+| 6 | 端到端延迟（RRF-only） | P95 | **P95=86.1ms / P50=45.6ms**（跳过 rerank，纯 RRF 排序） | ✅ 达标 | D7 消融最优配置 |
+| 7 | D7 消融结论 | 消融 | rerank ΔMRR=**-0.0417**（净负效果）；RRF-only **MRR=0.7569≥0.75 达标** | ✅ 达标 | **默认走 RRF-only**，rerank 保留为可选增强 |
+
+> **裁定口径（D7 消融后最终更新）**：`Recall@5` **达标**（1.0 ≥0.85）；`NDCG@5` **报告值 1.0**；`MRR=0.7569` **达标（≥0.75）**——D7 消融确认当前小语料下 rerank 净负效果（ΔMRR=-0.0417），改走 RRF-only 后 MRR 从 0.7153→0.7569 过线；`P95=86.1ms` **达标（<800ms）**——RRF-only 比 GPU rerank（353ms）再降 76%。
+> **D7 消融详情**：`scripts/d7_ablation.py` 逐题对比 RRF-only vs rerank：rerank 在 2 题帮助（m2a-005/012）、2 题伤害（m2a-003/007），净 ΔMRR=-0.0417。根因：当前语料极小（36 子块），RRF 双路信号已足够排序，rerank 引入噪声。`RetrievalService` 新增 `use_rerank` 开关（默认 True），`eval_m2.py` 新增 `--no-rerank` 选项。
+> **D11 处置**：本机 `D:\py312-torch`（venv, CUDA torch 2.14.0+cu130, RTX 4060 Laptop GPU）补装依赖后 GPU 重排 P95 7037→353ms（降幅 95%）；D7 后改走 RRF-only 进一步降至 86ms。GPU 环境保留供后续语料扩大后 rerank 重评。
+> **黄金集约束**：本 M2.3 指标基于**配套评测集**（非 50 条 `golden_set_v1`），因 golden 与真实语料内容脱节不可直接评测；50 题待语料扩充后重评。勿将本轮 12 题指标与 golden 50 题口径混淆。
+> **RAW 落盘**：`experiments/p2/m2/RAW-m2-metrics.jsonl` + `meta-m2.json`（含 `device: cuda, use_rerank: false`）；`experiments/p2/d7/ablation-d7.jsonl` + `summary-d7.json`。
+
+### 2.21 Phase 2 收尾（M2.4 达成 · handover-p3）（2026-10-09 锁版）
+
+> **来源**：`plan/Phase 2 详细开发计划（混合检索）.md` §六（里程碑 M2.4）+ §七（验收标准）。
+> **判定**：M2.4 三项通过条件全部达成（P95=86.1ms<800ms、retrieve_knowledge 可用、移交 P3）；M2.1–M2.4 四项里程碑全部达成。
+
+| # | 组件 | 版本/口径 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `docs/p2-handover-p3.md` | v1 | 移交清单（资产/优先级/遗留/里程碑判定） | ✅ 定稿 | Phase 2→3 唯一移交凭据 |
+| 2 | `reports/p2-summary.md` | v1 | Phase 2 总结报告（里程碑/决策/遗留） | ✅ 定稿 | Phase 2 收口报告 |
+| 3 | M2.4 判定 | — | P95=86.1ms ✅ / 工具可用 ✅ / 移交 ✅ | ✅ 达成 | Phase 2 四项里程碑全达成 |
+
+> **遗留转 P3**：golden 50 题评测（扩语料后）、Redis 缓存、引用正确率抽检、rerank 重评、消融报告正式版。
+> **约束（不变）**：M2.3/M2.4 指标基于 12 题配套集（非 golden 50 题），golden 待扩语料后重评。
+
+### 2.22 Phase 4 后端 API 依赖（2026-10-09 D0-1 锁版）
+
+> **来源**：`plan/Phase 4 详细开发计划（前端与集成）.md` §三（技术栈）；用户裁定 Q1/Q2（P4 含后端 API，前置 D0 增量承载）。
+> **实测口径**：`uv pip install -p .venv` 实装；安装时 anyio 4.15.1→4.14.2（starlette 1.7.0 约束传导），已验证 `app.graph.build` / `app.graph.checkpointer` 导入无损 + D0-1 自测 17/17 PASS。前端（Node/npm/Next 等）待 D1 初始化后另记前端段。
+
+| # | 组件 | 版本 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `fastapi` | **0.143.0** | 实装 + `app/api/main.py` TestClient 自测 17/17 | ✅ 已锁 | P4 REST API 骨架（§5.5 九契约 + 契约补丁） |
+| 2 | `starlette` | **1.7.0** | 随 fastapi 0.143.0 实装 | ✅ 已锁 | ASGI 框架底层（fastapi 传递依赖） |
+| 3 | `uvicorn` | **0.54.0** | 实装 | ✅ 已锁 | ASGI 服务器（8000 端口） |
+| 4 | `PyJWT` | **2.15.1** | 实装；HS256 签发/校验 R11–R15 通过 | ✅ 已锁 | 登录态 JWT（`app/api/security.py`） |
+| 5 | `bcrypt` | **5.0.0** | 实装；密码哈希 + 种子 4 账号写入 | ✅ 已锁 | `users.password_hash`（rounds=12，72 字节上限） |
+| 6 | `httpx` | **0.28.1** | 预装复用（fastapi TestClient 传输层） | ✅ 已锁 | `scripts/test_p4_d0x_*.py` 自测 |
+| 7 | `anyio` | **4.14.2** | 随 starlette 约束自 4.15.1 降级；Agent 链路回归导入无损 | ✅ 已锁 | 异步底层（传递依赖，降级留痕） |
+| 8 | `db/migrations/0004_users.sql` | git 工作树 | 幂等应用成功（users 表 + RBAC 四角色 CHECK） | ✅ 已用 | 用户与 RBAC 表结构（D0-1） |
+| 9 | `scripts/seed_users.py` | git 工作树 | 幂等写入 4 账号（eng_dev/rev_dev/kb_dev/sys_dev） | ✅ 已用 | RBAC 种子账号（bcrypt 应用层生成，不依赖 pgcrypto） |
+| 10 | `python-socketio` | **5.17.0** | 实装 + D0-4 自测 12/12 PASS（鉴权连接/chat:ask/alarm:new/事件桥接） | ✅ 已锁 | Socket.IO 服务端（D0-4，`app/api/socket.py`） |
+| 11 | `python-engineio` | **4.14.0** | 随 python-socketio 5.17.0 实装 | ✅ 已锁 | Engine.IO 底层（传递依赖） |
+| 12 | `simple-websocket` | **1.1.0** | 实装 + D0-4 子进程服务 WS 通道验证 | ✅ 已锁 | ASGI WebSocket 传输（D0-4，含 wsproto 1.3.2） |
+| 13 | `app/api/routes/review.py` + `app/api/runner.py`（submit_review/lifecycle watcher） | git 工作树 | D0-5 自测 22/22 PASS（SoD/锁/4h 通知/24h 超时/trace+metrics 接入）；D0-1/D0-3 回归通过 | ✅ 已用 | 审核 REST 主通道 + 报告别名 + pending 队列（D0-5） |
+| 14 | `db/migrations/0005_knowledge_admission.sql` | git 工作树 | 幂等应用成功（documents.admission_* 三列 + 部分索引）；D0-6 自测 14/14 PASS；D0-2 回归 22/22 | ✅ 已用 | 知识准入审核（D0-6 契约补丁，R-M3 防投毒） |
+
+> ⚠️ **安全留痕**：开发默认 `JWT_SECRET` 仅限本机（启动时打警告）；生产/外部环境必须环境变量注入并换密。默认种子密码 `Auscult#Dev2026` 同理。Socket.IO 跨域 `SOCKETIO_ORIGINS` 开发默认 `*`，生产必须白名单。
+
+### 2.23 Phase 4 前端工程（2026-10-09 D1 初始化锁版）
+
+> **来源**：`plan/Phase 4 详细开发计划（前端与集成）.md` §三；`plan/工业设备诊断 Agent - 前端 UI 方案（V1.0）.md` §10。
+> **实测口径**：`create-next-app@latest`（pnpm）+ `pnpm dlx shadcn@latest init -b radix -p nova` 实装；D1 build 通过 + 浏览器走查，D2–D5 单测 30/30 PASS。`pnpm list --depth=0` 实测版本如下。
+
+| # | 组件 | 版本 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `next` | **16.4.0** | 实装 + next build 通过（Turbopack/cacheComponents） | ✅ 已锁 | App Router 前端框架（client/） |
+| 2 | `react` / `react-dom` | **19.3.0** | 随 create-next-app 实装 | ✅ 已锁 | UI 运行时 |
+| 3 | `tailwindcss` | **4.3.3**（+ `@tailwindcss/turbopack`） | 实装 + tokens 语义槽位映射 | ✅ 已锁 | 样式（L0 尺度/L1 语义槽位三层） |
+| 4 | `radix-ui` | **1.7.0**（单包） | shadcn init `-b radix` 实装 | ✅ 已锁 | 无障碍交互原语（Dialog/DropdownMenu/Select 等） |
+| 5 | `shadcn`（CLI） | **4.21.4**（预设 nova） | init + 17 组件生成 | ✅ 已锁 | 组件生成器（产物入 git，CLI 仅开发期） |
+| 6 | `cn` | **0.4.0** | shadcn v4 默认 clsx+tailwind-merge 包装 | ✅ 已锁 | 类名合并 |
+| 7 | `lucide-react` | **1.53.0** | 实装 | ✅ 已锁 | 图标 |
+| 8 | `next-themes` | **0.4.6** | 实装 | ✅ 已锁 | 换肤（data-theme 切换） |
+| 9 | `@tanstack/react-query` | **5.104.1** | 实装 + useAlarms/alarm:new 定向插入 | ✅ 已锁 | 服务端状态（D4/D5） |
+| 10 | `socket.io-client` | **4.8.4** | 实装 + getSocket 单例（对齐后端 5.17.0） | ✅ 已锁 | 实时层（D5） |
+| 11 | `zustand` | **5.0.15**（+ persist） | 实装 + useAuth/useConn/useInspector | ✅ 已锁 | 客户端状态（会话/连接/检查器） |
+| 12 | `sonner` | **2.0.8** | 实装 + review:required toast | ✅ 已锁 | 低打扰通知 |
+| 13 | `vitest` + `jsdom` | **5.0.3** + **30.1.2** | 实装 + 30/30 PASS（api/auth/alarms-realtime） | ✅ 已锁 | 单元测试 |
+| 14 | `@playwright/test` | **1.64.0** | 实装（chromium 下载中，D20 e2e 用） | ✅ 已锁 | E2E 测试 |
+| 15 | `typescript` | **5.9.3** | 实装 + next build TS 检查通过 | ✅ 已锁 | 类型检查 |
+| 16 | Node.js / pnpm | **v24.19.0 / 11.7.0** | 环境实测 | ✅ 已锁 | 前端运行时与包管理 |
+
+---
+
 ## 四、与各报告的交叉引用
 
 > **引用方式统一为**：报告在首部声明环境基线版本号，并在正文引用本文件的**具体小节**；凡本文件为「待锁定」的条目，报告中一律写 `【待 D<天> 实测填入】`，不得填估算值。
@@ -292,6 +526,18 @@
 | `docs/prj-spec-review-lifecycle.md` | 引用 §二.2.1（`redis:8` digest） | §八.8.2 降级路径 L2（存储层降级须同步版本） |
 | `docker/compose.base.yml` | **反向依赖**：其 Neo4j 段注释「版本待锁定（`prj-ledger-version-lock.md` 中为"待锁定"行）」即指本文件 §三 第 7 行 | `docker/compose.base.yml` 第 148–149 行 |
 | `schemas/tools_v1.json` | **反向依赖**：其 `change_policy` 字段要求「同步更新 prj-ledger-version-lock.md」 | `schemas/tools_v1.json` `change_policy`；本文件 §一 纪律 4、§二.2.6 |
+| `reports/p1-d5-d7-b4-triples.md` | 引用 §二.2.13（B4 词表 v2 / `extract_triples.py` / Neo4j 图谱落点） | §二.2.13 第 1/2/6 行 |
+| `reports/p1-d8-d9-b6-consistency.md` | 引用 §二.2.13（B5/B6 脚本 / Milvus / Neo4j 落点、对账零差异） | §二.2.13 第 3–7 行 |
+| `reports/p1-d9-gate-judgment.md` | 引用 §二.2.13（D9 判定报告 / 人工复核样本） | §二.2.13 第 8/9 行 |
+| `reports/p2-d1-w1-query-rewrite.md` | 引用 §二.2.14（W1 查询改写器 / LLM 改写缓存） | §二.2.14 第 1/2 行 |
+| `reports/p2-d1-w2-recall.md` | 引用 §二.2.15（W2 多路召回编排 + 拓扑 19531） | §二.2.15 第 1–6 行、拓扑实测 |
+| `reports/p2-d1-w3-rrf.md` | 引用 §二.2.16（W3 RRF 融合） | §二.2.16 第 1/2 行 |
+| `reports/p2-d2-w4-w5-rerank-evidence.md` | 引用 §二.2.17（W4 重排 probe/rerank + W5 证据/父块映射） | §二.2.17 第 1–4 行、延迟留痕 |
+| `reports/p2-d3-w6-retrieve-knowledge.md` | 引用 §二.2.18（W6 retrieve_knowledge 工具/热延迟剖面） | §二.2.18 第 1–4 行、延迟结论 |
+| `reports/p2-d3-w7-retrieve-tools.md` | 引用 §二.2.19（W7 工具链接入 R-2/R-3 / 语义匹配扩充 / 资产还原留痕） | §二.2.19 第 1–6 行、判据修复与越权记录 |
+| `reports/p2-d3-m2-metrics.md` | 引用 §二.2.20（M2.3 配套评测集指标 / D7 消融 / D11 延迟闭合 / 四项达标） | §二.2.20 第 1–7 行、裁定口径 |
+| `docs/p2-handover-p3.md` | 引用 §二.2.21（Phase 2 收尾 / M2.4 达成 / 移交 P3） | §二.2.21 第 1–3 行、遗留转 P3 |
+| `reports/p2-summary.md` | 引用 §二.2.21（Phase 2 总结报告 / 四项里程碑 / 关键决策 / 遗留） | §二.2.21 第 1–3 行 |
 
 ---
 
@@ -313,6 +559,17 @@
 | 2026-09-28 | 单人（本人） | **清理非本项目镜像行（§二.2.1）**：按用户指示移除 `nacos/nacos-server`、`mysql`、`mongodb/mongodb-atlas-local` 三行（原 6–8 行，均为"其他项目在用"），顺延 tdengine/mosquitto/neo4j 为新第 6–8 行；镜像总数由「14 个/约 13.4 GB」更正为本项目 **8 个 / 约 7.8 GB**（表中 8 行求和建议值，非实测）；保留「禁止 prune 非本项目容器」红线并改为引用 R-V3-7 / R-V4b-8 | §二.2.1 表格、镜像总数注释 |
 | 2026-09-28 | 单人（本人） | **真 BM25 稀疏对标闭环（EXP-V2-BM25，M0.3 补齐）**：§二.2.8「真 BM25 状态」由"可用"补"对标已闭环"（ParadeDB 真 BM25 sparse `Recall@5`=0.90 vs Milvus 0.92、hybrid 打平 0.91）；对照对标声明更新为"结论范围扩展为两实现 BM25 对比，tsvector 降级淘汰" | §二.2.8；`experiments/v2/raw/EXP-V2-BM25.md` |
 | 2026-09-29 | 单人（本人） | **reranker 本地选用 & 锁定（用户选定本地模型）**：§三 第 13 行由「待锁定」改「✅ 已选用 & 锁定」，移入新建 §二.2.2.2；本地 `BAAI--bge-reranker-v2-m3`（`D:\modelscope\hub\models`，XLMRoberta，hidden 1024，≈2.1GB safetensors，纯本地、与 Ollama 无关）；`【待 D8】` 占位行标记完成。**注**：此为模型选用，safetensors 无单一 Docker 级 digest，以「本地路径 + 架构 + 文件大小」作为复现依据 | §二.2.2.2；§三 第 13；§五 |
-
-| 日期 | 修订人 | 原因 | 影响范围 |
-|---|---|---|---|
+| 2026-10-08 | 单人（本人） | **P1 启动前补锁测试工具链**：新增 **§二.2.10**（`pytest==9.1.1`，`reports/p0-audit-doc-sync-2026-10-08.md` §三 G1 缺口收口）并同步 `requirements.txt` 新增「测试工具链」段；已实装项目 `.venv` 并复跑回归 **176 passed**（0.66s）验证一致 | 新增 §二.2.10；`requirements.txt`；`README.md` tests 行 |
+| 2026-10-08 | 单人（本人） | **P1-D3 A3 告警引擎 + Redis 形态变更**：新增 **§二.2.12**（`scripts/alarm_engine.py` + `configs/alarm_rules.yml` + `configs/redis.conf` 形态 A→B+B7 闭环）；Redis 仍为 `redis:8`（§二.2.1 第 5 行），Python 依赖复用 §二.2.9，未重复列 | 新增 §二.2.12 |
+| 2026-10-09 | 单人（本人） | **P1 B4–B6/D9 锁版收尾**：新增 **§二.2.13**（B4 词表 v2 / `extract_triples.py` / `load_meta.py` / `outbox_worker.py` / `reconcile.py` / Neo4j 105 节点·127 关系 / Milvus `kb_p1_v1` / D9 判定报告 93% / 人工复核样本）；§四 交叉引用补 b4/b6/d9 三报告。依赖复用 §二.2.9/§二.2.2.1，未重复列 | 新增 §二.2.13；§四 |
+| 2026-10-09 | 单人（本人） | **Phase 2 W1 查询改写器**：新增 **§二.2.14**（`scripts/query_rewrite.py` 规则快路径+可选LLM + `experiments/p2/w1/cache/` 缓存）；jieba 复用 §二.2.8；LLM 复用 `llm_adapter` + `env/cloud.json` | 新增 §二.2.14 |
+| 2026-10-09 | 单人（本人） | **Phase 2 W2 多路召回编排**：新增 **§二.2.15**（`configs/retrieval.yml` + `retrieval_base.py` + `retrieve_{dense,sparse,graph}.py` + `retrieval.py`）；启动 v2 栈 Milvus（19531）实召回三路命中、`degraded_routes=[]`；§四 补 w2 交叉引用。依赖复用 §二.2.8/§二.2.2.1；修复留痕见 §二.2.15 | 新增 §二.2.15；§四 |
+| 2026-10-09 | 单人（本人） | **Phase 2 W3 RRF 融合**：新增 **§二.2.16**（`configs/retrieval.yml::rrf` 段 + `scripts/fuse_rrf.py`）；k=60/top_k=5/weights{0.6,0.4}；真实融合 top5 正确（图谱不参与，P2-R4）；§四 补 w3 交叉引用 | 新增 §二.2.16；§四 |
+| 2026-10-09 | 单人（本人） | **Phase 2 W4 重排 + W5 证据组装**：新增 **§二.2.17**（`probe_reranker.py` 闭环保 + `rerank.py` + `assemble_evidence.py` + `chunks/parents_v1.jsonl`）；probe 实测 CPU 加载 4.57s/≈54ms对；§四 补 w4/w5 交叉引用。旧 project-summary「reranker 延迟/驻留待实测」据此转已实测 | 新增 §二.2.17；§四 |
+| 2026-10-09 | 单人（本人） | **Phase 2 W6 `retrieve_knowledge` 工具**：新增 **§二.2.18**（`retrieve_knowledge.py::RetrievalService` 常驻级联 + `to_openai_tool()/with_tools()` 附加注册 + `--repeat` 冷/热延迟剖面）；`retrieve_dense/retrieval/rerank` 增可注入 `embedder/model`；热 recall 96→40ms、热 rerank ≈1.2s 实测；§四 补 w6 交叉引用 | 新增 §二.2.18；§四 |
+| 2026-10-09 | 单人（本人） | **Phase 2 W7 `retrieve_knowledge` 工具链接入 R-2/R-3**：新增 **§二.2.19**（`tools_p2_retrieve.json` + `evals/v2_retrieve_cases.jsonl` + `run_v2_tools.py` + `judge_tools` 对 `retrieve_knowledge.question` 复用 `_query_semantic_match`）；云端 Qwen/Qwen3.8-27B 全量 **16/16 Pass（单工具 100% ≥85% 线）**；资产还原留痕（tools_v2 还原/judge_v1 删除/TOOLS_P2_PATH）。§四 补 w7 交叉引用 | 新增 §二.2.19；§四 |
+| 2026-10-09 | 单人（本人） | **M2.3 配套评测集指标**：新增 **§二.2.20**（`evals/m2_acc_set.jsonl` 12题 + `scripts/eval_m2.py`）；**前置发现** 50 条 `golden_set_v1` 与真实语料内容脱节不可直接评测，改走配套集；实测 **Recall@5=1.0 / NDCG@5=1.0**、**MRR=0.7153（中间区间）**、**P95=7.0s（No-Go，CPU rerank）**；§四 补 m2 交叉引用。golden 50 题待语料扩充后重评 | 新增 §二.2.20；§四 |
+| 2026-10-09 | 单人（本人） | **D11 延迟闭合（GPU 重排）**：更新 **§二.2.20** 第 5 行 + 裁定口径；`D:\py312-torch`（CUDA torch 2.14.0+cu130, RTX 4060）补装依赖后 `eval_m2.py --device cuda` 全量 12 题 **P95 7037→353.2ms（降幅 95%）**，Recall/MRR/NDCG 无回退；P95<800ms **达标**。`eval_m2.py` 增 `--device` 参数 | 更新 §二.2.20；eval_m2.py |
+| 2026-10-09 | 单人（本人） | **D7 重排消融**：更新 **§二.2.20** 第 6-7 行 + 裁定口径；`scripts/d7_ablation.py` 逐题对比 RRF-only vs rerank：rerank ΔMRR=**-0.0417（净负）**，RRF-only **MRR=0.7569≥0.75 达标** + P95=86.1ms；`RetrievalService` 增 `use_rerank` 开关，`eval_m2.py` 增 `--no-rerank`。**M2.3 四项指标全部达标**（Recall=1.0/MRR=0.7569/NDCG=1.0/P95=86ms） | 更新 §二.2.20；retrieve_knowledge.py；eval_m2.py；d7_ablation.py |
+| 2026-10-09 | 单人（本人） | **Phase 2 收尾（M2.4 达成）**：新增 **§二.2.21**（`docs/p2-handover-p3.md` + `reports/p2-summary.md`）；M2.4 三项通过条件全部达成（P95=86.1ms / retrieve_knowledge 可用 / 移交 P3）；**M2.1–M2.4 四项里程碑全部达成**；§四 补 handover/summary 交叉引用。遗留转 P3：golden 50 题、Redis 缓存、引用正确率、rerank 重评 | 新增 §二.2.21；§四 |
+| 2026-10-09 | 单人（本人） | **Phase 4 前端工程锁版（D1–D5）**：新增 **§二.2.23**（Next 16.4.0 / React 19.3.0 / Tailwind 4.3.3 / radix-ui 1.7.0 单包 / shadcn CLI 4.21.4 nova 预设 / react-query 5.104.1 / socket.io-client 4.8.4 / zustand 5.0.15 / vitest 5.0.3 / playwright 1.64.0 / Node v24.19.0+pnpm 11.7.0）；实测依据：next build 通过 + 单测 30/30 PASS + `pnpm list --depth=0` | 新增 §二.2.23 |

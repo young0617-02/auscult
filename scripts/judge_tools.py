@@ -64,7 +64,7 @@ from typing import Any
 import param_normalizer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = PROJECT_ROOT / "schemas" / "tools_v2.json"  # P5 缩描述实测为负结果（EXP-V1-008），已回退至 v2
+SCHEMA_PATH = PROJECT_ROOT / "schemas" / "tools_v2.json"
 CASES_PATH = PROJECT_ROOT / "evals" / "v1_cases.jsonl"
 
 # 判据（逐字采用上游计划 §五 / reports/p0-report-v1-tool-call.md §7.1）
@@ -459,9 +459,13 @@ def compare_arguments(tool_name: str, tool_schema: dict[str, Any] | None,
                 issues.append(f"参数值错：time_range 期望 {exp_value}，实际 {act_value}")
             continue
         # 自由长文本宽松（2026-09-24 第二轮修订）：不走精确匹配
-        if (tool_name, key) == ("search_knowledge", "query"):
+        # W7 增量：`retrieve_knowledge.question` 复用与 `search_knowledge.query` 同一套
+        # `_query_semantic_match`（关键概念命中 + bigram 交叠），对齐 V1 R-2/R-3 语义口径；
+        # 只加判分分支，不改 search_knowledge 既有行为、不新增其它判据项。
+        if (tool_name, key) == ("search_knowledge", "query") or (
+                tool_name, key) == ("retrieve_knowledge", "question"):
             if not _query_semantic_match(exp_value, act_value):
-                issues.append(f"参数值错：query 期望近似 {exp_value!r}，实际 {act_value!r}")
+                issues.append(f"参数值错：{key} 期望近似 {exp_value!r}，实际 {act_value!r}")
             continue
         if (tool_name, key) == ("generate_report", "diagnosis_summary"):
             if not _free_text_ok(exp_value, act_value):

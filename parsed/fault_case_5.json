@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "6f2ef3e66f5a797c0776b8c1bb05cfe87f6e2ccd509df76cc2c4b1dcfd6482c1",
+    "short_id": "6f2ef3e",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      31
+    ],
+    "created_parse_ids": [
+      31
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "6f2ef3e66f5a797c0776b8c1bb05cfe87f6e2ccd509df76cc2c4b1dcfd6482c1",
+    "short_id": "6f2ef3e",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备故障案例分析（合成样本）\n\n故障案例 5:基础松动\n\n现象:松动侧明显位移且随运行漂移，现场实测振动高于警戒值。\n\n分析:松动会放大各处振动并随工况漂移，相位不稳定。\n\n处置:紧固并灌浆加固基础。\n\n结论:经修复并返测，振动恢复至正常区间，建议纳入周期性巡检。",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:6f2ef3e/tier:basic/page:1",
+        "end": "doc:6f2ef3e/tier:basic/page:1/block:6"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

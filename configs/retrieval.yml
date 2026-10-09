@@ -1,0 +1,35 @@
+# Phase 2 W2 多路召回参数集中配置（供 D11 调参，勿在脚本中硬编码）
+# 来源：plan/Phase 2 详细开发计划（混合检索）.md §5.2 W2
+
+dense:
+  top_k: 20
+  hnsw:
+    M: 16
+    efConstruction: 200
+    ef: 64          # 查询 ef，可调（D11）
+  metric: COSINE
+  dim: 1024
+
+sparse:
+  top_k: 20
+  bm25_k1: 1.2
+  bm25_b: 0.75
+  analyzer: jieba
+
+graph:
+  top_k_paths: 5
+  max_hops: 2
+
+routes:
+  # 需与 query_rewrite 输出的三路输入对应
+  semantic_keys: ["semantic"]
+  keyword_keys: ["keywords"]
+  entity_keys: ["entities"]
+
+# W3 RRF 融合参数（来源：plan/Phase 2 详细开发计划 §5.3；与 V2 基准 RRF_K=60 一致）
+rrf:
+  k: 60
+  top_k: 5
+  weights:
+    dense: 0.6
+    sparse: 0.4

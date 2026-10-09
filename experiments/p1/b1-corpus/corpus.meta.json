@@ -1,0 +1,112 @@
+{
+  "synthetic": true,
+  "seed": 42,
+  "generator": "scripts/gen_corpus_pdfs.py",
+  "doc_type_counts": {
+    "manual_text": 2,
+    "manual_scanned": 1,
+    "manual_table": 1,
+    "workorders": 6,
+    "fault_case": 6,
+    "criteria": 2,
+    "topo": 1
+  },
+  "note": "自编合成内容，取自公开工业常识骨架，不含任何真实手册原文；禁止以“现场数据”表述；字段结构与真实数据等价，可被真实数据无改代码替换",
+  "samples": {
+    "manual_impeller_series": {
+      "file": "manual_impeller_series.pdf",
+      "bytes": 4608,
+      "sha256": "e661a7e0fb5572b7dea02e18738769c3c87ab9b2d0d785f2c8c6ff532f11e9ec"
+    },
+    "manual_centrifugal_hc": {
+      "file": "manual_centrifugal_hc.pdf",
+      "bytes": 4600,
+      "sha256": "96ee222b0228d858ac3a241d8e5162a8ea65a915556ed2c83214bf299ad2d420"
+    },
+    "manual_scanned_dp": {
+      "file": "manual_scanned_dp.pdf",
+      "bytes": 11602698,
+      "sha256": "9193f23cd21759c4beb596c38679c2c233b996a4706fa08939901de54bc7c53c"
+    },
+    "manual_ss_process": {
+      "file": "manual_ss_process.pdf",
+      "bytes": 8812,
+      "sha256": "e8e31c8f24f5c922192829912ee5f5beb2185a3f24477628253f8ba01267cbcc"
+    },
+    "workorders_A": {
+      "file": "workorders_A.pdf",
+      "bytes": 11369,
+      "sha256": "b4c5ab66c36e5af7d34d3f2e8a4f85a65352859e19fc495fb09c9bc3393bc443"
+    },
+    "workorders_B": {
+      "file": "workorders_B.pdf",
+      "bytes": 11388,
+      "sha256": "2961281629b957570648014b30b4b709475facb98a617758d6fe89fc915010af"
+    },
+    "workorders_C": {
+      "file": "workorders_C.pdf",
+      "bytes": 11394,
+      "sha256": "715a12984015adbebbe8d942ab61e71c66843a83ffadbcf7f6962eacc8b942e2"
+    },
+    "workorders_D": {
+      "file": "workorders_D.pdf",
+      "bytes": 11393,
+      "sha256": "9b06f7bd1f26949be052003007dfe3e1d5cb16e8e4d62d9e37c74b7a708b83fd"
+    },
+    "workorders_E": {
+      "file": "workorders_E.pdf",
+      "bytes": 11413,
+      "sha256": "cf6a742883e1c289f1e734404e565ee525d274d70f7186bdbe6b75c457214fa6"
+    },
+    "workorders_F": {
+      "file": "workorders_F.pdf",
+      "bytes": 11401,
+      "sha256": "2a9e70e6c38ad86920e2f3064c13f9a188ac3966c0f9eff0cea17d18d85b30b1"
+    },
+    "fault_case_1": {
+      "file": "fault_case_1.pdf",
+      "bytes": 2287,
+      "sha256": "3dfeb3958784adb968fa5dc203d8050df7473b7788e7aceaad034fb9b9edfe98"
+    },
+    "fault_case_2": {
+      "file": "fault_case_2.pdf",
+      "bytes": 2262,
+      "sha256": "6681aba0b87c2e2c04796c0686818bcad0b7d09d4173f5bbead2dad0104890d1"
+    },
+    "fault_case_3": {
+      "file": "fault_case_3.pdf",
+      "bytes": 2284,
+      "sha256": "00e20cbe5fc0fa90bbbb3d065d3e050bc73f24dfe54c1adeb7a97a592d43dfe5"
+    },
+    "fault_case_4": {
+      "file": "fault_case_4.pdf",
+      "bytes": 2273,
+      "sha256": "c72e3533ffb48583fcd1e8c6259bee3b840b767cabd9a0e35f7c58ecd18e62d8"
+    },
+    "fault_case_5": {
+      "file": "fault_case_5.pdf",
+      "bytes": 2271,
+      "sha256": "6f2ef3e66f5a797c0776b8c1bb05cfe87f6e2ccd509df76cc2c4b1dcfd6482c1"
+    },
+    "fault_case_6": {
+      "file": "fault_case_6.pdf",
+      "bytes": 2275,
+      "sha256": "451dc8325d52b6ebb6f6bc44d0af3e1143db4b71ceed14627a23e769ed9eca28"
+    },
+    "criteria_1": {
+      "file": "criteria_1.pdf",
+      "bytes": 5170,
+      "sha256": "4d250b580174a3aebbd8a21429ffd479815fdd08234739465c1788cefb48b646"
+    },
+    "criteria_2": {
+      "file": "criteria_2.pdf",
+      "bytes": 4721,
+      "sha256": "7397b17f2cf58bdca748a37640f7012e64f958b8ad0b6d6f2d25fbc9fadbad0c"
+    },
+    "topo_plant": {
+      "file": "topo_plant.pdf",
+      "bytes": 5750,
+      "sha256": "2fc934e1c56d99d64e77d3abfa45b77101c56a2615da1c7eccde11838fadc3b3"
+    }
+  }
+}

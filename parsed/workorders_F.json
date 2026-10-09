@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "2a9e70e6c38ad86920e2f3064c13f9a188ac3966c0f9eff0cea17d18d85b30b1",
+    "short_id": "2a9e70e",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      59
+    ],
+    "created_parse_ids": [
+      59
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "2a9e70e6c38ad86920e2f3064c13f9a188ac3966c0f9eff0cea17d18d85b30b1",
+    "short_id": "2a9e70e",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备维修工单（合成样本 · F）\n\n| 工单编号 | 客户号 | 设备 | 故障现象 | 处置措施 | 日期 |\n| --- | --- | --- | --- | --- | --- |\n| WO-F-2024 | 0客1户--1000000 | A 0泵 | 噪声增大 | 动平衡校正 | 工作日第1天 |\n| WO-F-2024 | 0客2户--1000071 | C 1泵 | 噪声增大 | 清理过滤器 | 工作日第2天 |\n| WO-F-2024 | 0客1户--1001042 | B 2泵 | 轴承温度异常 | 重新对中 | 工作日第3天 |\n| WO-F-2024 | 0客2户--1002013 | C 3泵 | 密封渗漏 | 动平衡校正 | 工作日第4天 |\n| WO-F-2024 | 0客1户--1002084 | C 4泵 | 轴承温度异常 | 清理过滤器 | 工作日第5天 |\n| WO-F-2024 | 0客2户--1003055 | B 5泵 | 轴承温度异常 | 动平衡校正 | 工作日第6天 |\n| WO-F-2024 | 0客1户--1004026 | C 6泵 | 密封渗漏 | 更换轴承 | 工作日第7天 |\n| WO-F-2024 | 0客2户--1004097 | A 7泵 | 电流超限 | 清理过滤器 | 工作日第8天 |",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:2a9e70e/tier:basic/page:1",
+        "end": "doc:2a9e70e/tier:basic/page:1/block:2"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

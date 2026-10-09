@@ -679,7 +679,7 @@ def main():
         "SPB_SUB_TOPIC", "spBv1.0/plant1/+/gw-pump-01/#"))
     args = ap.parse_args()
 
-    cfg_path = Path(args.schema_mapping) if args.schema_mapping else None
+    cfg_path = Path(args.prj_spec_schema_mapping) if args.prj_spec_schema_mapping else None
     cfg = DecoderConfig(cfg_path)
 
     if args.selftest:

@@ -1,0 +1,19 @@
+{
+  "device": "cpu",
+  "load_s": 4.574,
+  "n_params_m": 567.8,
+  "batch": {
+    "8": {
+      "warm_ms": 503.7,
+      "n": 32,
+      "total_ms": 1808.0,
+      "ms_per_pair": 56.5
+    },
+    "16": {
+      "warm_ms": 920.4,
+      "n": 32,
+      "total_ms": 1728.3,
+      "ms_per_pair": 54.01
+    }
+  }
+}

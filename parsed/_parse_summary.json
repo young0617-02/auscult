@@ -1,0 +1,10 @@
+{
+  "input": "<REPO>\\experiments\\p1\\b1-corpus",
+  "output": "parsed",
+  "tier": "basic",
+  "total": 19,
+  "success": 19,
+  "fail": 0,
+  "fail_rate": 0.0,
+  "gate": true
+}

@@ -1,0 +1,126 @@
+{
+  "_meta": {
+    "name": "triple_extraction_v2",
+    "desc": "B4 三元组抽取受控词表（实体类型 / 关系类型）+ OpenAI strict json_schema 约束解码与入库共用。v2 新增「驱动/构成/阈值」细化关系、移除泛「关联」兜底，降低信息量稀释与错配。实体/关系值使用中文字面量，扩展时在对应 enum 中追加并在报告留痕。",
+    "version": "v2",
+    "source": "plan/p1-plan-detailed.md §5.7 B4"
+  },
+  "entity_types": [
+    "设备",
+    "测点",
+    "部件",
+    "故障",
+    "参数",
+    "标准值",
+    "处置",
+    "部位"
+  ],
+  "relation_types": [
+    "监测",
+    "安装于",
+    "连接",
+    "驱动",
+    "构成",
+    "导致",
+    "表征",
+    "超限",
+    "阈值",
+    "处置为",
+    "位于"
+  ],
+  "neo4j_relation_map": {
+    "监测": "MONITORS",
+    "安装于": "INSTALLED_ON",
+    "连接": "CONNECTS",
+    "驱动": "DRIVES",
+    "构成": "COMPOSES",
+    "导致": "CAUSES",
+    "表征": "CHARACTERIZES",
+    "超限": "EXCEEDS",
+    "阈值": "THRESHOLDS",
+    "处置为": "HANDLED_BY",
+    "位于": "LOCATED_AT"
+  },
+  "schema": {
+    "type": "object",
+    "properties": {
+      "triples": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "head": {
+              "type": "string",
+              "description": "三元组头实体（原文中的名称，禁止编造）"
+            },
+            "head_type": {
+              "enum": [
+                "设备",
+                "测点",
+                "部件",
+                "故障",
+                "参数",
+                "标准值",
+                "处置",
+                "部位"
+              ]
+            },
+            "relation": {
+              "enum": [
+                "监测",
+                "安装于",
+                "连接",
+                "驱动",
+                "构成",
+                "导致",
+                "表征",
+                "超限",
+                "阈值",
+                "处置为",
+                "位于"
+              ]
+            },
+            "tail": {
+              "type": "string",
+              "description": "三元组尾实体（原文中的名称，禁止编造）"
+            },
+            "tail_type": {
+              "enum": [
+                "设备",
+                "测点",
+                "部件",
+                "故障",
+                "参数",
+                "标准值",
+                "处置",
+                "部位"
+              ]
+            },
+            "confidence": {
+              "type": "number",
+              "description": "模型对抽取置信度，0~1"
+            },
+            "source_chunk_id": {
+              "type": "string",
+              "description": "来源子块 id，必须等于随语料给出的 chunk_id"
+            }
+          },
+          "required": [
+            "head",
+            "head_type",
+            "relation",
+            "tail",
+            "tail_type",
+            "confidence",
+            "source_chunk_id"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "triples"
+    ],
+    "additionalProperties": false
+  }
+}

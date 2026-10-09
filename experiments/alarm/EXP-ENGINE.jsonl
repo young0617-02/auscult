@@ -1,0 +1,1 @@
+{"alarm_id": "thr_vib_rms:PUMP-A:vib_rms:1791450480000", "device_id": "PUMP-A", "metric": "vib_rms", "value": 4.5936, "baseline": 4.5, "severity": "high", "ts": 1791450480000, "rule_id": "thr_vib_rms", "dedup_count": 2}

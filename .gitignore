@@ -6,6 +6,8 @@ env/cloud.json
 __pycache__/
 *.pyc
 .venv/
+# MinerU 解析专用隔离环境（P1-D1；重依赖，不入库）
+.venv-mineru/
 
 # V2 压力档合成语料（可再生，不入库）：76.4 MB / 3 文件，占 experiments/v2/raw 的 96.2%
 # 生成方式（种子固定 42，可完全复现）：
@@ -16,3 +18,11 @@ __pycache__/
 # 基线提交 672143e 已含这 3 个 blob，故 .git 体积不会因此下降（需历史重写才能回收）。
 # 详见 reports/p0-report-vcs-baseline-2026-10-06.md
 experiments/v2/raw/corpora_v2/
+
+# P1 解析样本：扫描件 PDF（无文本层，两份同内容共 22.7 MB，占 experiments 待入库体积 96%）
+# 生成方式（种子固定 42，可完全复现）：
+#   python scripts/gen_sample_pdfs.py --out-dir experiments/p1/mineru-spike/samples --seed 42
+#   python scripts/gen_corpus_pdfs.py  --out-dir experiments/p1/b1-corpus           --seed 42
+# 说明：仅移出版本控制，文件仍保留在磁盘；其余实验产物（jsonl/md/小 PDF）正常入库。
+experiments/p1/mineru-spike/samples/sample_scanned.pdf
+experiments/p1/b1-corpus/manual_scanned_dp.pdf

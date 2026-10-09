@@ -1,0 +1,4 @@
+{"trace_id": "d21-event-test", "span_id": "fddfb250", "type": "event", "name": "route", "ts": "2026-10-09T07:51:43.332870+00:00", "target": "human_review", "reason": "risk=high"}
+{"trace_id": "d21-event-test", "span_id": "ab118797", "type": "event", "name": "route", "ts": "2026-10-09T07:55:33.321030+00:00", "target": "human_review", "reason": "risk=high"}
+{"trace_id": "d21-event-test", "span_id": "6d212b64", "type": "event", "name": "route", "ts": "2026-10-09T07:55:46.360000+00:00", "target": "human_review", "reason": "risk=high"}
+{"trace_id": "d21-event-test", "span_id": "80494dba", "type": "event", "name": "route", "ts": "2026-10-09T07:58:30.756607+00:00", "target": "human_review", "reason": "risk=high"}

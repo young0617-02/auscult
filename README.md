@@ -68,7 +68,7 @@ auscult/
 ├─ docker/        compose.base.yml / compose.ingest.yml / compose.v2.yml / compose.v4b-iso.yml / Dockerfile.decoder
 ├─ scripts/       22 个 Python 执行器 + 2 个 PowerShell（其中 16 个含 --selftest）
 ├─ tests/         回归测试（pytest，**176 用例 / 8 个 test_*.py**；离线运行，见 ISS-030 / ISS-031 / ISS-037）
-│                 ⚠️ pytest 尚未登记进 requirements.txt 与 docs/prj-ledger-version-lock.md（P1 开工前补锁）
+│                 ✅ pytest 已锁 `9.1.1`（requirements.txt + 版本锁 §二.2.10，2026-10-08 补锁）
 ├─ evals/         golden_set_v1(50) / v1_cases(20，ISS-029 修订版) / v2_cases(25) / v3_cases(25) / r4_cases(20) /
 │                 v1_refusal_transfer_v1(无泄漏迁移集) / v1_adversarial_v1(自建对抗集) / probe-v1-004 / corpora_v1/corpus_100
 │                 原件归档：v1_cases-pre-2026-10-05 / -10-06、v1_refusal_transfer_v1-pre-2026-10-06

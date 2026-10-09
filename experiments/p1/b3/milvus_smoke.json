@@ -1,0 +1,87 @@
+{
+  "collection": "kb_p1_v1",
+  "row_count": 36,
+  "smoke": [
+    {
+      "text": "振动烈度判据要点表（合成样本）",
+      "doc_type": "标准判据",
+      "relevant": "criteria_1-1-c0",
+      "recall_dense": 1.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 1.0
+    },
+    {
+      "text": "设备故障案例分析（合成样本）",
+      "doc_type": "故障案例",
+      "relevant": "fault_case_1-1-c0",
+      "recall_dense": 0.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 0.0
+    },
+    {
+      "text": "1 安全须知",
+      "doc_type": "设备手册",
+      "relevant": "manual_centrifugal_hc-2-c0",
+      "recall_dense": 0.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 0.0
+    },
+    {
+      "text": "厂区设备拓扑（合成样本）",
+      "doc_type": "拓扑",
+      "relevant": "topo_plant-1-c0",
+      "recall_dense": 1.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 1.0
+    },
+    {
+      "text": "设备维修工单（合成样本 · A）",
+      "doc_type": "维修工单",
+      "relevant": "workorders_A-1-c0",
+      "recall_dense": 1.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 0.0
+    },
+    {
+      "text": "1 安全须知",
+      "doc_type": "设备手册",
+      "relevant": "manual_centrifugal_hc-2-c0",
+      "recall_dense": 0.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 0.0
+    },
+    {
+      "text": "2 结构原理",
+      "doc_type": "设备手册",
+      "relevant": "manual_centrifugal_hc-3-c0",
+      "recall_dense": 1.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 1.0
+    },
+    {
+      "text": "3 安装要求",
+      "doc_type": "设备手册",
+      "relevant": "manual_centrifugal_hc-4-c0",
+      "recall_dense": 1.0,
+      "recall_sparse": 0.0,
+      "recall_hybrid": 1.0
+    },
+    {
+      "text": "4 运行维护",
+      "doc_type": "设备手册",
+      "relevant": "manual_centrifugal_hc-5-c0",
+      "recall_dense": 0.0,
+      "recall_sparse": 1.0,
+      "recall_hybrid": 1.0
+    },
+    {
+      "text": "5 故障排查",
+      "doc_type": "设备手册",
+      "relevant": "manual_centrifugal_hc-6-c0",
+      "recall_dense": 0.0,
+      "recall_sparse": 1.0,
+      "recall_hybrid": 1.0
+    }
+  ],
+  "synthetic": true
+}

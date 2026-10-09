@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "00e20cbe5fc0fa90bbbb3d065d3e050bc73f24dfe54c1adeb7a97a592d43dfe5",
+    "short_id": "00e20cb",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      26
+    ],
+    "created_parse_ids": [
+      26
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "00e20cbe5fc0fa90bbbb3d065d3e050bc73f24dfe54c1adeb7a97a592d43dfe5",
+    "short_id": "00e20cb",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备故障案例分析（合成样本）\n\n故障案例 4:气蚀\n\n现象:宽频随机噪声伴高频气泡破裂，现场实测振动高于警戒值。\n\n分析:气蚀产生随机高频冲击，流量与扬程同时下降。\n\n处置:调整吸入压力并清理进口。\n\n结论:经修复并返测，振动恢复至正常区间，建议纳入周期性巡检。",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:00e20cb/tier:basic/page:1",
+        "end": "doc:00e20cb/tier:basic/page:1/block:6"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

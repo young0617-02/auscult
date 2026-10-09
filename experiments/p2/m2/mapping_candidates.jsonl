@@ -1,0 +1,5 @@
+{"qid": "gs-001", "coverage": 0.529, "category": "设备手册", "candidate_chunk_ids": ["manual_scanned_dp-3-c0", "manual_ss_process-3-c0", "manual_centrifugal_hc-3-c0", "manual_centrifugal_hc-6-c0", "manual_impeller_series-3-c0"]}
+{"qid": "gs-002", "coverage": 0.171, "category": "设备手册", "candidate_chunk_ids": ["manual_centrifugal_hc-5-c0", "manual_impeller_series-5-c0", "manual_ss_process-5-c0", "manual_scanned_dp-2-c0", "manual_ss_process-2-c0"]}
+{"qid": "gs-003", "coverage": 0.346, "category": "设备手册", "candidate_chunk_ids": ["manual_scanned_dp-3-c0", "manual_ss_process-3-c0", "manual_centrifugal_hc-3-c0", "manual_impeller_series-3-c0", "manual_centrifugal_hc-5-c0"]}
+{"qid": "gs-004", "coverage": 0.386, "category": "设备手册", "candidate_chunk_ids": ["manual_centrifugal_hc-5-c0", "manual_impeller_series-5-c0", "manual_scanned_dp-5-c0", "manual_ss_process-5-c0", "manual_scanned_dp-2-c0"]}
+{"qid": "gs-005", "coverage": 0.196, "category": "设备手册", "candidate_chunk_ids": ["manual_scanned_dp-3-c0", "manual_ss_process-3-c0", "manual_centrifugal_hc-3-c0", "manual_centrifugal_hc-6-c0", "manual_impeller_series-3-c0"]}

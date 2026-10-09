@@ -1,0 +1,51 @@
+# A3 告警规则配置（阈值 + 统计异常）
+# 上游：plan/p1-plan-detailed.md §5.3 ｜ 数据口径：docs/p1-spec-data-sources.md §3.1
+# 唯一事实源之一；alarm_engine.py 只读本文件，不硬编码规则。
+
+rules:
+  # ---------- 阈值规则（立即判定） ----------
+  - rule_id: thr_vib_rms
+    metric: vib_rms          # st_pump_metrics 列名（直拼 SQL，须与 SAFE_IDENT 白名单匹配）
+    type: threshold
+    op: gt
+    threshold: 4.5           # mm/s，ISO 10816 C 区上界 → high
+    severity: high
+    window_min: 1            # 窗口粒度（分钟）
+    must_windows: 2          # 连续 N 窗口超限才触发（抑制单点噪声）
+
+  - rule_id: thr_bearing_temp
+    metric: bearing_temp
+    type: threshold
+    op: gt
+    threshold: 85            # °C → high
+    severity: high
+    window_min: 1
+    must_windows: 2
+
+  - rule_id: thr_motor_current
+    metric: motor_current
+    type: threshold
+    op: gt
+    # 额定 12.3 A × 1.15 = 14.145 A → medium（阈值从 yml 显式给出，便于现场调整）
+    threshold: 14.145
+    severity: medium
+    window_min: 1
+    must_windows: 2
+
+  # ---------- 统计异常（滑动窗口 Z-Score） ----------
+  # 规格：需 ≥7 天基线。无基线时段内仅用阈值规则；本文件预置规则、默认 disabled，
+  # 待 A2 长窗数据（gen_sparkplug --hours ≥168）就绪后由 enable=true 启用。
+  - rule_id: z_span_vib
+    metric: vib_rms
+    type: zscore
+    window_min: 30           # 滑动窗口（分钟）
+    z_threshold: 3.0         # Z-Score > 3 → medium
+    baseline_days: 7         # 需 ≥7 天历史
+    severity: medium
+    enabled: false
+
+# ---------- Redis 去重 ----------
+dedup:
+  key_prefix: dedup:alarm
+  ttl_sec: 300               # 5 分钟滑动窗口
+  # key = {prefix}:{device_id}:{metric}；同 key 命中则 dedup_count+1 合并计数不重复触发

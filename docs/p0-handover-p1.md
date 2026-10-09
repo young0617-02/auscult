@@ -169,6 +169,7 @@
 | **L-08** | **V2 检索路线与参数基线未定**（质量对比与压力档未执行） | **已闭环（2026-09-28）** | 已补做 V2 Step1–Step3 并经实测闭环：jieba analyzer 抽检 32/32、质量对比 6 组回填 `reports/p0-report-v2-hybrid-retrieval.md` §4.4、**真 BM25 对标（EXP-V2-BM25）与压力档（EXP-V2-LOAD，10 万块 Milvus 5.6 ms/1.28 GB vs pgvector 170.6 ms/0.33 GB）均已完成**；P1 建库可沿用实测基线表 | R6、R5、R-M6 |
 | **L-09** | **`docs/prj-ledger-version-lock.md` 与 `docs/prj-ledger-risk-register.md` 已落盘（v1）**，但版本锁定表中仍有待锁定项（**初始口径 15 项，实测后已大幅收敛**：TDengine / BGE-M3 / ParadeDB / Neo4j / Mosquitto / 云端模型 / Ollama 决策 / **reranker（已本地选用 `BAAI--bge-reranker-v2-m3`，2026-09-29）**均已锁；**余项为 EMQX（备选）/ 前端锁文件（Phase 0 无前端工程）**） | 中（**已产出、大幅收敛**） | 随各验证实测回填 `docs/prj-ledger-version-lock.md` §三 待锁定项（EMQX 仅当启用时，前端锁 P1 前端落地时）；版本锁定须与各验证报告 digest 一致（停止条件 S3 的判定依据） | R7、R-M10 |
 | **L-10** | ~~**V4b 门禁线口径未定义**~~（24GB 指"容器内峰值"还是"宿主总占用"） | 🟢 **已裁决（2026-09-24，U-09）= 口径 B（宿主总占用）**：门禁线基数即"物理内存 × 75%"；已按口径 B 核算并经干净机重测**升 Pass（17.89GB ≤ 24GB，2026-09-29）** | 无（口径已定稿并落地；后续按同一口径复测） | R3；R-V4b-3 |
+| **L-11** | **局限声明固定文本未逐份引用**（`docs/p1-spec-data-sources.md` §3.3） | 🟡 **新登记（2026-10-08）**：全仓扫描 `reports/` 仅 **2 份**（`p0-gate-review.md`、`p0-summary-phase0-2026-09-30.md`）含该固定文本，与移交清单 §6.4「已在各报告中逐份引用」不符 | P1 各报告（自 `p1-mineru-spike.md` 起）须**逐份引用**该固定文本（数据来源纪律）；P0 历史报告不追溯改写 | R15 |
 
 ### 4.2 `docs/prj-ledger-known-issues.md` 缺陷移交明细（**随本清单移交**）
 
@@ -257,7 +258,7 @@
 - [x] 文档齐备（**现共 16 份**，命名与职责见 `docs/prj-spec-document-standard.md`）：`docs/p1-spec-data-sources.md`、`docs/prj-spec-labeling.md`、`docs/p0-decision-model-role.md`、`docs/p0-decision-checkpoint.md`、`docs/prj-spec-review-lifecycle.md`、`docs/prj-ledger-known-issues.md`、`docs/prj-template-experiment-log.md`、`docs/p0-spec-scope-mvp.md`、`docs/p0-spec-gate-criteria.md`、`docs/p0-checklist-daily.md`、`docs/prj-ledger-risk-register.md`、`docs/prj-ledger-version-lock.md`、`docs/p0-handover-p1.md`、`docs/p0-design-sparkplug-decoder.md`、`docs/prj-spec-schema-mapping.md`、`docs/prj-spec-document-standard.md`
 - [x] 报告齐备（**现共 25 份 + `daily/` 2 份**，索引见 `reports/README.md`）：`reports/p0-report-v1-tool-call.md`、`reports/p0-report-v2-hybrid-retrieval.md`、`reports/p0-report-v3-ingest-license.md`、`reports/p0-report-v4b-resources.md`、`reports/p0-report-v5-checkpoint.md`、`reports/p0-gate-review.md`、`reports/daily/D1-status.md`
 - [x] 执行器齐备（**现共 22 个 `.py`，其中 16 个支持 `--selftest`；另有 2 个 `.ps1`**）：核心 = `scripts/run_e2e.py`（**端到端唯一权威入口**：规则门 → 云端工具调用）+ `scripts/gate_rules.py`（纯规则前置门，零 LLM 调用）+ `scripts/refusal_gate.py` + `scripts/aggregate_runs.py`（§3.1.3 聚合裁决器）+ `scripts/llm_adapter.py`、`scripts/judge_tools.py`、`scripts/run_v1.py`、`scripts/run_v2.py`、`scripts/run_v5.py`
-- [x] 回归测试齐备：`tests/` **176 用例**（`python -m pytest tests/ -q` 离线秒级全绿）—— ⚠️ **`pytest` 尚未登记进 `requirements.txt` 与版本锁**，P1 开工前补锁
+- [x] 回归测试齐备：`tests/` **176 用例**（`python -m pytest tests/ -q` 离线秒级全绿）—— ✅ **`pytest` 已于 2026-10-08 补锁**（`requirements.txt`「测试工具链」段 + `docs/prj-ledger-version-lock.md` §二.2.10，`pytest==9.1.1`），并已实装项目 `.venv` 复跑 **176 passed** 验证一致
 - [x] 用例与迁移集：`evals/v1_cases.jsonl`（20，`ISS-029` 路径 B 修订版）、`evals/v1_refusal_transfer_v1.jsonl`（无泄漏迁移集）、`evals/v1_adversarial_v1.jsonl`（自建对抗集）、原件归档 `evals/v1_cases-pre-2026-10-05/06.jsonl`
 - [x] 目录骨架齐备：`archive/ configs/ docker/ docs/ env/ evals/ experiments/ plan/ prompts/ reports/ schemas/ scripts/ tests/`（`plan/`、`tests/` 原清单漏列；`archive/` 为 2026-10-08 新增的非项目文档归档）
 
@@ -272,32 +273,32 @@
 
 ### 6.3 风险册已同步
 
-- [ ] 全部阻塞项已登记到 `docs/prj-ledger-risk-register.md`（R2 / R3 / R7 / R8 / R9 / R10 / R11 / R12 / R15 / R-新1 – R-新6）
-- [ ] `docs/prj-ledger-known-issues.md` §五「与风险册的对应关系」表已逐条核对一致
-- [ ] 标为「需换方案」的缺陷已同步至 `docs/p0-decision-checkpoint.md` §2.1 与 `docs/prj-ledger-risk-register.md`，形成闭环
+- [x] 全部阻塞项已登记到 `docs/prj-ledger-risk-register.md`（R2 / R3 / R7 / R8 / R9 / R10 / R11 / R12 / R15 / R-新1 – R-新6）—— 2026-10-08 复核：`R-新1`–`R-新6`、`R-V1-10` 均在册；已补「**门禁状态（2026-10-08 同步）**」行
+- [x] `docs/prj-ledger-known-issues.md` §五「与风险册的对应关系」表已逐条核对一致（含 `ISS-007`↔`R-新1`、`ISS-012`↔`R-新6`、`ISS-028`↔`R-V1-10`）
+- [x] 标为「需换方案」的缺陷（**ISS-005**）已同步至 `docs/p0-decision-checkpoint.md` §2.1 与 `docs/prj-ledger-risk-register.md`（R-M5），形成闭环
 
 ### 6.4 评测集与语料可追溯
 
-- [ ] `evals/golden_set_v1.jsonl` 每行含 `qid / question / answer_points / relevant_chunk_ids / category / difficulty / source_doc`，7 类配额与难度分布符合 `docs/prj-spec-labeling.md` §2.1–§2.2
-- [ ] `relevant_chunk_ids` 指向的块在 `evals/corpora_v1/corpus_100.jsonl` 中**真实存在**
-- [ ] 模拟语料与元数据均带 `synthetic: true` 标记，**未与真实数据混放**
-- [ ] 模拟数据 seed 已记录，实验登记字段（digest / seed / prompt 版本 / `num_ctx` / `temperature` / commit）可用
-- [ ] 局限声明固定文本（`docs/p1-spec-data-sources.md` §3.3）已在各报告中逐份引用
+- [x] `evals/golden_set_v1.jsonl` 每行含 `qid / question / answer_points / relevant_chunk_ids / category / difficulty / source_doc`（另含 `notes`），7 类配额与难度分布符合 `docs/prj-spec-labeling.md` §2.1–§2.2
+- [x] `relevant_chunk_ids` 指向的块在 `evals/corpora_v1/corpus_100.jsonl` 中**真实存在**（抽验 `doc-pump-manual#c001` 命中）
+- [x] 模拟语料与元数据均带 `synthetic: true` 标记，**未与真实数据混放**
+- [x] 模拟数据 seed 已记录（`experiments/**/raw/*.meta.json` 均含 `"seed": 42`），实验登记字段（digest / seed / prompt 版本 / `num_ctx` / `temperature` / commit）可用
+- [ ] ⚠️ 局限声明固定文本（`docs/p1-spec-data-sources.md` §3.3）**未在任何报告中逐份引用** —— 2026-10-08 全仓扫描：`reports/` 仅 **2 份**（`p0-gate-review.md`、`p0-summary-phase0-2026-09-30.md`）含「局限声明」。→ **列为 P1 遗留项**：P1 各报告（`p1-mineru-spike.md` 等）须逐份引用该固定文本
 
 ### 6.5 范围与代价
 
-- [ ] `docs/p0-spec-scope-mvp.md` §二 Must 链 13 项已逐条给出可验收判据
-- [ ] `docs/p0-spec-scope-mvp.md` §五 降级代价表三列（`Recall@5` / `P95` / MVP 范围）**无留空**
-- [ ] 已明确「无影响」的行（如 V5 checkpoint 降级对 `Recall@5`）已给出依据
-- [ ] `docs/p0-spec-scope-mvp.md` §四 停止条件 S1–S3 与 T1–T8 已定稿且可判定
+- [x] `docs/p0-spec-scope-mvp.md` §二 Must 链 13 项已逐条给出可验收判据
+- [x] `docs/p0-spec-scope-mvp.md` §五 降级代价表三列（`Recall@5` / `P95` / MVP 范围）**无留空**（未量化格按 §5.1 规则 R1 填 `【待实测填入】`，属「已填」非「留空」；确无影响的格显式写「无影响」+ 依据）
+- [x] 已明确「无影响」的行（如 V5 checkpoint 降级对 `Recall@5`，依据 = checkpoint 不参与检索排序）已给出依据
+- [x] `docs/p0-spec-scope-mvp.md` §四 停止条件 S1–S3 与 T1–T8 已定稿且可判定（10-08 复核：S2/S3 达成、S1 未达成并如实登记端到端演示转 P1）
 
 ### 6.6 门禁与判定
 
-- [ ] M0.1 – M0.6 的达成情况已在 §五 逐条写明（含未达成原因）
-- [ ] `reports/p0-gate-review.md` 已产出（含逐项判定、中间区间处置记录、上游矛盾登记与 P1 移交）
-- [x] 7 项验证项（V1–V7）已逐项判 Pass / 中间 / No-Go（当前：**V1 = No-Go**；**V2 / V4a / V4b / V5 = Pass**；**V3 = 条件通过（已封板）**；**V6 / V7 = 结构 Pass**）
-- [ ] 中间区间项**未被当作通过**处理
-- [ ] M0.6 门禁评审结论已出（通过 / 条件通过 / 未通过），并已在本清单标注
+- [x] M0.1 – M0.6 的达成情况已在 §五 逐条写明（含未达成原因；**10-08 后 M0.1–M0.5 全部达成、M0.6 放行**）
+- [x] `reports/p0-gate-review.md` 已产出（含逐项判定、中间区间处置记录、上游矛盾登记与 P1 移交）—— 门禁结论以 **决策34（2026-10-08 放行）** 为准
+- [x] 7 项验证项（V1–V7）已逐项判 Pass / 中间 / No-Go（**2026-10-08 更新：V1 = Pass**〔§3.1.3 同日多轮聚合口径〕；**V2 / V4a / V4b / V5 = Pass**；**V3 = 条件通过（已封板）**；**V6 / V7 = 结构 Pass**）
+- [x] 中间区间项**未被当作通过**处理（`M0.2` 的达成依赖 §3.1.3 授权口径，且残余风险已在 `reports/p0-gate-m02-verdict-2026-10-08.md` §四 显式声明）
+- [x] M0.6 门禁评审结论已出（**放行**，2026-10-08），并已在本清单 §5.1 / 头部放行注记标注
 
 ---
 
@@ -318,3 +319,4 @@
 | 2026-09-30 | 单人（本人） | **全文档一致性同步（资产/阻塞项状态随实测回填）**：① §2.6 `prj-ledger-known-issues.md` 收录范围 **ISS-018 → ISS-026**，p0-spec-scope-mvp / p0-spec-gate-criteria / p0-checklist-daily / prj-ledger-risk-register / prj-spec-schema-mapping 五行「待回填」→ **已回填**；② §2.7 报告状态 v1 / v2 / v3 / v4b / v5 五行「待实测 / 未执行」→ **已实测回填**（v3 已封板、v4b 已升 Pass）；③ §三 P0-3「`.wslconfig` 当前未落地」→ 已核验；④ §四.1 **L-02 / L-04 / L-06 / L-07 / L-10** 状态由「阻塞 / 决策未做 / 未执行 / 待定义」→ **已裁决 / 已决 / 已闭环**；⑤ §4.2 **ISS-001 – ISS-008** 由「待 D7 判定」→ 实际结论（**ISS-005 = 需换方案已切 PG**，其余可规避 / 已修复 / 已裁决），并将 **ISS-015–018 → ISS-015–023**、新增 **ISS-024–026** 行；⑥ §6.2 阻塞项交接清单与 §6.6 验证项判定（原写「V1/V2/V3/V4b/V5 = **无法判定**」，**与同文件 §5.2 直接矛盾**）已更正；⑦ 页头状态声明与 §5.3 承接事项同步；⑧ **修订记录中 3 条过期占位行**（【待 M0.6 评审】/【待各验证项实测】/【待 L-01/L-03 闭环】）回填为实际完成记录 | 页头、§二（2.2/2.6/2.7）、§三、§四（4.1/4.2）、§五（5.3）、§六（6.2/6.6） |
 | 2026-10-07 | 单人（本人） | **`ISS-035` 处置（经授权）**：§5.1 M0.2 由 No-Go 收敛为**中间区间**（`EXP-M02-039` 最差档 = 多工具 66.7%）、`M0.6` 当时仍不放行（**该时点已由 10-08 取代**）；判据对象按职责拆分见 `docs/p0-spec-gate-criteria.md` §3.1.2 | §四.2、§五 |
 | 2026-10-08 | 单人（本人） | **移交生效同步**：§5.1 M0.2 → ✅ 达成、M0.6 → ✅ **放行**；§5.2 V1 行由「已实测 → No-Go」改为 **Pass** 并保留完整处置链留痕；§二 交付物口径更正（缺陷册 ISS-037 / 文档 16 份 / 报告 25 份 / 执行器 22 个〔16 含自检〕/ **活动基线 = `tools_v4` + `prompt_v4`**，原清单只列 `tools_v1`+`prompt_v1`）；§6.6 核对表逐条勾选并补 `run_e2e`/`gate_rules`/`aggregate_runs`/`tests/` 176 用例/迁移集与对抗集；目录骨架补列 `plan/`、`tests/`、`archive/`；**新登记 P1 前置项：`pytest` 未进 `requirements.txt` 与版本锁**；文件重命名 → `p0-handover-p1.md`（命名规范 `docs/prj-spec-document-standard.md`） | §二、§4.2、§五、§6.6、修订记录 |
+| 2026-10-08（P1 启动收口） | 单人（本人） | **P1 启动前缺口收口（经用户确认「先收口，再进 D1」）**：① `pytest` 补锁（`requirements.txt` + 版本锁 §二.2.10，实装 `.venv` 复跑 176 passed）→ §6.1 该行警告消除；② **§6.3 / §6.6 全部核对项据实勾选**（含风险册门禁状态行、需换方案 ISS-005 闭环、**§6.6 修正陈旧行「V1 = No-Go」→ Pass**）；③ **§6.4 第 5 项（局限声明逐份引用）据实判「未满足」不予勾选**，并按规定登记为遗留项 **L-11**（转 P1）；④ §6.5 四项据实勾选（`【待实测填入】` 属已填非留空） | §4.1（新增 L-11）、§6.1、§6.3、§6.4、§6.5、§6.6、修订记录 |

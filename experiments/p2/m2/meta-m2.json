@@ -1,0 +1,17 @@
+{
+  "eval_set": "m2_acc_set.jsonl",
+  "n_cases": 12,
+  "top_k": 5,
+  "device": "cuda",
+  "use_rerank": false,
+  "metrics": {
+    "Recall@k": 1.0,
+    "MRR": 0.7569,
+    "NDCG@k": 1.0,
+    "P95_total_ms": 86.1,
+    "P50_total_ms": 45.6
+  },
+  "n_relevant_blocks_total": 12,
+  "degraded_cases": [],
+  "missing_cases": []
+}

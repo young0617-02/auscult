@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "b4c5ab66c36e5af7d34d3f2e8a4f85a65352859e19fc495fb09c9bc3393bc443",
+    "short_id": "b4c5ab6",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      48
+    ],
+    "created_parse_ids": [
+      48
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "b4c5ab66c36e5af7d34d3f2e8a4f85a65352859e19fc495fb09c9bc3393bc443",
+    "short_id": "b4c5ab6",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备维修工单（合成样本 · A）\n\n| 工单编号 | 客户号 | 设备 | 故障现象 | 处置措施 | 日期 |\n| --- | --- | --- | --- | --- | --- |\n| WO-A-2024 | 0客1户--1000000 | C 0泵 | 电流超限 | 更换机械密封 | 工作日第1天 |\n| WO-A-2024 | 0客2户--1000071 | C 1泵 | 电流超限 | 重新对中 | 工作日第2天 |\n| WO-A-2024 | 0客1户--1001042 | B 2泵 | 噪声增大 | 更换机械密封 | 工作日第3天 |\n| WO-A-2024 | 0客2户--1002013 | B 3泵 | 噪声增大 | 重新对中 | 工作日第4天 |\n| WO-A-2024 | 0客1户--1002084 | C 4泵 | 密封渗漏 | 更换轴承 | 工作日第5天 |\n| WO-A-2024 | 0客2户--1003055 | B 5泵 | 噪声增大 | 更换轴承 | 工作日第6天 |\n| WO-A-2024 | 0客1户--1004026 | C 6泵 | 密封渗漏 | 动平衡校正 | 工作日第7天 |\n| WO-A-2024 | 0客2户--1004097 | B 7泵 | 密封渗漏 | 更换轴承 | 工作日第8天 |",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:b4c5ab6/tier:basic/page:1",
+        "end": "doc:b4c5ab6/tier:basic/page:1/block:2"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

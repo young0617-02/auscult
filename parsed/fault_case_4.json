@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "c72e3533ffb48583fcd1e8c6259bee3b840b767cabd9a0e35f7c58ecd18e62d8",
+    "short_id": "c72e353",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      28
+    ],
+    "created_parse_ids": [
+      28
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "c72e3533ffb48583fcd1e8c6259bee3b840b767cabd9a0e35f7c58ecd18e62d8",
+    "short_id": "c72e353",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备故障案例分析（合成样本）\n\n故障案例 3:轴承磨损\n\n现象:高频段出现轴承特征频率族，现场实测振动高于警戒值。\n\n分析:B P F I/B P F O 边带明显，包络谱故障频率随磨损上升。\n\n处置:更换轴承并改善润滑。\n\n结论:经修复并返测，振动恢复至正常区间，建议纳入周期性巡检。",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:c72e353/tier:basic/page:1",
+        "end": "doc:c72e353/tier:basic/page:1/block:6"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

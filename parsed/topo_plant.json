@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "2fc934e1c56d99d64e77d3abfa45b77101c56a2615da1c7eccde11838fadc3b3",
+    "short_id": "2fc934e",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      45
+    ],
+    "created_parse_ids": [
+      45
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "2fc934e1c56d99d64e77d3abfa45b77101c56a2615da1c7eccde11838fadc3b3",
+    "short_id": "2fc934e",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 厂区设备拓扑（合成样本）\n\n| 来源 | 关系 | 目标 |\n| --- | --- | --- |\n| 泵组 P U M P-A | 连接 | 管线 L-01 |\n| 管线 L-01 | 输送 | 去流程段 T A N K-1 |\n| 泵组 P U M P-A | 安装 | 测点 V I B_A |\n| 测点 V I B_A | 监测 | 驱动端轴承 |\n| 电机 M-01 | 驱动 | 泵组 P U M P-A |\n| 配电柜 P-01 | 供电 | 电机 M-01 |",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:2fc934e/tier:basic/page:1",
+        "end": "doc:2fc934e/tier:basic/page:1/block:2"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

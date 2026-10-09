@@ -1,0 +1,106 @@
+{
+  "schema_version": "v1",
+  "doc_count": 19,
+  "parent_total": 58,
+  "child_total": 36,
+  "token_total": 3147,
+  "orphan_child": 0,
+  "sampled": 20,
+  "per_doc": {
+    "criteria_1": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 72
+    },
+    "criteria_2": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 74
+    },
+    "fault_case_1": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 71
+    },
+    "fault_case_2": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 62
+    },
+    "fault_case_3": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 61
+    },
+    "fault_case_4": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 70
+    },
+    "fault_case_5": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 66
+    },
+    "fault_case_6": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 70
+    },
+    "manual_centrifugal_hc": {
+      "parents": 7,
+      "children": 5,
+      "tokens": 200
+    },
+    "manual_impeller_series": {
+      "parents": 7,
+      "children": 5,
+      "tokens": 203
+    },
+    "manual_scanned_dp": {
+      "parents": 7,
+      "children": 5,
+      "tokens": 203
+    },
+    "manual_ss_process": {
+      "parents": 8,
+      "children": 6,
+      "tokens": 272
+    },
+    "topo_plant": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 109
+    },
+    "workorders_A": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 266
+    },
+    "workorders_B": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 268
+    },
+    "workorders_C": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 268
+    },
+    "workorders_D": {
+      "parents": 1,
+      "children": 1,
+      "tokens": 274
+    },
+    "workorders_E": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 272
+    },
+    "workorders_F": {
+      "parents": 2,
+      "children": 1,
+      "tokens": 266
+    }
+  }
+}

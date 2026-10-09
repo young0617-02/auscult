@@ -1,0 +1,43 @@
+{
+  "parse": {
+    "sha256": "cf6a742883e1c289f1e734404e565ee525d274d70f7186bdbe6b75c457214fa6",
+    "short_id": "cf6a742",
+    "tier": "basic",
+    "page_range": "1",
+    "status": "done",
+    "cache_hit": false,
+    "wait_parse_ids": [
+      57
+    ],
+    "created_parse_ids": [
+      57
+    ],
+    "reused_parse_ids": [],
+    "tip": null
+  },
+  "content": {
+    "sha256": "cf6a742883e1c289f1e734404e565ee525d274d70f7186bdbe6b75c457214fa6",
+    "short_id": "cf6a742",
+    "tier": "basic",
+    "format": "markdown",
+    "content": "<!-- page 1 of 1 -->\n\n## 设备维修工单（合成样本 · E）\n\n| 工单编号 | 客户号 | 设备 | 故障现象 | 处置措施 | 日期 |\n| --- | --- | --- | --- | --- | --- |\n| WO-E-2024 | 0客1户--1000000 | B 0泵 | 振动值偏高 | 清理过滤器 | 工作日第1天 |\n| WO-E-2024 | 0客2户--1000071 | A 1泵 | 噪声增大 | 更换机械密封 | 工作日第2天 |\n| WO-E-2024 | 0客1户--1001042 | C 2泵 | 振动值偏高 | 动平衡校正 | 工作日第3天 |\n| WO-E-2024 | 0客2户--1002013 | B 3泵 | 轴承温度异常 | 更换轴承 | 工作日第4天 |\n| WO-E-2024 | 0客1户--1002084 | C 4泵 | 噪声增大 | 更换机械密封 | 工作日第5天 |\n| WO-E-2024 | 0客2户--1003055 | B 5泵 | 振动值偏高 | 重新对中 | 工作日第6天 |\n| WO-E-2024 | 0客1户--1004026 | B 6泵 | 电流超限 | 更换机械密封 | 工作日第7天 |\n| WO-E-2024 | 0客2户--1004097 | C 7泵 | 轴承温度异常 | 重新对中 | 工作日第8天 |",
+    "request_scope": {
+      "page_range": "1",
+      "after": null,
+      "limit": 30000,
+      "locator": null,
+      "context": 0,
+      "image_format": null
+    },
+    "content_ranges": [
+      {
+        "page_range": "1",
+        "start": "doc:cf6a742/tier:basic/page:1",
+        "end": "doc:cf6a742/tier:basic/page:1/block:2"
+      }
+    ],
+    "truncated": false,
+    "next_request": null,
+    "asset": null
+  }
+}

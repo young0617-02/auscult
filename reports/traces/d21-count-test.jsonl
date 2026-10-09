@@ -1,0 +1,16 @@
+{"trace_id": "d21-count-test", "span_id": "d70d2483", "parent_id": null, "type": "span", "name": "a", "start_ts": "2026-10-09T07:51:43.334259+00:00", "end_ts": "2026-10-09T07:51:43.334259+00:00", "duration_ms": 0.0, "input": null}
+{"trace_id": "d21-count-test", "span_id": "7e2eb700", "parent_id": null, "type": "llm", "name": "b", "model": "m", "input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "think_tokens": 0, "think_pct": 0.0, "duration_ms": 0.0, "ts": "2026-10-09T07:51:43.335265+00:00"}
+{"trace_id": "d21-count-test", "span_id": "bbd6a723", "parent_id": null, "type": "tool", "name": "c", "input": "in", "output": "out", "duration_ms": 0.0, "ts": "2026-10-09T07:51:43.335265+00:00"}
+{"trace_id": "d21-count-test", "span_id": "65128e57", "type": "event", "name": "d", "ts": "2026-10-09T07:51:43.336275+00:00"}
+{"trace_id": "d21-count-test", "span_id": "2ad295f4", "parent_id": null, "type": "span", "name": "a", "start_ts": "2026-10-09T07:55:33.321030+00:00", "end_ts": "2026-10-09T07:55:33.321030+00:00", "duration_ms": 0.0, "input": null}
+{"trace_id": "d21-count-test", "span_id": "76b182d5", "parent_id": null, "type": "llm", "name": "b", "model": "m", "input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "think_tokens": 0, "think_pct": 0.0, "duration_ms": 0.0, "ts": "2026-10-09T07:55:33.321030+00:00"}
+{"trace_id": "d21-count-test", "span_id": "4f185634", "parent_id": null, "type": "tool", "name": "c", "input": "in", "output": "out", "duration_ms": 0.0, "ts": "2026-10-09T07:55:33.322036+00:00"}
+{"trace_id": "d21-count-test", "span_id": "14358424", "type": "event", "name": "d", "ts": "2026-10-09T07:55:33.322036+00:00"}
+{"trace_id": "d21-count-test", "span_id": "fba50446", "parent_id": null, "type": "span", "name": "a", "start_ts": "2026-10-09T07:55:46.361728+00:00", "end_ts": "2026-10-09T07:55:46.361728+00:00", "duration_ms": 0.0, "input": null}
+{"trace_id": "d21-count-test", "span_id": "493d2297", "parent_id": null, "type": "llm", "name": "b", "model": "m", "input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "think_tokens": 0, "think_pct": 0.0, "duration_ms": 0.0, "ts": "2026-10-09T07:55:46.362738+00:00"}
+{"trace_id": "d21-count-test", "span_id": "c62ee37f", "parent_id": null, "type": "tool", "name": "c", "input": "in", "output": "out", "duration_ms": 0.0, "ts": "2026-10-09T07:55:46.363750+00:00"}
+{"trace_id": "d21-count-test", "span_id": "5d25ab10", "type": "event", "name": "d", "ts": "2026-10-09T07:55:46.363750+00:00"}
+{"trace_id": "d21-count-test", "span_id": "d7735ea3", "parent_id": null, "type": "span", "name": "a", "start_ts": "2026-10-09T07:58:30.756607+00:00", "end_ts": "2026-10-09T07:58:30.756607+00:00", "duration_ms": 0.0, "input": null}
+{"trace_id": "d21-count-test", "span_id": "bc0ef012", "parent_id": null, "type": "llm", "name": "b", "model": "m", "input_tokens": 0, "output_tokens": 0, "total_tokens": 0, "think_tokens": 0, "think_pct": 0.0, "duration_ms": 0.0, "ts": "2026-10-09T07:58:30.758110+00:00"}
+{"trace_id": "d21-count-test", "span_id": "6c91305f", "parent_id": null, "type": "tool", "name": "c", "input": "in", "output": "out", "duration_ms": 0.0, "ts": "2026-10-09T07:58:30.758110+00:00"}
+{"trace_id": "d21-count-test", "span_id": "43f5dc40", "type": "event", "name": "d", "ts": "2026-10-09T07:58:30.758110+00:00"}
