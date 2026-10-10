@@ -274,7 +274,7 @@
 | 6 | `langgraph-checkpoint-postgres` | **3.1.2** | 实测装定 | ✅ **已锁（V5 采纳路线）** | PostgreSQL checkpointer（PostgresSaver） |
 | 7 | `langgraph-checkpoint-redis` | **0.5.2** | 实测装定 | ⚠️ **已锁但未采用**（B7 弃 A） | Redis checkpointer（候选 A，放弃） |
 | 8 | `langgraph-sdk` | **0.4.5** | 实测装定 | ✅ 已锁 | LangGraph 相关 SDK |
-| 9 | `langchain-core` | **1.6.4** | 实测装定 | ✅ 已锁 | LangChain 核心 |
+| 9 | `langchain-core` | **1.6.9** | 实测装定；**2026-10-10 按实装回填**（原记 1.6.4 —— P5 W1 引入 `ragas` 时其 langchain 生态依赖已把它升至 1.6.9，见 §二.2.24） | ✅ 已锁 | LangChain 核心 |
 | 10 | `psycopg` | **3.3.6** | 实测装定（与 §二.2.8 一致） | ✅ 已锁 | PG 驱动（含 checkpointer） |
 | 11 | `psycopg-pool` | **3.3.3** | 实测装定 | ✅ 已锁 | PG 连接池 |
 
@@ -530,13 +530,16 @@
 | 3 | `locust` | **2.46.7** | `.venv` 实装 | ✅ 已锁 | P5 D14 压测（`scripts/locustfile.py`；`reports/p5-perf.md`） |
 | 4 | `prometheus-client` | **0.26.0** | `.venv` 实装 | ✅ 已锁 | P5 W2 可观测（`app/observability/prom_metrics.py`、`scripts/test_p5_d06_metrics.py`） |
 | 5 | `numpy` | **2.5.3** | `.venv` 实装 | ✅ 已锁 | 向量归一化 / 建库（`scripts/build_milvus_v1.py`） |
+| 6 | `langchain` | **1.4.4** | `.venv` 实装（`uv pip list` 实测） | ✅ 已锁 | `ragas` 0.4.3 传递依赖（**代码未直接 import**）；2026-10-10 按实装显式钉住 |
+| 7 | `langchain-openai` | **1.7.0** | `.venv` 实装（`uv pip list` 实测） | ✅ 已锁 | `ragas` 0.4.3 / `langchain` 传递依赖（**代码未直接 import**）；2026-10-10 按实装显式钉住 |
 
-> **传递依赖（实装实测，仅留痕、不单独 pin）**：`torch` **2.14.0**、`transformers` **5.17.0**、`datasets` **5.1.0**、`langchain` **1.4.4**、`pandas` **3.0.6**、`scipy` **1.18.1**，由上述直接依赖解析带入。其中 `scripts/probe_reranker.py` 为**统计参数量**而 `import torch`（失败即跳过、不参与判据）——该包属 `sentence-transformers` 传递依赖，故不单列。
+> **传递依赖（实装实测，仅留痕、不单独 pin）**：`torch` **2.14.0**、`transformers` **5.17.0**、`datasets` **5.1.0**、`pandas` **3.0.6**、`scipy` **1.18.1**，由上述直接依赖解析带入（`langchain` 已按实装**升为显式钉住项**，见上表第 6 行）。其中 `scripts/probe_reranker.py` 为**统计参数量**而 `import torch`（失败即跳过、不参与判据）——该包属 `sentence-transformers` 传递依赖，故不单列。
 > ⛔ **`uv pip sync` 提示（2026-10-10 实测）**：`uv pip sync` **不解析传递依赖**（官方口径：输入文件须为 `pip compile` / `uv export` 的产物）→ **禁止**对本文件直接 sync（`--dry-run` 计划移除 **136 包**）。安全用法：先 `uv pip compile requirements.txt -o requirements.lock.txt`，再 sync 该产物；P6 D6/D7 出 `uv.lock`（方案 C）后转确定性口径。
-> 🔴 **【待裁决】残留 3 处版本级漂移（2026-10-10 实测发现，本次未擅自处置）**：`uv pip install -r requirements.txt --dry-run` 与 `.venv` 实装的差异为 `langchain`（实装 **1.4.4** / 解析 **1.4.3**，且未在本文件声明）、`langchain-core`（实装 **1.6.9** / 本文件声明 **1.6.4**）、`langchain-openai`（实装 **1.7.0** / 解析 **1.6.6**，且未在本文件声明）。
-> **根因（dist-info 时间戳实测）**：`langchain*` 全链于 **2026-10-09 22:43–22:50** 批量安装，与 `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 同批 → 即 **P5 W1 评测引入 `ragas` 时，其 langchain 生态依赖把 `langchain-core` 由 1.6.4 升至 1.6.9**（同批新增 `langchain` / `langchain-openai` / `langchain-community` 0.4.2 / `langchain-classic` 1.0.8 / `langchain-ollama` 1.1.0 / `langchain-huggingface` 1.2.3 / `langchain-text-splitters` 1.1.3），但**未同步回本文件与 §二.2.9**。
-> **处置选项（待用户裁决）**：① **以实装为真** —— 将本文件与 §二.2.9 的 `langchain-core` 更新为 **1.6.9**，并补登记 `langchain` / `langchain-openai`（需按纪律 2 评估是否升版 `env-baseline-v2.md`）**（推荐）**；② 将 `.venv` 降回 `langchain-core==1.6.4` / `langchain==1.4.3` 并复跑回归；③ 暂不处置、仅登记。
-> ⚠️ **影响面提示**：`langchain-core` 是 **V5 LangGraph checkpoint 的直接依赖**（§二.2.9）→ 若采选项 ①/②，须按 §3.1.3 同口径复跑 `scripts/run_v5.py` 与回归套件，确认 V5 结论不受影响后再动 `env-baseline-v2.md` 升版判定。
+> ✅ **【已处置】残留 3 处版本级漂移已闭环（2026-10-10，用户裁定选项①「以实装为真」）**：原差异为 `langchain`（实装 **1.4.4** / 解析 1.4.3，未声明）、`langchain-core`（实装 **1.6.9** / 声明 1.6.4）、`langchain-openai`（实装 **1.7.0** / 解析 1.6.6，未声明）。
+> **处置动作**：① `langchain-core` 由 1.6.4 **回填为 1.6.9**（§二.2.9 第 9 行已同步）；② `langchain` / `langchain-openai` **补登记为显式钉住项**（上表第 6/7 行 + `requirements.txt`），目的 = 阻止解析器再次静默升/降 `langchain-core`。
+> **验证**：`uv pip install -r requirements.txt --dry-run` → **Would make no changes**（声明集与 `.venv` 实装零差异，漂移彻底闭环）；回归 **183 passed**。**未做 live V5 重跑**：`scripts/run_v5.py` 会改写 `experiments/v5/raw/` 冻结数据（违「raw 只增不改」纪律），故不走重跑路线；改以回归套件（含 `run_v5` 用例）验证，且 `.venv` 自 **2026-10-09 22:43 起即已是 1.6.9**，P5 期间全部回归结论本就在 1.6.9 下取得。
+> **根因（dist-info 时间戳实测）**：`langchain*` 全链于 **2026-10-09 22:43–22:50** 批量安装，与 `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 同批 → 即 **P5 W1 评测引入 `ragas` 时，其 langchain 生态依赖把 `langchain-core` 由 1.6.4 升至 1.6.9**（同批新增 `langchain` / `langchain-openai` / `langchain-community` 0.4.2 / `langchain-classic` 1.0.8 / `langchain-ollama` 1.1.0 / `langchain-huggingface` 1.2.3 / `langchain-text-splitters` 1.1.3）。
+> ⚠️ **升版判定 = 不升版 `env-baseline-v2.md`**：该文件 §引用纪律 的 5 条升版触发条件（镜像 digest / 模型 digest / Ollama·Docker·WSL2 版本 / `.wslconfig` / 硬件）**均不含 Python 包版本**；本次仅把版本台账对齐**既有实装**（`.venv` 未做任何装/卸动作），故 v2 结论与快照指纹不受影响。
 
 ---
 
@@ -607,4 +610,5 @@
 | 2026-10-09 | 单人（本人） | **Phase 2 收尾（M2.4 达成）**：新增 **§二.2.21**（`docs/p2-handover-p3.md` + `reports/p2-summary.md`）；M2.4 三项通过条件全部达成（P95=86.1ms / retrieve_knowledge 可用 / 移交 P3）；**M2.1–M2.4 四项里程碑全部达成**；§四 补 handover/summary 交叉引用。遗留转 P3：golden 50 题、Redis 缓存、引用正确率、rerank 重评 | 新增 §二.2.21；§四 |
 | 2026-10-09 | 单人（本人） | **Phase 4 前端工程锁版（D1–D5）**：新增 **§二.2.23**（Next 16.4.0 / React 19.3.0 / Tailwind 4.3.3 / radix-ui 1.7.0 单包 / shadcn CLI 4.21.4 nova 预设 / react-query 5.104.1 / socket.io-client 4.8.4 / zustand 5.0.15 / vitest 5.0.3 / playwright 1.64.0 / Node v24.19.0+pnpm 11.7.0）；实测依据：next build 通过 + 单测 30/30 PASS + `pnpm list --depth=0` | 新增 §二.2.23 |
 | 2026-10-10 | 单人（本人） | **uv 环境口径统一（P5 收尾方案 A）**：§二.2.3 工具链表新增 **uv 0.11.31** 行；补 4 条说明（`.python-version`=3.12 为解释器唯一锚定、**不升版 `env-baseline-v2.md`** 的 5 条触发条件依据、`uv pip sync` 口径）。**未改正文快照指纹、未升版** | 更新 §二.2.3 |
-| 2026-10-10 | 单人（本人） | **环境实装漂移补声明（用户批准）**：新增 **§二.2.24**（`sentence-transformers` 6.1.0 / `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 / `numpy` 2.5.3 —— 均已被代码 import 且已实装、此前未进 `requirements.txt`）；同步 `requirements.txt`（新增「环境实装漂移补声明」段）。**当日实测纠正**：`uv pip sync` **不解析传递依赖**（`--dry-run` 计划移除 **136 包**）→ §二.2.3 口径定为「**禁止直接 sync**，须先 `uv pip compile` 出锁文件」（纠正同日早前「dry-run 后可选」的错误表述）；§2.3 的【待补声明】→【已补声明】；§四 补 `requirements.txt` 反向依赖行。**新增 🔴 待裁决项**：残留 3 处版本级漂移（`langchain` 1.4.4/1.4.3、`langchain-core` 1.6.9/1.6.4、`langchain-openai` 1.7.0/1.6.6，根因 = 2026-10-09 P5 引入 `ragas` 升级 langchain 链）。`.venv` 未变动，回归 **183 passed**；**未升版 `env-baseline-v2.md`** | 新增 §二.2.24；更新 §二.2.3、§四；`requirements.txt` |
+| 2026-10-10 | 单人（本人） | **环境实装漂移补声明（用户批准）**：新增 **§二.2.24**（`sentence-transformers` 6.1.0 / `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 / `numpy` 2.5.3 —— 均已被代码 import 且已实装、此前未进 `requirements.txt`）；同步 `requirements.txt`（新增「环境实装漂移补声明」段）。**当日实测纠正**：`uv pip sync` **不解析传递依赖**（`--dry-run` 计划移除 **136 包**）→ §二.2.3 口径定为「**禁止直接 sync**，须先 `uv pip compile` 出锁文件」（纠正同日早前「dry-run 后可选」的错误表述）；§2.3 的【待补声明】→【已补声明】；§四 补 `requirements.txt` 反向依赖行。`.venv` 未变动，回归 **183 passed**；**未升版 `env-baseline-v2.md`** | 新增 §二.2.24；更新 §二.2.3、§四；`requirements.txt` |
+| 2026-10-10 | 单人（本人） | **langchain 残留漂移处置（用户裁定选项①「以实装为真」）**：`langchain-core` 由 **1.6.4 回填为 1.6.9**（更新 **§二.2.9** 第 9 行）；**§二.2.24** 补第 6/7 行（`langchain` **1.4.4** / `langchain-openai` **1.7.0**，按实装**显式钉住**，目的 = 阻止解析器再次静默升/降 `langchain-core`），🔴 待裁决 → ✅ 已处置；同步 `requirements.txt`。验证：`uv pip install -r requirements.txt --dry-run` = **Would make no changes**；回归 **183 passed**。**未做 live V5 重跑**（`scripts/run_v5.py` 会改写 `experiments/v5/raw/` 冻结数据，违「只增不改」纪律）；`.venv` 未做任何装/卸。**不升版 `env-baseline-v2.md`**（5 条触发条件不含 Python 包版本） | 更新 §二.2.9、§二.2.24；`requirements.txt` |

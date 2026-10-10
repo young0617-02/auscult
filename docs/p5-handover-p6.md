@@ -66,5 +66,8 @@
 ## 六、环境状态（移交时刻）
 
 - 常驻：v2-pg(5433) / redis(6379) / neo4j(7687) / milvus(39530) / nginx(9763)；**tdengine 已停**（Phase 5 基线口径，profile 启用见 p5-perf.md §八）；
+  > **milvus 端口口径澄清（2026-10-10，Phase 6 D4 补）**：本行 `39530` **不是笔误**，而是 P5 实测所用**宿主既有实例 `kee-milvus`**（非本项目 compose 起的容器，映射 `19530→39530`）—— `scripts/retrieval_base.py` / `reconcile.py` / `outbox_worker.py` 三处均硬编码 `MILVUS_URI = "http://127.0.0.1:39530"`（注释「kee-milvus 实际映射 19530→39530（P5 修正）」），P5 压测以 `MILVUS_PORT=39530` 覆盖后端默认。
+  > 由此**存在三个并存口径**：① `docker/compose.base.yml` = `19530:19530`（本项目 base 栈）；② `docker/compose.v2.yml` = `19531:19530`（本项目 v2 业务栈，即 `app/api/config.py` 默认 `MILVUS_PORT=19531`）；③ `39530` = 宿主既有 `kee-milvus`（P5 实测口径，脚本硬编码）。
+  > **对 Phase 6 的影响（已登记 `ISS-042`）**：干净环境一键启动（`M6.2` 判据）只能起本项目 compose 栈（①/②），**脚本硬编码的 39530 将连不上** → 必须在 D6–D7 改为读 `MILVUS_PORT` 环境变量，或由 `deploy/` 显式导出统一端口。
 - 监控栈 kee-prometheus/kee-grafana **已销毁**（`down -v`，0 残留）；prom/grafana digest 已锁版本锁 §二.2.1 第 9/10 行；
 - uvicorn 压测实例已停；`experiments/p5/w5/` 原始数据保留。

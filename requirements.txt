@@ -6,7 +6,7 @@
 #   - §二.2.9 V5 LangGraph checkpoint 依赖（2026-09-24）
 #   - §二.2.10 测试工具链依赖（pytest，2026-10-08 补锁）
 #   - §二.2.24 环境实装漂移补声明（sentence-transformers / ragas / locust /
-#              prometheus-client / numpy，2026-10-10 补锁）
+#              prometheus-client / numpy / langchain / langchain-openai，2026-10-10 补锁）
 #
 # 安装（uv 口径，推荐）：
 #   uv venv --python 3.12                 # 建环境；解释器锚定 = 仓库根 `.python-version`（=3.12）
@@ -46,7 +46,9 @@ langgraph==1.2.12
 langgraph-checkpoint==4.2.0
 langgraph-checkpoint-postgres==3.1.2
 langgraph-sdk==0.4.5
-langchain-core==1.6.4
+langchain-core==1.6.9
+#  ↑ 2026-10-10 由 1.6.4 回填为 1.6.9（按实装为真；P5 W1 引入 ragas 时被其 langchain
+#    生态依赖升高）。见 docs/prj-ledger-version-lock.md §二.2.9 第 9 行 + §二.2.24
 # 候选 A（Redis checkpointer）：已锁版本但未采用，B7 阻塞后切 PG
 # 保留仅为复现 B7 与审计可追溯，见 docs/p0-decision-checkpoint.md §2.1
 langgraph-checkpoint-redis==0.5.2
@@ -76,11 +78,16 @@ python-socketio==5.17.0   # D0-4 Socket.IO（含 python-engineio==4.14.0 / bidic
 simple-websocket==1.1.0   # D0-4 WS 传输（含 wsproto==1.3.2）
 
 # ---------------- 环境实装漂移补声明（2026-10-10 补锁，P5 收尾方案 A） ----------------
-# 以下 5 项已被代码直接 import 且已实装于 .venv，此前未在本文件声明 → 违背本文件
-# 「与本机实装不一致即视为环境漂移」纪律，现补齐声明。
-# 见 docs/prj-ledger-version-lock.md §二.2.24
+# ① 已被代码直接 import 且已实装于 .venv、此前未在本文件声明（违背本文件
+#    「与本机实装不一致即视为环境漂移」纪律），现补齐声明：
 sentence-transformers==6.1.0   # V2 向量化/重排运行时（run_v2 / rerank / retrieve_knowledge / probe_reranker）
 ragas==0.4.3                   # P5 W1 评测（scripts/eval_ragas.py）
 locust==2.46.7                 # P5 D14 压测（scripts/locustfile.py）
 prometheus-client==0.26.0      # P5 W2 可观测（app/observability/prom_metrics.py）
 numpy==2.5.3                   # 向量归一化/建库（scripts/build_milvus_v1.py）
+# ② ragas 生态传递依赖，按实装显式钉住（2026-10-10 用户裁定「以实装为真」）：
+#    钉住目的 = 阻止解析器再次静默升/降 langchain-core（P5 曾把 1.6.4 升到 1.6.9）。
+#    注意：二者代码未直接 import，仅为传递依赖。
+langchain==1.4.4               # ragas 0.4.3 传递依赖
+langchain-openai==1.7.0        # ragas 0.4.3 / langchain 传递依赖
+# 见 docs/prj-ledger-version-lock.md §二.2.24
