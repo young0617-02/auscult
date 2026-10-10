@@ -37,6 +37,16 @@ const NODE_COLORS: Record<string, string> = {
 };
 const DEFAULT_COLOR = "#94a3b8";
 
+// 节点标签色随主题：canvas 不支持 var()，故解析语义槽位 --text-primary 的实际值（暗/明主题均满足对比度）
+let cachedLabelColor: string | null = null;
+function labelColor() {
+  if (cachedLabelColor === null) {
+    cachedLabelColor =
+      getComputedStyle(document.documentElement).getPropertyValue("--text-primary").trim() || "#182029";
+  }
+  return cachedLabelColor;
+}
+
 export function GraphExplorer({ initialEntity }: { initialEntity?: string | null }) {
   const [input, setInput] = useState(initialEntity ?? "");
   const [entity, setEntity] = useState<string | null>(initialEntity ?? null);
@@ -190,7 +200,7 @@ export function GraphExplorer({ initialEntity }: { initialEntity?: string | null
                   ctx.fill();
                   ctx.font = `${fontSize}px sans-serif`;
                   ctx.textAlign = "center";
-                  ctx.fillStyle = "#e2e8f0";
+                  ctx.fillStyle = labelColor();
                   ctx.fillText(label, node.x ?? 0, (node.y ?? 0) + r + fontSize);
                 }}
                 linkLabel={(l) => {

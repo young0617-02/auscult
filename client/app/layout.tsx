@@ -9,8 +9,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // 工业中控场景暗色为默认（UI 方案 §9.1）；换肤仅切 data-theme 属性
-    <html lang="zh-CN" data-theme="dark" className="h-full antialiased" suppressHydrationWarning>
+    // 明色为当前默认（tokens.css 提供 [data-theme="light"] 全套语义槽位）；
+    // 暗色为工业中控原默认（UI 方案 §9.1），换肤仍只切 data-theme 属性
+    <html lang="zh-CN" data-theme="light" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         <AppProviders>{children}</AppProviders>
       </body>
