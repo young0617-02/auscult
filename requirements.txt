@@ -6,9 +6,16 @@
 #   - §二.2.9 V5 LangGraph checkpoint 依赖（2026-09-24）
 #   - §二.2.10 测试工具链依赖（pytest，2026-10-08 补锁）
 #
-# 安装：uv pip install -r requirements.txt   （或 pip install -r requirements.txt）
+# 安装（uv 口径，推荐）：
+#   uv venv --python 3.12                 # 建环境；解释器锚定 = 仓库根 `.python-version`（=3.12）
+#   uv pip install -r requirements.txt     # 按本文件安装/补齐（全部 `==` 精确锁定）
+#   # 回退方案：python -m venv .venv ; .venv\Scripts\python.exe -m pip install -r requirements.txt
+# 运行：一律用 `.venv\Scripts\python.exe`（其即 `uv venv` 产物，与 `uv run python` 等价）
+# 注：勿用 `uv pip sync`——本文件当前仅声明直接依赖，sync 会移除其它已装包（含 P5 工具链）
 # 纪律：本文件与本机实装不一致即视为环境漂移；改动须同步 `docs/prj-ledger-version-lock.md`
 #       并升版 `env/env-baseline-v2.md`（纪律 2：变更即升版）。
+#       ★ 例外：`.python-version` 与 uv 工具链口径**不在** env-baseline 升版触发条件内
+#         （该文件 §引用纪律列出的 5 条触发项均与解释器/包管理工具无关，故不触发升版）。
 #
 # 说明：`scripts/` 下 V1 判分链路（llm_adapter / judge_tools / run_v1 /
 #       gbnf_grammar / param_normalizer / run_cloud_baseline）**仅用标准库**，

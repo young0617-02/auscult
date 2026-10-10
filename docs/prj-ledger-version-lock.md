@@ -97,6 +97,7 @@
 | 工具 | 版本 | 路径 | 来源 |
 |---|---|---|---|
 | Python | **3.12.8** | `D:\Python312\python.exe` | `env-baseline-v2.md` §九 |
+| uv（Python 包/环境管理） | **0.11.31** | `uv`（PATH，`uv --version`） | 实测 2026-10-10（P5 收尾方案 A） |
 | Node.js | **v24.19.0** | `C:\Program Files\nodejs\node.exe` | `env-baseline-v2.md` §九 |
 | Git | **2.45.1.windows.1** | `C:\Program Files\Git\cmd\git.exe` | `env-baseline-v2.md` §九 |
 | Ollama | **0.34.2** | `<USER_HOME>\AppData\Local\Programs\Ollama\ollama.exe` | `env-baseline-v2.md` §九 |
@@ -108,6 +109,11 @@
 
 > ✅ **Ollama 版本决策已定（2026-09-24，U-04）**：**锁定维持 0.34.2，不升级 0.34.3/0.34.4**（ISS-009 建议 + 已安装运行、V1 全流程固定同版本防行为漂移）。V1 实测已按此版本开跑。
 > ⚠️ **CUDA Toolkit 未安装**（默认路径 `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA` 下无）。Ollama 自带 CUDA 运行时，WSL2 走驱动透传；编译类需求须另装。
+
+> ✅ **Python 环境口径统一为 uv（2026-10-10，方案 A）**：项目 `.venv` 由 **uv 0.11.31** 创建（`pyvenv.cfg` 含 `uv = 0.11.31`，无 pip）。仓库根新增 **`.python-version` = 3.12** 作为解释器发现的唯一锚定（与 §2.3 Python 3.12.8 一致）。命令口径：建环境 `uv venv --python 3.12`、装依赖 `uv pip install -r requirements.txt`、运行一律 `.venv\Scripts\python.exe`。
+> **不升版 env-baseline-v2**：该文件 §引用纪律 的 5 条升版触发条件（镜像 digest / 模型 digest / Ollama·Docker·WSL2 版本 / `.wslconfig` / 硬件）均不含解释器与包管理工具 → v2 结论不受影响、快照指纹不破坏。
+> ⛔ **禁用 `uv pip sync`**：`requirements.txt` 当前**仅声明直接依赖**，sync 会移除未声明包。
+> 🔴 **【待补声明】requirements.txt 与环境实装漂移（2026-10-10 发现，待裁决）**：下列**已被代码 import 且已实装、但未进 `requirements.txt`** 的直接依赖，违背该文件「本文件与本机实装不一致即视为环境漂移」纪律 → `sentence-transformers`（`scripts/rerank.py`/`retrieve_knowledge.py`/`probe_reranker.py`/`run_v2.py`）、`ragas`（`scripts/eval_ragas.py`）、`locust`（`scripts/locustfile.py`）、`prometheus-client`（`app/observability/prom_metrics.py`/`scripts/test_p5_d06_metrics.py`）、`numpy`（`scripts/build_milvus_v1.py`）。补声明须同步本表 §二 对应小节，故未擅自改动。
 
 ### 2.4 硬件（实测）
 

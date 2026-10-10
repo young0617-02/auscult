@@ -89,47 +89,49 @@ auscult/
 ## 快速开始
 
 ```powershell
-# 1) 依赖（版本见 requirements.txt，来源 docs/prj-ledger-version-lock.md）
-uv pip install -r requirements.txt
+# 1) 环境与依赖（uv 口径；版本见 requirements.txt，来源 docs/prj-ledger-version-lock.md）
+uv venv --python 3.12                     # 建 .venv；解释器锚定 = 仓库根 .python-version（3.12）
+uv pip install -r requirements.txt         # 安装/补齐依赖（勿用 uv pip sync，见 requirements.txt 头部注释）
+# 之后一律用 .venv\Scripts\python.exe 运行（其即 uv venv 产物，与 uv run python 等价）
 
 # 2) 离线自检（不联网、不需容器；22 个 Python 脚本中 **16 个**含 --selftest，全部应 exit 0）
 foreach ($s in 'llm_adapter','judge_tools','gbnf_grammar','param_normalizer','run_v1',
                'run_cloud_baseline','run_v2','self_decoder','spb_simulator','run_v5',
                'run_r4','judge_r4','gate_rules','refusal_gate','run_e2e','aggregate_runs') {
-    python "scripts/$s.py" --selftest
+    .venv\Scripts\python.exe "scripts/$s.py" --selftest
 }
 
 # 3) 回归测试（离线、秒级；**176 用例**：llm_adapter / judge_tools / param_normalizer / run_v5 / run_v1 /
 #    gate_rules / refusal_gate / run_e2e / aggregate_runs / 用例集完整性。
 #    防「已修复缺陷复发」，见 docs/prj-ledger-known-issues.md ISS-030 / ISS-031 / ISS-037）
-#    注意：需 pytest（当前未登记进 requirements.txt，本机实跑于宿主 Python 3.12）
-python -m pytest tests/ -q
+#    pytest 已锁入 requirements.txt（pytest==9.1.1）
+.venv\Scripts\python.exe -m pytest tests/ -q
 
 # 4) 基础设施（注意：compose.base.yml 与 compose.ingest.yml 端口冲突，不得同时启动）
 docker compose -f docker/compose.base.yml up -d          # Milvus/PG/Redis/Neo4j/(tdengine profile)
-docker compose -f docker/compose.ingest.yml up -d        # Mosquitto + TDengine + 自研解码器
+docker compose -f docker/compose.ingest.yml up -d        # Mosquitto + TDengine（两件套；解码器已改本地直跑）
 
 # 5) V3 时序链路（模拟器是验证工具，不进 compose）
-python scripts/spb_simulator.py --scenario birth,new_metric,rebirth,offline
-python scripts/run_v3_alert.py --threshold 4.5 --window-min 5 --must-windows 3
+.venv\Scripts\python.exe scripts/spb_simulator.py --scenario birth,new_metric,rebirth,offline
+.venv\Scripts\python.exe scripts/run_v3_alert.py --threshold 4.5 --window-min 5 --must-windows 3
 ```
 
 ## 常用入口
 
 | 目的 | 命令 |
 |---|---|
-| 回归测试（改代码后必跑） | `python -m pytest tests/ -q` |
-| V1 工具调用评测 | `python scripts/run_v1.py --constrain --tag constrained-decoding ...` |
-| V1 判分 | `python scripts/judge_tools.py --raw experiments/v1/raw/EXP-V1-003.jsonl --out experiments/v1/summary-EXP-V1-003.csv` |
-| 云端上界校准 | `python scripts/run_cloud_baseline.py --constrain` |
-| V2 混合检索对比 | `python scripts/run_v2.py --routes milvus,pgvector --dsn postgresql://root:123456@127.0.0.1:5433/auscult_v2` |
-| V5 checkpoint 验证 | `python scripts/run_v5.py --step t5.3 --resume <thread_id> --checkpointer postgres` |
-| R-4 证据归纳执行 | `python scripts/run_r4.py` |
-| R-4 证据归纳判分 | `python scripts/judge_r4.py --raw experiments/r4/raw/EXP-R4-001.jsonl --out experiments/r4/summary-EXP-R4-001.csv` |
-| **M0.2 权威入口**：端到端（规则门 → 云端工具调用） | `python scripts/run_e2e.py --cases evals/v1_cases.jsonl --cases evals/v1_refusal_transfer_v1.jsonl --repeat 3 --out <raw.jsonl>` |
-| 同日多轮聚合裁决（§3.1.3） | `python scripts/aggregate_runs.py --raw R1.jsonl --raw R2.jsonl --raw R3.jsonl` |
-| 纯规则前置门（H18b，零 LLM 调用） | `python scripts/gate_rules.py --selftest` / 由 `run_e2e.py` 内置调用 |
-| 本地 7B 前置门（R-1，H15 原方案） | `python scripts/refusal_gate.py --models qwen2.5:7b --cases evals/v1_cases.jsonl --repeat 3 --out experiments/v1/raw/EXP-M02-026.jsonl` |
+| 回归测试（改代码后必跑） | `.venv\Scripts\python.exe -m pytest tests/ -q` |
+| V1 工具调用评测 | `.venv\Scripts\python.exe scripts/run_v1.py --constrain --tag constrained-decoding ...` |
+| V1 判分 | `.venv\Scripts\python.exe scripts/judge_tools.py --raw experiments/v1/raw/EXP-V1-003.jsonl --out experiments/v1/summary-EXP-V1-003.csv` |
+| 云端上界校准 | `.venv\Scripts\python.exe scripts/run_cloud_baseline.py --constrain` |
+| V2 混合检索对比 | `.venv\Scripts\python.exe scripts/run_v2.py --routes milvus,pgvector --dsn postgresql://root:123456@127.0.0.1:5433/auscult_v2` |
+| V5 checkpoint 验证 | `.venv\Scripts\python.exe scripts/run_v5.py --step t5.3 --resume <thread_id> --checkpointer postgres` |
+| R-4 证据归纳执行 | `.venv\Scripts\python.exe scripts/run_r4.py` |
+| R-4 证据归纳判分 | `.venv\Scripts\python.exe scripts/judge_r4.py --raw experiments/r4/raw/EXP-R4-001.jsonl --out experiments/r4/summary-EXP-R4-001.csv` |
+| **M0.2 权威入口**：端到端（规则门 → 云端工具调用） | `.venv\Scripts\python.exe scripts/run_e2e.py --cases evals/v1_cases.jsonl --cases evals/v1_refusal_transfer_v1.jsonl --repeat 3 --out <raw.jsonl>` |
+| 同日多轮聚合裁决（§3.1.3） | `.venv\Scripts\python.exe scripts/aggregate_runs.py --raw R1.jsonl --raw R2.jsonl --raw R3.jsonl` |
+| 纯规则前置门（H18b，零 LLM 调用） | `.venv\Scripts\python.exe scripts/gate_rules.py --selftest` / 由 `run_e2e.py` 内置调用 |
+| 本地 7B 前置门（R-1，H15 原方案） | `.venv\Scripts\python.exe scripts/refusal_gate.py --models qwen2.5:7b --cases evals/v1_cases.jsonl --repeat 3 --out experiments/v1/raw/EXP-M02-026.jsonl` |
 
 ## 迭代纪律（改动前必读）
 
