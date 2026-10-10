@@ -12,6 +12,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+from ...observability import prom_metrics as pm
 from ...tools.query_sensor import query_sensor
 from ..state import DiagnosisState
 
@@ -97,6 +98,7 @@ def analyze_sensor(state: DiagnosisState) -> dict[str, Any]:
                 timeout=0.5,
             )
             values = [r["value"] for r in result["rows"]]
+            pm.inc_tool_call("query_sensor", "ok" if values else "empty")
             stats = _compute_stats(values, alarm.baseline)
             sensor_report: dict[str, Any] = {
                 "device_id": alarm.device_id,
@@ -112,6 +114,7 @@ def analyze_sensor(state: DiagnosisState) -> dict[str, Any]:
             last_error = "E_TD_UNREACHABLE"
         except (RuntimeError, ValueError) as exc:
             # 查询错误不重试
+            pm.inc_tool_call("query_sensor", "error")
             return {
                 "sensor_report": None,
                 "errors": [{"node": "analyze_sensor",
@@ -122,6 +125,7 @@ def analyze_sensor(state: DiagnosisState) -> dict[str, Any]:
         if attempt < MAX_RETRIES - 1:
             time.sleep(RETRY_DELAYS[attempt])
 
+    pm.inc_tool_call("query_sensor", "error")
     return {
         "sensor_report": None,
         "errors": [{"node": "analyze_sensor", "code": last_error or "E_UNKNOWN",

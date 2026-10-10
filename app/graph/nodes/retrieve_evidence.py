@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
+import time
 from typing import Any
 
+from ...observability import prom_metrics as pm
 from ...tools.query_graph import query_graph
 from ...tools.retrieve_knowledge import RetrievalService
 from ..state import DiagnosisState, EvidenceItem, GraphPath
@@ -64,8 +66,12 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
     # 1) retrieve_knowledge（W1→W5 全链路）
     try:
         svc = _get_service()
+        t0 = time.perf_counter()
         result = svc.retrieve(question)
-        for item in result.get("items", []):
+        pm.observe_retrieval("total", (time.perf_counter() - t0) * 1000)
+        items = result.get("items", [])
+        pm.inc_tool_call("retrieve_knowledge", "ok" if items else "empty")
+        for item in items:
             evidence_items.append(EvidenceItem(
                 chunk_id=item.get("chunk_id", ""),
                 text=item.get("text", ""),
@@ -74,6 +80,7 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
                 source_type="knowledge",
             ))
     except Exception as exc:  # noqa: BLE001 - 降级不中断
+        pm.inc_tool_call("retrieve_knowledge", "error")
         errors.append({"node": "retrieve_evidence", "code": "E_RETRIEVE_FAIL",
                         "msg": f"retrieve_knowledge 失败: {exc}"})
 
@@ -81,7 +88,9 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
     try:
         graph_result = query_graph(question)
         if not graph_result.get("degraded"):
-            for hit in graph_result.get("hits", []):
+            hits = graph_result.get("hits", [])
+            pm.inc_tool_call("query_graph", "ok" if hits else "empty")
+            for hit in hits:
                 evidence_items.append(EvidenceItem(
                     chunk_id=hit.get("chunk_id", ""),
                     text="",
@@ -96,10 +105,12 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
                     description=f"图谱命中实体: {', '.join(entities_hit)}",
                 ))
         else:
+            pm.inc_tool_call("query_graph", "empty")
             reason = graph_result.get("reason", "未知")
             errors.append({"node": "retrieve_evidence", "code": "E_GRAPH_DEGRADED",
                            "msg": f"图谱召回降级: {reason}"})
     except Exception as exc:  # noqa: BLE001
+        pm.inc_tool_call("query_graph", "error")
         errors.append({"node": "retrieve_evidence", "code": "E_GRAPH_FAIL",
                         "msg": f"query_graph 失败: {exc}"})
 

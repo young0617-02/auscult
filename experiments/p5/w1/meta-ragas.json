@@ -1,0 +1,23 @@
+{
+  "ts": "2026-10-09T15:12:17.772942+00:00",
+  "eval_set": "m2_acc_set.jsonl",
+  "n_cases": 12,
+  "top_k": 5,
+  "use_rerank": false,
+  "gen_model": "qwen2.5:7b",
+  "judge_model": "qwen2.5:7b",
+  "embeddings": "BAAI/bge-m3 (local)",
+  "versions": {
+    "ragas": "0.4.3",
+    "langchain_core": "1.6.9"
+  },
+  "ragas_elapsed_sec": 465.2,
+  "avg_scores": {
+    "faithfulness": 0.9375,
+    "answer_relevancy": 0.8754,
+    "context_precision": 0.9861,
+    "context_recall": 1.0
+  },
+  "degraded_cases": [],
+  "scope_statement": "基于模拟数据（模拟语料 + 本地 7B 生成与 judge）的初步验证，不代表生产级评测结论"
+}

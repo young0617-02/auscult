@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import urllib.request
 from pathlib import Path
@@ -21,11 +22,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RETRIEVAL_CONFIG = PROJECT_ROOT / "configs" / "retrieval.yml"
 
 # 拓扑常量（与 build_milvus_v1.py / extract_triples.py 保持一致，便于复用）
-MILVUS_URI = "http://127.0.0.1:19531"
+MILVUS_URI = "http://127.0.0.1:39530"   # kee-milvus 实际映射 19530→39530（P5 修正）
 MILVUS_COLLECTION = "kb_p1_v1"
 NEO4J_URI = "http://127.0.0.1:7474"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "auscult_p0_dev"
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "auscult_p0_dev")
 
 # W4 本地重排模型（version-lock §二.2.2.2，已 probe 实测：CPU 加载 4.57s、~54ms/对@batch16）
 RERANKER_MODEL_PATH = PROJECT_ROOT / (

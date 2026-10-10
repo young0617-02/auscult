@@ -52,8 +52,10 @@
 | 6 | `tdengine/tsdb` | `3.3.8.0` | `sha256:36e2bf82f151e8013d39a929aadc41bfcd5c46564866635cee1a02693d2256bf` | 1.68 GB | **V3 时序库（OSS，T1.9 已定稿自研解码器路线）** | **实测 2026-09-24**（`docker images --digests`） |
 | 7 | `eclipse-mosquitto` | `2` | `sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408` | 41.8 MB | **V3 时序链路 MQTT Broker（Sparkplug B 传输层）** | **实测 2026-09-24**（D4–D5 拉取） |
 | 8 | `neo4j` | `5-community` | `sha256:ab3aafb0020e6fed65bb2b59f7db1fabd7ee0568c4da46f3cc3b8fad77801d61` | 约 1.0 GB | **图谱库（社区版）** | **实测 2026-09-24**（V4b 压测拉取，V4b 内存实测 ≈871MiB） |
+| 9 | `prom/prometheus` | `latest`（锚 digest） | `sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e` | 381 MB | **P5 监控栈（临时，压测期起、测后销毁）** | **实测 2026-10-10**（D14 压测拉取，`reports/p5-perf.md` §七） |
+| 10 | `grafana/grafana` | `11.1.0` | `sha256:079600c9517b678c10cda6006b4487d3174512fd4c6cface37df7822756ed7a5` | 604 MB | **P5 监控栈看板（临时，同上）** | **实测 2026-10-10**（本地已有镜像锚 digest） |
 
-> ⚠️ **镜像总数 / 占用**：**8 个（本项目）/ 约 7.8 GB**（仍以 `env-baseline-v2.md` §7.1 为唯一镜像基线；宿主上其他项目镜像如 nacos/mysql/mongodb 已从本表移除，但本机容器仍在，**禁止** `docker system prune` 或停止非本项目容器，见 `docs/prj-ledger-risk-register.md` R-V3-7 / R-V4b-8）。
+> ⚠️ **镜像总数 / 占用**：**10 个（本项目）/ 约 8.8 GB**（仍以 `env-baseline-v2.md` §7.1 为唯一镜像基线；宿主上其他项目镜像如 nacos/mysql/mongodb 已从本表移除，但本机容器仍在，**禁止** `docker system prune` 或停止非本项目容器，见 `docs/prj-ledger-risk-register.md` R-V3-7 / R-V4b-8）。
 > ⚠️ **BGE-M3 经 ModelScope 本地加载**（`D:\modelscope\hub\models\BAAI--bge-m3`，非 Docker 镜像、非 Ollama 模型，见 §2.2.1）；Neo4j 已在本表第 8 行锁定。D6/D7 新增镜像拉取后必须立即回填本表并锁 digest。
 > ✅ `milvusdb/milvus:v3.0.0` 与上游计划 §二 Q3 裁决一致（v3.0.0 + 服务端 `FunctionType.BM25`），无偏差。
 > ✅ `tdengine/tsdb:3.3.8.0` 的 tag 与 digest 已实测锁定；其镜像名相对上游 `tdengine/tdengine` 的变更与授权判定见 `reports/p0-report-v3-ingest-license.md` §〇/§四.1（T1.9 需降级 = OSS + 自研解码器）。

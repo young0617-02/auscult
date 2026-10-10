@@ -36,6 +36,7 @@ ERROR_STATUS: dict[str, int] = {
     "E_TIMEOUT": 504,
     "E_UPSTREAM": 502,
     "E_INTERNAL": 500,       # 未分类服务端错误（兜底，不对外透出细节）
+    "E_RATE_LIMITED": 429,   # 限流触发（P5-W4/D13 令牌桶）
 }
 
 

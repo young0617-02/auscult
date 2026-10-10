@@ -1,0 +1,17 @@
+{
+  "ts": "2026-10-09T15:30:10.001388+00:00",
+  "source": "experiments/p5/w1/RAW-ragas.jsonl",
+  "n_cases": 12,
+  "judge_model": "qwen2.5:7b",
+  "judge_temperature": 0.0,
+  "recheck_policy": "首判 C → 逐句核对式独立复核；翻案保守降 B，双判定留痕",
+  "counts": {
+    "A": 10,
+    "B": 2,
+    "C": 0
+  },
+  "hallucination_rate": 0.0,
+  "gate_target": "≤ 0.10",
+  "gate": "Pass",
+  "scope_statement": "评分者为本地 LLM（qwen2.5:7b）非真人（Q1=A 精神延伸）；基于模拟语料与本地 7B 生成的初步验证，不代表生产级结论"
+}

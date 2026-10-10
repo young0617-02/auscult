@@ -4,8 +4,9 @@
  * 报告详情（P4-D11）：结论 + 根因（citations 锚点）+ 建议（risk）+ 审核状态 + 降级横幅。
  * 审核操作区由 D13 的 ReviewActions 组件承载；置信度 breakdown 由 D12 组件承载。
  *
- * 已知边界（M4.3）：reports.payload 未持久化 evidence 原文，citations 仅 chunk_id 锚点，
- * 下钻原文待后端补持久化（M4.4/P5）。降级报告顶部强制「初步判断」横幅（P2）。
+ * P5-Q8：payload 已补持久化 evidence 原文与 confidence_breakdown，
+ * 详情页新增「证据原文」区块（标注载体），四分量分解已接通；历史报告无该字段时降级隐藏。
+ * 降级报告顶部强制「初步判断」横幅（P2）。
  */
 
 import { AlertTriangle, ArrowLeft, Share2, ShieldCheck } from "lucide-react";
@@ -161,6 +162,27 @@ function ReportBody({ report }: { report: ReportDetailData }) {
             )}
           </Section>
 
+          {/* 证据原文（P5-Q8 持久化；历史报告无此字段则整块隐藏） */}
+          {payload.evidence && payload.evidence.length > 0 && (
+            <Section title={`证据原文（${payload.evidence.length}）`} testid="report-evidence">
+              <ol className="flex flex-col gap-2.5">
+                {payload.evidence.map((ev) => (
+                  <li key={ev.chunk_id} className="rounded-md border border-edge-subtle bg-surface-base px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <EvidenceChip chunkId={ev.chunk_id} />
+                      <span className="font-mono text-[11px] text-fg-tertiary">
+                        score={Number(ev.score).toFixed(3)} · {ev.source_type}
+                      </span>
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-wrap text-xs leading-5 text-fg-secondary">
+                      {ev.text}
+                    </p>
+                  </li>
+                ))}
+              </ol>
+            </Section>
+          )}
+
           {/* 审核留痕 */}
           {payload.human_review && (
             <Section title="审核记录" testid="report-human-review">
@@ -182,7 +204,7 @@ function ReportBody({ report }: { report: ReportDetailData }) {
 
         {/* 右栏：置信度 breakdown + 审核操作区 + Trace/图谱联动（D18） */}
         <aside className="flex flex-col gap-4">
-          <ConfidenceBreakdown breakdown={null} total={confidence} />
+          <ConfidenceBreakdown breakdown={payload.confidence_breakdown ?? null} total={confidence} />
           <ReviewActions report={report} />
 
           {/* D18：报告→图谱联动（以告警设备为起始实体载入） */}

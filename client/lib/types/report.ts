@@ -52,12 +52,31 @@ export interface HumanReviewRecord {
   };
 }
 
+/** 证据原文条目（payload.evidence，P5-Q8 补持久化；历史报告无此字段） */
+export interface EvidenceRecord {
+  chunk_id: string;
+  text: string;
+  score: number;
+  source_type: string;   // knowledge / sensor / graph / maintenance
+  routes?: string[];
+}
+
+/** 置信度四分量（payload.confidence_breakdown，P5-Q8 补持久化） */
+export interface ConfidenceBreakdownData {
+  retrieval: number;     // 检索覆盖 ×0.35
+  sensor: number;        // 传感器一致性 ×0.20
+  graph: number;         // 图谱支撑 ×0.15
+  self: number;          // 模型自评 ×0.30
+}
+
 /** 报告 payload 主体（reports.payload JSONB） */
 export interface ReportPayload {
   diagnosis: string | null;
   root_causes: RootCause[];
   suggestions: Suggestion[];
   confidence: number;
+  confidence_breakdown?: ConfidenceBreakdownData;  // P5-Q8
+  evidence?: EvidenceRecord[];                     // P5-Q8
   risk_level: string;
   escalate_cloud: boolean;
   human_review: HumanReviewRecord | null;

@@ -1,0 +1,67 @@
+# 告警规则（P5-W2/D9 · plan §5.2.2 六条）
+# 阈值与级别严格对齐 plan/Phase 5 §5.2.2；PromQL 基于 /metrics 暴露的 auscult_* 指标
+groups:
+  - name: auscult-ops
+    rules:
+      # ① Redis 内存 > 80% 上限（Critical）
+      # 上限 = maxmemory 配置（bytes）；无 maxmemory 时 maxmemory_bytes=0 → 恒不触发（显式配置后生效）
+      - alert: RedisMemoryHigh
+        expr: >
+          redis_memory_used_bytes / redis_memory_max_bytes > 0.8
+          and redis_memory_max_bytes > 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis 内存超 80% 上限"
+          description: "used={{ $value | humanizePercentage }}，超限将影响预算熔断与限流"
+
+      # ② GPU 显存 > 90%（Warning）——需 NVIDIA DCGM exporter（压测期随监控栈起）
+      - alert: GpuMemoryHigh
+        expr: DCGM_FI_DEV_FB_USED / (DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU 显存超 90%"
+          description: "影响 BGE-M3/7B 常驻，可能触发检索/推理降级"
+
+      # ③ 对账差异 > 0（Critical）——reconcile 脚本结果经 pushgateway 或 gauge 上报
+      - alert: ReconcileDiff
+        expr: auscult_reconcile_diff > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "存储对账存在差异"
+          description: "PG/Milvus/TDengine 对账差异数={{ $value }}，阻塞项（plan §7.2 对账差异>0 必须修复）"
+
+      # ④ 审核超时（存在 4h 未审 → Warning）
+      - alert: ReviewTimeout4h
+        expr: increase(auscult_review_timeout_total{kind="notify_4h"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "存在审核超过 4 小时未处理"
+          description: "备用审核人已通知；若 24h 未审将自动降级（degrade_24h）"
+
+      # ⑤ 云端预算 > 80% 日预算（Warning）
+      - alert: CloudBudgetHigh
+        expr: auscult_cloud_budget_used_ratio > 0.8
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "云端推理日预算消耗超 80%"
+          description: "当前比例={{ $value | humanizePercentage }}，100% 触发熔断强制本地降级"
+
+      # ⑥ checkpoint key 数异常增长（Warning）——PG checkpoint 表行数 1h 增幅阈值
+      - alert: CheckpointGrowthAbnormal
+        expr: increase(auscult_checkpoint_keys[1h]) > 100
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "LangGraph checkpoint key 异常增长"
+          description: "1h 新增={{ $value }}，检查 checkpointer 清理策略"

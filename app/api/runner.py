@@ -319,6 +319,11 @@ def _lifecycle_tick() -> None:
         elapsed = now - rec.finished_at
         if elapsed >= TIMEOUT_AFTER_SECONDS:
             try:
+                from app.observability import prom_metrics as pm   # noqa: PLC0415
+                pm.inc_review_timeout("degrade_24h")
+            except Exception:                                    # noqa: BLE001
+                pass
+            try:
                 resume_review(rec.thread_id,
                               {"action": "timeout",
                                "comment": "24h 超时自动降级（API 生命周期 watcher）"},
@@ -327,6 +332,11 @@ def _lifecycle_tick() -> None:
                 traceback.print_exc()
         elif elapsed >= NOTIFY_AFTER_SECONDS and not rec.notified_4h:
             rec.notified_4h = True
+            try:
+                from app.observability import prom_metrics as pm   # noqa: PLC0415
+                pm.inc_review_timeout("notify_4h")
+            except Exception:                                    # noqa: BLE001
+                pass
             try:
                 notify_backup_reviewer(rec.thread_id, rec.review_payload or {})
             except Exception:                                # noqa: BLE001

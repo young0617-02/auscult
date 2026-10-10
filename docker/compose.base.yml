@@ -45,6 +45,11 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
     # 内网服务，不对外暴露端口（避免占用宿主 2379）
 
   minio:
@@ -62,6 +67,11 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "0.5"
 
   milvus:
     image: milvusdb/milvus:v3.0.0@sha256:49371c30af46b1013e4d3e0b980e691d81376d69cdbe1b372725baf1d7255862
@@ -80,7 +90,11 @@ services:
       - "19530:19530"   # gRPC
       - "9091:9091"     # metrics / healthz
     networks: [auscult-net]
-    depends_on: [etcd, minio]
+    depends_on:
+      etcd:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9091/healthz"]
       interval: 30s
@@ -92,6 +106,7 @@ services:
         limits:
           # 预留上限，实测值由 V4b (D8) 校准
           memory: 4g
+          cpus: "2.0"
 
   # ---------------- 关系库：pgvector 对照路线 + 业务库 ----------------
   # 版本锁定： postgres:18
@@ -120,6 +135,7 @@ services:
       resources:
         limits:
           memory: 2g
+          cpus: "1.0"
 
   # ---------------- 状态库：LangGraph checkpoint（V5 验证对象） ----------------
   # 版本锁定： redis:8
@@ -146,6 +162,7 @@ services:
         limits:
           # 与 configs/redis.conf 的 maxmemory 1gb 对齐，留 2 倍余量给 AOF 重写
           memory: 2g
+          cpus: "0.5"
 
   # ---------------- 图数据库：Neo4j ----------------
   # ✅ 版本已锁定（version-lock.md §二.2.1 第 11 行，实测 2026-09-24）
@@ -174,6 +191,7 @@ services:
       resources:
         limits:
           memory: 2g
+          cpus: "1.5"
 
   # ---------------- MQTT Broker：Mosquitto（V3 Sparkplug B 接入） ----------------
   # ✅ 版本已锁定（version-lock.md §二.2.1 第 10 行，实测 2026-09-24）
@@ -194,6 +212,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.25"
 
   # ---------------- 时序库：TDengine + taosAdapter（V3） ----------------
   # ✅ T1.9 授权已定稿（2026-09-24）：官方 Sparkplug B 连接器仅 All-in-One/Enterprise；
@@ -218,6 +241,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
 
 # =============================================================
 # 分组启动策略（对应 V4b 的 T8.1 启动矩阵，内存紧张时使用）

@@ -43,7 +43,12 @@ def compute_report_id(idempotency_key: str) -> str:
 
 
 def state_to_payload(state_dict: dict[str, Any]) -> dict[str, Any]:
-    """从最终 state dict 提取报告 payload 快照。"""
+    """从最终 state dict 提取报告 payload 快照。
+
+    P5-Q8：补持久化 evidence 原文（chunk_id/text/score/source_type/routes）
+           与 confidence_breakdown 四分量，支撑报告详情展示与评测标注
+           （引用正确率/幻觉率标注依赖证据原文可见）。
+    """
     return {
         "diagnosis": state_dict.get("diagnosis"),
         "root_causes": [
@@ -59,12 +64,37 @@ def state_to_payload(state_dict: dict[str, Any]) -> dict[str, Any]:
             for s in state_dict.get("suggestions", [])
         ],
         "confidence": state_dict.get("confidence", 0.0),
+        "confidence_breakdown": _serialize_breakdown(state_dict.get("confidence_breakdown")),
+        "evidence": [_serialize_evidence(ev) for ev in state_dict.get("evidence", [])],
         "risk_level": state_dict.get("risk_level", "low"),
         "escalate_cloud": state_dict.get("escalate_cloud", False),
         "human_review": _serialize_review(state_dict.get("human_review")),
         "degrade_reason": state_dict.get("degrade_reason"),
         "errors": state_dict.get("errors", []),
     }
+
+
+def _serialize_evidence(ev: Any) -> dict[str, Any]:
+    """序列化证据条目（EvidenceItem Pydantic 模型或 dict 均兼容）。"""
+    if isinstance(ev, dict):
+        get = ev.get
+    else:
+        get = lambda k, d=None: getattr(ev, k, d)  # noqa: E731
+    return {
+        "chunk_id": get("chunk_id", ""),
+        "text": get("text", ""),
+        "score": float(get("score", 0.0) or 0.0),
+        "source_type": get("source_type", "knowledge"),
+        "routes": list(get("routes", []) or []),
+    }
+
+
+def _serialize_breakdown(breakdown: Any) -> dict[str, float]:
+    """序列化置信度四分量（retrieval/sensor/graph/self）。"""
+    if not isinstance(breakdown, dict):
+        return {}
+    return {k: float(v) for k, v in breakdown.items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)}
 
 
 def _serialize_review(human_review: Any) -> dict | None:

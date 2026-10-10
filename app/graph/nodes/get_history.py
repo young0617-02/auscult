@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from ...observability import prom_metrics as pm
 from ...tools.get_maintenance_history import get_maintenance_history
 from ..state import DiagnosisState, WorkOrder
 
@@ -28,6 +29,7 @@ def get_history(state: DiagnosisState) -> dict[str, Any]:
 
     try:
         rows = get_maintenance_history(alarm.device_id, limit=10, timeout=2.0)
+        pm.inc_tool_call("get_maintenance_history", "ok" if rows else "empty")
         work_orders = [
             WorkOrder(
                 order_id=r["order_id"],
@@ -42,12 +44,14 @@ def get_history(state: DiagnosisState) -> dict[str, Any]:
         return {"work_orders": work_orders}
 
     except ConnectionError as exc:
+        pm.inc_tool_call("get_maintenance_history", "error")
         return {
             "work_orders": [],
             "errors": [{"node": "get_history", "code": "E_PG_UNREACHABLE",
                         "msg": str(exc)}],
         }
     except Exception as exc:
+        pm.inc_tool_call("get_maintenance_history", "error")
         return {
             "work_orders": [],
             "errors": [{"node": "get_history", "code": "E_PG_QUERY_ERROR",

@@ -78,24 +78,32 @@ class MetricsCollector:
     # ---------------------------------------------------------------- 采集
 
     def record_node_duration(self, node: str, duration_ms: float) -> None:
-        """记录节点执行耗时。"""
+        """记录节点执行耗时（同步 Prometheus，D6）。"""
+        from . import prom_metrics   # noqa: PLC0415
+        prom_metrics.observe_node(node, duration_ms)
         with self._lock:
             self._node_durations.setdefault(node, []).append(duration_ms)
 
     def record_confidence(self, confidence: float) -> None:
-        """记录诊断置信度。"""
+        """记录诊断置信度（同步 Prometheus，D6）。"""
+        from . import prom_metrics   # noqa: PLC0415
+        prom_metrics.observe_confidence(confidence)
         with self._lock:
             self._confidences.append(confidence)
 
     def record_route(self, target: str) -> None:
-        """记录条件路由结果（finalize/degrade/escalate_cloud/human_review）。"""
+        """记录条件路由结果（finalize/degrade/escalate_cloud/human_review；同步 Prometheus，D6）。"""
+        from . import prom_metrics   # noqa: PLC0415
+        prom_metrics.inc_route(target)
         with self._lock:
             if target not in self._routes:
                 self._routes[target] = 0
             self._routes[target] += 1
 
     def record_review(self, duration_ms: float, status: str) -> None:
-        """记录审核完成（耗时 + 状态）。"""
+        """记录审核完成（耗时 + 状态；同步 Prometheus，D6）。"""
+        from . import prom_metrics   # noqa: PLC0415
+        prom_metrics.observe_review(status, duration_ms)
         with self._lock:
             self._review_durations.append(duration_ms)
             self._review_statuses[status] = \

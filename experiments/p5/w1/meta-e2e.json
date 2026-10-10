@@ -1,0 +1,37 @@
+{
+  "ts": "2026-10-09T15:29:45.207979+00:00",
+  "source": "experiments/p5/w1/RAW-ragas.jsonl",
+  "n_cases": 12,
+  "latency_local": {
+    "n": 12,
+    "retrieval": {
+      "p50": 91.7,
+      "p95": 111.7
+    },
+    "e2e_local": {
+      "p50": 1539.6,
+      "p95": 9248.8,
+      "mean": 2880.0
+    }
+  },
+  "tool_first_success_rate": 1.0,
+  "tool_first_success_rule": "retrieve_knowledge 首次调用即非降级且返回≥1命中",
+  "gate_targets": {
+    "p95_retrieval_ms": 800,
+    "p95_e2e_local_ms": 3000,
+    "tool_first_success_rate": 0.9
+  },
+  "gate": {
+    "p95_retrieval": "Pass",
+    "p95_e2e_local": "Fail",
+    "tool_first_success": "Pass"
+  },
+  "scope_statement": "基于模拟数据（模拟语料 + 本地 7B）的初步验证；P95 端到端口径=检索+本地7B生成知识问答全链路，诊断编排链路（LangGraph）口径不同另行统计",
+  "ece": {
+    "ece": 0.0,
+    "n_bins": 5,
+    "accuracy": 0.75,
+    "gate": "Pass",
+    "note": "样本量 12，5 桶；自评置信度未做温度校准"
+  }
+}

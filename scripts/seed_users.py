@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -25,7 +26,7 @@ import psycopg  # noqa: E402
 from app.api.config import POSTGRES_URL  # noqa: E402
 from app.api.security import hash_password  # noqa: E402
 
-DEFAULT_PASSWORD = "Auscult#Dev2026"
+DEFAULT_PASSWORD = os.environ.get("AUSCULT_SEED_PASSWORD", "Auscult#Dev2026")
 
 SEED_USERS = [
     # username, display_name, role

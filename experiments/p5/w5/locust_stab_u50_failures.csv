@@ -1,0 +1,5 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+GET,GET /api/knowledge/docs,HTTPError('502 Server Error: Bad Gateway for url: GET /api/knowledge/docs'),1,2026-10-09T16:48:34Z,2026-10-09T16:48:34Z
+GET,GET /api/reports/{id},HTTPError('502 Server Error: Bad Gateway for url: GET /api/reports/{id}'),1,2026-10-09T16:48:46Z,2026-10-09T16:48:46Z
+GET,GET /api/reports,HTTPError('502 Server Error: Bad Gateway for url: GET /api/reports'),1,2026-10-09T16:43:17Z,2026-10-09T16:43:17Z
+GET,GET /api/alarms,HTTPError('502 Server Error: Bad Gateway for url: GET /api/alarms'),3,2026-10-09T16:48:54Z,2026-10-09T17:05:29Z

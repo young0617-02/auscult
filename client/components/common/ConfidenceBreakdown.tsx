@@ -5,9 +5,8 @@
  * 口径：plan §6.2 / nodes/diagnose.py compute_confidence
  *   检索覆盖 0.35 · 传感器一致性 0.20 · 图谱支撑 0.15 · 模型自评（校准）0.30
  * 目的：让审核人看到「为什么系统这么判断」（安全边界的一部分）。
- * 注意：confidence_breakdown 未入 reports.payload（M4.3 已知边界），
- *   详情页暂以总置信度为唯一锚点；四分量分解待后端补持久化后接入。
- * 组件已就绪（纯函数条形），接入点留待 M4.4/P5 数据补齐。
+ * P5-Q8：payload 已补持久化 confidence_breakdown，详情页已接通四分量；
+ *   历史报告无该字段时仍降级为仅总置信度展示。
  */
 
 import { cn } from "cn";
@@ -75,7 +74,7 @@ export function ConfidenceBreakdown({
         </ul>
       ) : (
         <p className="mt-3 text-xs text-fg-tertiary">
-          四分量分解数据未随报告持久化（M4.3 已知边界），暂以总置信度为准。
+          历史报告未含四分量数据，暂以总置信度为准。
         </p>
       )}
     </section>

@@ -1,0 +1,54 @@
+{
+  "ts": "2026-10-09T15:15:30.123637+00:00",
+  "eval_set": "m2_acc_set.jsonl",
+  "n_questions": 12,
+  "n_pairs": 60,
+  "annotator_a": "m2_acc_set.jsonl.relevant_chunk_ids_full（人工主标注·完备相关集 L3+L2（P5-κ 规范修订后补标））",
+  "annotator_b": "Ollama qwen2.5:7b（本地 LLM 第二标注，非真人——局限声明）",
+  "top_k": 5,
+  "use_rerank": false,
+  "po": 0.9167,
+  "pe": 0.4967,
+  "kappa": 0.8344,
+  "band": "可接受",
+  "confusion": {
+    "a1_b1": 28,
+    "a1_b0": 0,
+    "a0_b1": 5,
+    "a0_b0": 27
+  },
+  "n_disputes": 5,
+  "disputes": [
+    {
+      "qid": "m2a-005",
+      "chunk_id": "manual_scanned_dp-5-c0",
+      "label_a": 0,
+      "label_b": true
+    },
+    {
+      "qid": "m2a-005",
+      "chunk_id": "manual_ss_process-5-c0",
+      "label_a": 0,
+      "label_b": true
+    },
+    {
+      "qid": "m2a-005",
+      "chunk_id": "manual_impeller_series-5-c0",
+      "label_a": 0,
+      "label_b": true
+    },
+    {
+      "qid": "m2a-012",
+      "chunk_id": "manual_ss_process-5-c0",
+      "label_a": 0,
+      "label_b": true
+    },
+    {
+      "qid": "m2a-012",
+      "chunk_id": "manual_centrifugal_hc-5-c0",
+      "label_a": 0,
+      "label_b": true
+    }
+  ],
+  "scope_statement": "B 标注者为本地 LLM（qwen2.5:7b）非真人，κ 结论仅表征人工标注与本地 LLM 判定的一致性，基于模拟数据，不代表双人真⼈标注一致性"
+}

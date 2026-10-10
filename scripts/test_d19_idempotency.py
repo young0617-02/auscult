@@ -18,13 +18,14 @@
 from __future__ import annotations
 
 import sys
+import uuid
 from pathlib import Path
 from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.graph.state import RootCause, Suggestion  # noqa: E402
+from app.graph.state import EvidenceItem, RootCause, Suggestion  # noqa: E402
 from app.graph.nodes.finalize import _compute_idempotency_key  # noqa: E402
 from app.report.idempotency import (  # noqa: E402
     compute_idempotency_key,
@@ -50,6 +51,11 @@ def _make_state_dict(thread_id="d19-test", risk="low",
         "root_causes": root_causes,
         "suggestions": [Suggestion(action="检查润滑",
                                    citations=["c_002"])],
+        "evidence": [EvidenceItem(chunk_id="c_001", text="轴承磨损特征频谱：外圈故障频率突出",
+                                  score=0.92, source_type="knowledge",
+                                  routes=["dense", "sparse"])],
+        "confidence_breakdown": {"retrieval": 0.8, "sensor": 0.5,
+                                 "graph": 1.0, "self": 0.75},
         "escalate_cloud": False,
         "human_review": None,
         "degrade_reason": None,
@@ -87,20 +93,31 @@ def test_report_id_format() -> None:
 
 
 def test_payload_structure() -> None:
-    """3. payload 结构。"""
+    """3. payload 结构（含 P5-Q8 evidence 原文 + confidence_breakdown）。"""
     state = _make_state_dict()
     payload = state_to_payload(state)
     for key in ("diagnosis", "root_causes", "suggestions", "confidence",
+                "confidence_breakdown", "evidence",
                 "risk_level", "escalate_cloud", "human_review",
                 "degrade_reason", "errors"):
         assert key in payload, f"payload 缺 {key}"
     assert payload["root_causes"][0]["cause"] == "轴承磨损"
-    print("[PASS] payload 结构")
+    # P5-Q8：证据原文逐字段
+    ev = payload["evidence"][0]
+    assert ev["chunk_id"] == "c_001"
+    assert "轴承磨损特征频谱" in ev["text"]
+    assert ev["score"] == 0.92
+    assert ev["source_type"] == "knowledge"
+    assert ev["routes"] == ["dense", "sparse"]
+    # P5-Q8：四分量 breakdown
+    bd = payload["confidence_breakdown"]
+    assert bd == {"retrieval": 0.8, "sensor": 0.5, "graph": 1.0, "self": 0.75}
+    print("[PASS] payload 结构（含 evidence 原文 + confidence_breakdown）")
 
 
 def test_generate_new() -> None:
-    """4. 新建报告 → is_new=True。"""
-    state = _make_state_dict(thread_id="d19-new")
+    """4. 新建报告 → is_new=True（thread_id 加 uuid 保证可重复运行）。"""
+    state = _make_state_dict(thread_id=f"d19-new-{uuid.uuid4().hex[:8]}")
     result = generate_report(state)
     assert result["is_new"] is True, "应为新建"
     assert result["report_id"].startswith("RPT-")
@@ -108,8 +125,8 @@ def test_generate_new() -> None:
 
 
 def test_generate_idempotent() -> None:
-    """5. 幂等：相同 key → is_new=False。"""
-    state = _make_state_dict(thread_id="d19-idem")
+    """5. 幂等：相同 key → is_new=False（同一 state 调两次）。"""
+    state = _make_state_dict(thread_id=f"d19-idem-{uuid.uuid4().hex[:8]}")
     first = generate_report(state)
     second = generate_report(state)
     assert first["report_id"] == second["report_id"], "幂等应返回相同 report_id"
@@ -119,7 +136,7 @@ def test_generate_idempotent() -> None:
 
 def test_get_report() -> None:
     """6. 按 report_id 查询。"""
-    state = _make_state_dict(thread_id="d19-get")
+    state = _make_state_dict(thread_id=f"d19-get-{uuid.uuid4().hex[:8]}")
     result = generate_report(state)
     fetched = get_report(result["report_id"])
     assert fetched is not None, "应能查到"
@@ -130,7 +147,7 @@ def test_get_report() -> None:
 
 def test_report_exists() -> None:
     """7. report_exists 检查。"""
-    state = _make_state_dict(thread_id="d19-exists")
+    state = _make_state_dict(thread_id=f"d19-exists-{uuid.uuid4().hex[:8]}")
     result = generate_report(state)
     assert report_exists(result["idempotency_key"]) is True
     assert report_exists("nonexistent_key") is False
@@ -175,11 +192,12 @@ def test_graph_external_write() -> None:
     def _mock_get_history(state):
         return {"work_orders": []}
 
-    config = {"configurable": {"thread_id": "d19-external"}}
+    tid = f"d19-external-{uuid.uuid4().hex[:8]}"
+    config = {"configurable": {"thread_id": tid}}
     initial = {
         "alarm": {"alarm_id": "e1", "device_id": "PUMP-A",
                   "metric": "vib_rms", "value": 5.0, "ts": 0},
-        "thread_id": "d19-external",
+        "thread_id": tid,
     }
     with patch.object(build_mod, "analyze_sensor", _mock_analyze_sensor), \
          patch.object(build_mod, "retrieve_evidence", _mock_retrieve_evidence), \

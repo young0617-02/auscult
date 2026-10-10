@@ -26,3 +26,10 @@ experiments/v2/raw/corpora_v2/
 # 说明：仅移出版本控制，文件仍保留在磁盘；其余实验产物（jsonl/md/小 PDF）正常入库。
 experiments/p1/mineru-spike/samples/sample_scanned.pdf
 experiments/p1/b1-corpus/manual_scanned_dp.pdf
+
+# P5 备份产物：含业务数据（PG dump 含 users 等表），禁止入库；
+# 生产化应转存独立存储介质（见 reports/p5-backup.md §四.5）。复现命令见该报告 §三。
+backups/
+
+# 运行日志（可再生，不入库）
+logs/

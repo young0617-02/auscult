@@ -1,0 +1,131 @@
+{
+  "uid": "auscult-overview",
+  "title": "auscult 诊断服务总览（P5-W2/D7）",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "refresh": "15s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1, "type": "timeseries", "title": "API 请求速率（按路由）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "reqps" }, "overrides": [] },
+      "targets": [
+        { "expr": "sum by (path) (rate(auscult_http_requests_total[5m]))", "legendFormat": "{{path}}" }
+      ]
+    },
+    {
+      "id": 2, "type": "timeseries", "title": "HTTP P95 延迟（按路由，ms）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (path, le) (rate(auscult_http_request_duration_ms_bucket[5m])))", "legendFormat": "{{path}}" }
+      ]
+    },
+    {
+      "id": 3, "type": "timeseries", "title": "HTTP 5xx 错误率（%）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "percent", "max": 100 }, "overrides": [] },
+      "targets": [
+        { "expr": "100 * sum(rate(auscult_http_requests_total{status=~\"5..\"}[5m])) / sum(rate(auscult_http_requests_total[5m]))", "legendFormat": "5xx" }
+      ]
+    },
+    {
+      "id": 4, "type": "timeseries", "title": "诊断路由分布（rate）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "targets": [
+        { "expr": "sum by (route) (rate(auscult_routes_total[5m]))", "legendFormat": "{{route}}" }
+      ]
+    },
+    {
+      "id": 5, "type": "gauge", "title": "云端日预算消耗比",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 16, "w": 6, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1,
+                      "thresholds": { "mode": "absolute", "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "orange", "value": 0.8 },
+                        { "color": "red", "value": 1.0 } ] } },
+        "overrides": []
+      },
+      "targets": [ { "expr": "auscult_cloud_budget_used_ratio", "legendFormat": "budget" } ]
+    },
+    {
+      "id": 6, "type": "timeseries", "title": "节点耗时 P95（按节点，ms）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 6, "y": 16, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (node, le) (rate(auscult_node_duration_ms_bucket[5m])))", "legendFormat": "{{node}}" }
+      ]
+    },
+    {
+      "id": 7, "type": "stat", "title": "云端升级率（5m）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 18, "y": 16, "w": 3, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1,
+                      "thresholds": { "mode": "absolute", "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "orange", "value": 0.25 } ] } }, "overrides": [] },
+      "targets": [
+        { "expr": "sum(rate(auscult_routes_total{route=\"escalate_cloud\"}[5m])) / sum(rate(auscult_routes_total[5m]))", "legendFormat": "escalate" }
+      ]
+    },
+    {
+      "id": 8, "type": "stat", "title": "降级率（5m）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 21, "y": 16, "w": 3, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "max": 1,
+                      "thresholds": { "mode": "absolute", "steps": [
+                        { "color": "green", "value": null },
+                        { "color": "red", "value": 0.15 } ] } }, "overrides": [] },
+      "targets": [
+        { "expr": "sum(rate(auscult_routes_total{route=\"degrade\"}[5m])) / sum(rate(auscult_routes_total[5m]))", "legendFormat": "degrade" }
+      ]
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "置信度分布（诊断次数，按分桶）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "sum by (le) (increase(auscult_diagnosis_confidence_bucket[1h]))", "legendFormat": "≤{{le}}" }
+      ]
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "检索通道耗时 P95（ms）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 24, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ms" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (channel, le) (rate(auscult_retrieval_duration_ms_bucket[5m])))", "legendFormat": "{{channel}}" }
+      ]
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "工具调用（按工具/状态）",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 0, "y": 32, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "ops" }, "overrides": [] },
+      "targets": [
+        { "expr": "sum by (tool, status) (rate(auscult_tool_calls_total[5m]))", "legendFormat": "{{tool}}/{{status}}" }
+      ]
+    },
+    {
+      "id": 12, "type": "timeseries", "title": "审核时长 P95 / 超时事件",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "x": 12, "y": 32, "w": 12, "h": 8 },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (status, le) (rate(auscult_review_duration_ms_bucket[1h])))", "legendFormat": "p95/{{status}}" },
+        { "expr": "sum by (kind) (increase(auscult_review_timeout_total[1h]))", "legendFormat": "timeout/{{kind}}" }
+      ]
+    }
+  ]
+}

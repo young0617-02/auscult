@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import base64
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -38,11 +39,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # 保证 import run_v
 
 # ---------------- 核对后的连接常量（勿自行猜测） ----------------
 PG_DSN = "postgresql://root:123456@127.0.0.1:5433/auscult_v2"
-MILVUS_URI = "http://127.0.0.1:19531"
+MILVUS_URI = "http://127.0.0.1:39530"   # kee-milvus 实际映射 19530→39530（P5 修正）
 MILVUS_COLLECTION = "kb_p1_v1"
 NEO4J_URI = "http://127.0.0.1:7474"
 NEO4J_USER = "neo4j"
-NEO4J_PASSWORD = "auscult_p0_dev"
+NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "auscult_p0_dev")
 RETRY_MAX = 10                     # retry_count 达到该值 → status='failed'
 DB_BATCH = 10                      # 每处理 N 条打印一次批进度
 

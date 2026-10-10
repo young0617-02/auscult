@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 import re
 import urllib.error
 import urllib.request
@@ -20,7 +21,7 @@ from typing import Any
 TDENGINE_BASE = "http://127.0.0.1:6041/rest/sql"
 TDENGINE_DB = "iot"
 TDENGINE_USER = "root"
-TDENGINE_PASSWORD = "taosdata"
+TDENGINE_PASSWORD = os.environ.get("TDENGINE_PASSWORD", "taosdata")
 
 # 白名单校验（防 SQL 注入：只允许字母数字/下划线/连字符）
 _SAFE_ID = re.compile(r"^[A-Za-z0-9_\-]+$")

@@ -1,0 +1,60 @@
+# 临时监控栈（P5-W2/D7 · Q4=B 定案）
+#
+# ⚠️ 仅压测/观测期临时起、测后销毁（docker compose -f docker/compose.monitoring.yml down -v），
+#    不并入基础 compose 栈，护 24GB 宿主门禁（V4b 结论）。
+#
+# 镜像纪律（纪律 1）：禁止裸 tag——启动前必须以精确 digest 提供：
+#   PROMETHEUS_IMAGE=prom/prometheus@sha256:<digest> \
+#   GRAFANA_IMAGE=grafana/grafana@sha256:<digest> \
+#   docker compose -f docker/compose.monitoring.yml up -d
+# digest 获取：docker pull prom/prometheus:latest && docker image inspect prom/prometheus:latest --format '{{index .RepoDigests 0}}'
+# 锚定后登记 docs/version-lock.md §三。
+#
+# 用法：
+#   up    → docker compose -f docker/compose.monitoring.yml up -d
+#   down  → docker compose -f docker/compose.monitoring.yml down -v   （测后销毁）
+
+services:
+  prometheus:
+    image: ${PROMETHEUS_IMAGE:?须以 prom/prometheus@sha256:<digest> 形式提供（禁止裸 tag）}
+    container_name: kee-prometheus
+    ports:
+      - "9091:9090"
+    volumes:
+      - ../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../monitoring/alerts.yml:/etc/prometheus/alerts.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    mem_limit: 512m
+    restart: unless-stopped
+
+  grafana:
+    image: ${GRAFANA_IMAGE:?须以 grafana/grafana@sha256:<digest> 形式提供（禁止裸 tag）}
+    container_name: kee-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      # 本机开发临时栈：匿名只读预览（Q4=B 测后销毁，不入生产）；管理员账号默认 admin/admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-auscult-dev-grafana}
+    volumes:
+      - ../monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    mem_limit: 512m
+    restart: unless-stopped

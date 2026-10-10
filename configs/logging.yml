@@ -1,0 +1,52 @@
+# 结构化日志配置（P5-W2/D8 · M5.2）
+# 结构化 JSON → 集中查询口径：单机部署下以 logs/ JSONL 轮转文件为集中查询面
+# （jq/grep 可查；trace_id 贯穿 API 与图执行，与 X-Trace-Id 响应头同源）
+#
+# 装配入口：app.observability.logging_config.setup_logging()（main.py lifespan 调用）
+# 级别：由 env AUSCULT_LOG_LEVEL 覆盖（默认 INFO）
+
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  json:
+    (): app.observability.logging_config.JsonFormatter
+    # 字段：ts / level / logger / msg / trace_id / module / funcName
+    # trace_id 由 contextvar 注入（app.api.errors.get_trace_id），非请求上下文为 "-"
+
+handlers:
+  file:
+    class: logging.handlers.RotatingFileHandler
+    level: INFO
+    formatter: json
+    filename: logs/auscult.log
+    maxBytes: 10485760        # 10MB
+    backupCount: 5            # 保留 5 轮转 → 集中查询窗口 ≈ 60MB
+    encoding: utf-8
+  stderr:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: json
+    stream: ext://sys.stderr
+
+loggers:
+  uvicorn:
+    level: INFO
+    handlers: [file, stderr]
+    propagate: false
+  uvicorn.error:
+    level: INFO
+    handlers: [file, stderr]
+    propagate: false
+  uvicorn.access:
+    level: WARNING            # access 日志降噪（Prometheus 已有 HTTP 指标）
+    handlers: [file]
+    propagate: false
+  app:
+    level: INFO
+    handlers: [file, stderr]
+    propagate: false
+
+root:
+  level: INFO
+  handlers: [file, stderr]

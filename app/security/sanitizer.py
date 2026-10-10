@@ -211,6 +211,14 @@ def log_security_event(event: str, *,
     AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
+    # P5-W4/D12：PG audit_logs 双写（append-only 防篡改，权威审计层）
+    # 写入失败不阻断（pg_audit 内部降级），JSONL 主路径保底
+    try:
+        from .pg_audit import append_audit   # noqa: PLC0415
+        append_audit(event, severity=severity, thread_id=thread_id,
+                     detail=detail)
+    except Exception:   # noqa: BLE001 - PG 不可达时 JSONL 兜底
+        pass
 
 
 def audit_injection_attempt(thread_id: str | None,

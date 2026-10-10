@@ -1,0 +1,12 @@
+# Grafana 面板自动配置（P5-W2/D7）
+apiVersion: 1
+
+providers:
+  - name: auscult-dashboards
+    orgId: 1
+    folder: auscult
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    options:
+      path: /var/lib/grafana/dashboards
