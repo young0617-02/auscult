@@ -333,7 +333,7 @@ project/
    ├─ p5-backup.md
    ├─ p5-security.md
    ├─ p5-perf.md
-   └─ P5-summary.md
+   └─ p5-summary-phase5-2026-10-10.md
 ```
 
 ### 9.2 交付物清单

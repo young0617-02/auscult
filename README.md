@@ -2,8 +2,8 @@
 
 > **一句话定位**：一个跑在本地、以告警为入口、会自己查资料并给出**带出处**维修建议的工业设备诊断 Agent —— **数据不出厂，结论可追溯**。
 > **主场景**：离心泵驱动端轴承振动异常诊断
-> **当前阶段**：**Phase 0–5 已完成**（`M0.6` 门禁 2026-10-08 放行；`M5.4` 2026-10-10 达成）；**Phase 6（收敛与交付，`M6.1`–`M6.4`）进行中**
-> **唯一事实源**：环境 → `env/env-baseline-v2.md` ｜ 版本与镜像 digest → `docs/prj-ledger-version-lock.md` ｜ 文档命名 → `docs/prj-spec-document-standard.md`
+> **当前阶段**：**Phase 0–6 全部完成** —— `M0.6` 门禁 2026-10-08 放行、`M5.4` 2026-10-10 达成、**`M6.4` 正式收口 2026-10-10**（停止条件三条满足、交付包已封版）；此后**只维护、不扩范围**（后续路线见 `docs/p6-gate-closure-2026-10-10.md` §六）
+> **唯一事实源**：环境 → `env/env-baseline-v2.md` ｜ 版本与镜像 digest → `docs/prj-ledger-version-lock.md` ｜ 文档命名 → `docs/prj-spec-document-standard.md` ｜ **阶段状态与收口凭据 → `docs/p6-gate-closure-2026-10-10.md`**
 
 ## 一、这是什么
 
@@ -123,9 +123,9 @@ MQTT 告警 → 去重(Redis 滑动窗口) → LangGraph 触发
 | Phase 3 | Agent 工作流实现 | `M3.1`–`M3.5` | ✅ 全达成 |
 | Phase 4 | 前端与集成 | `M4.1`–`M4.4` | ✅ 全达成（Playwright E2E 9/9） |
 | Phase 5 | 评测与硬化 | `M5.1`–`M5.4` | ✅ 全达成（停止条件三条满足） |
-| **Phase 6** | **收敛与交付** | `M6.1`–`M6.4` | 🚧 进行中 |
+| **Phase 6** | **收敛与交付** | `M6.1`–`M6.4` | ✅ **全达成（`M6.4` 2026-10-10 收口）** |
 
-### 3.2 Phase 5 全量指标终值（Phase 6 验收输入）
+### 3.2 Phase 5 全量指标终值（Phase 6 收口输入）
 
 | 指标 | 目标 | 终值 | 判定 |
 |---|---|---|---|
@@ -184,7 +184,7 @@ docker compose -f docker/compose.ingest.yml up -d
 .venv\Scripts\python.exe scripts/seed_users.py
 ```
 
-> 一键初始化脚本（幂等）在 **Phase 6 D6–D7** 落地于 `deploy/init/`，见 §五。
+> ✅ 一键初始化脚本（幂等）已落地为 `deploy/init.ps1`（见 §五）；本节手动迁移路径保留，用于排障与分步核对。
 
 ### 4.5 启动后端
 
@@ -221,9 +221,9 @@ docker compose -f docker/compose.nginx.yml up -d      # http://127.0.0.1:9763
 .venv\Scripts\python.exe -m pytest tests/ -q
 ```
 
-## 五、一键启动（交付包，Phase 6 D6–D7 落地）
+## 五、一键启动（交付包，Phase 6 D6–D7 已落地）
 
-> ⏳ **进行中**：Phase 6 将把上述手动步骤固化为交付包，产出：
+> ✅ **已落地（2026-10-10，`M6.2` 达成）**：实测 8 容器 up、7 个基建 healthy、`deploy/smoke.ps1` **6/6 PASS**。
 
 ```powershell
 deploy\up.ps1        # 一键启动：compose 全服务（healthcheck + 依赖顺序 + 资源限额）+ 等待健康
@@ -234,7 +234,7 @@ deploy\down.ps1      # 一键停止（可选 -v 清卷）
 
 - 编排：`deploy/docker-compose.yml`（含 `.env.example`、镜像 **digest** 清单，禁止裸 tag）；
 - 版本：沿用 `docs/prj-ledger-version-lock.md`（不另建重复文件）；
-- 判据：**干净环境**（全新 clone + 空数据卷 + 仅按交付文档操作）一键启动并冒烟通过（`M6.2`）。
+- 判据：**干净环境**（全新 clone + 空数据卷 + 仅按交付文档操作）一键启动并冒烟通过（`M6.2`）—— **已达成**；
 
 ## 六、目录导航
 
@@ -247,6 +247,8 @@ auscult/
 ├─ app/                 后端 FastAPI 应用（api / graph / tools / report / review / router / security / observability）
 ├─ client/              前端 Next.js 16 + shadcn/ui + Socket.IO（app/(auth)login、app/(main){alarms,diagnosis,reports,knowledge,graph,audit}）
 ├─ db/migrations/       PostgreSQL 迁移（0001 / 0003 / 0004 / 0005 / 0006）
+├─ deploy/              ★ 交付包：docker-compose.yml + up/init/smoke/down.ps1 + .env.example + images.digest.md
+├─ demo/                ★ 演示：scenario.md（主场景 S1 + 备用 S2–S4）/ data/alarms.json / recording/rehearsal-log.md
 ├─ docker/              compose.base / compose.ingest / compose.v2 / compose.nginx / compose.monitoring / compose.v4b-iso + Dockerfile.decoder
 ├─ monitoring/          Prometheus + Grafana（临时件：压测期启动、测后销毁）
 ├─ configs/             alarm_rules / risk_rules / retrieval / logging / mosquitto / redis / decoder_schema_mapping / triple_schema
@@ -259,6 +261,7 @@ auscult/
 ├─ docs/                治理与规范（判据 / 台账 / 版本锁 / 范围 / 移交 / 决策 / 模板 / 命名规范 / 命名映射表）
 │                 ★ Phase 6 D1–D5 收口新增：prj-design-architecture（架构）/ prj-spec-{deployment,operations}（部署运维）
 │                            / prj-spec-{api,data-dictionary}（API 与数据字典）/ prj-decision-adr-001..009（架构决策记录）
+│                 ★ Phase 6 D10 收口新增：p6-gate-closure-2026-10-10.md（**阶段状态唯一凭据**）
 ├─ plan/                阶段计划（Phase 0–6）与设计
 ├─ reports/             实测报告 / 审计 / 裁决 / 总结 + reports/daily/
 ├─ env/                 环境基线 v2（+v1 留档）/ hardware.json / ports.md / cloud.json（含 key，已 gitignore）
@@ -277,6 +280,10 @@ auscult/
 | 目的 | 命令 |
 |---|---|
 | 回归测试（改代码后必跑） | `.venv\Scripts\python.exe -m pytest tests/ -q` |
+| **一键启动全栈**（交付包） | `deploy\up.ps1`（compose 全服务 + 等待 healthy） |
+| **一键初始化**（幂等） | `deploy\init.ps1`（迁表 / 建库 / 建图谱 / 导入语料与演示数据） |
+| **一键冒烟**（`M6.2` 判据） | `deploy\smoke.ps1` |
+| 一键停止 | `deploy\down.ps1`（可选 `-v` 清卷） |
 | 后端 API + Socket.IO | `.venv\Scripts\python.exe -m uvicorn app.api.main:socket_app --host 127.0.0.1 --port 8000` |
 | 前端开发服务器 | `cd client; pnpm dev` |
 | V1 工具调用评测 | `.venv\Scripts\python.exe scripts/run_v1.py --constrain --tag constrained-decoding ...` |
@@ -301,6 +308,7 @@ auscult/
 5. **变更记录**：见 `CHANGELOG.md`。
 6. **文档命名**：新增/改名文档按 `docs/prj-spec-document-standard.md`（`<阶段>-<类型>-<主题>[-<日期>]`，全小写 ASCII kebab），并同步登记 `reports/README.md` §一 与本文件目录结构。
 7. **依赖口径**：`requirements.txt` 为声明集，`uv pip install -r` 为唯一安装入口；**禁止直接 `uv pip sync`**。
+8. **收口后纪律（2026-10-10 起）**：`M6.4` 已达成，仓库进入**维护期** —— **只修缺陷与文档口径，不新增功能范围**；任何扩范围动作须先另立阶段计划并经判据前置，不得直接改本阶段的 Must 链或停止条件。
 
 ## 九、明确不做（Won't）
 
@@ -311,5 +319,5 @@ auscult/
 ---
 
 > **文档事实源索引**：环境基线 `env/env-baseline-v2.md` ｜ 版本与 digest `docs/prj-ledger-version-lock.md` ｜
-> 已知缺陷 `docs/prj-ledger-known-issues.md` ｜ 风险`docs/prj-ledger-risk-register.md` ｜ 命名规范 `docs/prj-spec-document-standard.md` ｜
-> 当前计划 `plan/Phase 6 详细开发计划（收敛与交付）.md` ｜ 报告索引 `reports/README.md`。
+> 已知缺陷 `docs/prj-ledger-known-issues.md` ｜ 风险 `docs/prj-ledger-risk-register.md` ｜ 命名规范 `docs/prj-spec-document-standard.md` ｜
+> **阶段状态与收口凭据 `docs/p6-gate-closure-2026-10-10.md`** ｜ 报告索引 `reports/README.md` ｜ 变更记录 `CHANGELOG.md`。

@@ -79,7 +79,7 @@ Phase 0–5（验证 → 实现 → 评测硬化）
 | **A** | 文档收口 | README / 架构 / 部署运维 / API / 数据字典 / ADR | `docs/` 全量 |
 | **B** | 交付包工程化 | 一键 Compose、版本锁定、初始化脚本、环境模板 | `deploy/` |
 | **C** | 演示与汇报 | 演示脚本、解说词、Q&A 预演、电梯演讲 | `demo/`、`docs/pitch.md` |
-| **D** | 正式收口 | 停止条件终核、风险收敛、后续路线图 | `docs/P6-closure.md` |
+| **D** | 正式收口 | 停止条件终核、风险收敛、后续路线图 | `docs/p6-gate-closure-2026-10-10.md` |
 
 ---
 
@@ -112,7 +112,7 @@ Phase 0–5（验证 → 实现 → 评测硬化）
 |---|---|---|
 | D8 | 演示脚本：主场景（离心泵轴承振动）端到端；备用场景（高风险审核 / 低置信降级 / 云端不可用） | `demo/scenario.md`、`demo/data/` |
 | D9 | 演示排练 + 解说词 + **Q&A 预演**（含尖锐问题）；录屏或截图留档 | `docs/pitch.md`、`demo/recording/` |
-| D10 | **停止条件终核** + 风险收敛 + 后续路线图 + 交付包封版 | `docs/P6-closure.md`、**M6.4** |
+| D10 | **停止条件终核** + 风险收敛 + 后续路线图 + 交付包封版 | `docs/p6-gate-closure-2026-10-10.md`、**M6.4** |
 
 ---
 
@@ -312,15 +312,17 @@ project/
 │  ├─ data/
 │  └─ recording/
 └─ docs/
-   ├─ ARCHITECTURE.md
-   ├─ DEPLOYMENT.md
-   ├─ OPERATIONS.md
-   ├─ API.md
-   ├─ data-dictionary.md
+   ├─ prj-design-architecture.md
+   ├─ prj-spec-deployment.md
+   ├─ prj-spec-operations.md
+   ├─ prj-spec-api.md
+   ├─ prj-spec-data-dictionary.md
    ├─ pitch.md
-   ├─ adr/ADR-001..009.md
-   └─ P6-closure.md
+   ├─ prj-decision-adr-001..009.md
+   └─ p6-gate-closure-2026-10-10.md
 ```
+
+> **口径注（2026-10-10 收口后补）**：上表已按**实际交付名**校正。§四 各天「产出」列中的 `ARCHITECTURE.md` / `DEPLOYMENT.md` / `API.md` / `adr/` 等为**计划期代号**，落地时一律遵循 `docs/prj-spec-document-standard.md` 的 `<阶段>-<类型>-<主题>` 命名；`docs/pitch.md` 为演示对外材料，保留可读短名（已知偏差，不改）。
 
 ### 9.2 交付物清单
 
@@ -364,10 +366,10 @@ project/
 - [x] 录屏/截图留档（`demo/recording/` 已建目录 + 排练记录；正式录屏现场补）
 
 ### D10（M6.4）
-- [x] Must 13 项逐条核对（`docs/P6-closure.md` §三，P1–P5 累计闭环；遗留仅按 ISS 台账登记）
+- [x] Must 13 项逐条核对（`docs/p6-gate-closure-2026-10-10.md` §三，P1–P5 累计闭环；遗留仅按 ISS 台账登记）
 - [x] 停止条件三条通过（§二，S1/S2/S3 全通过，终核自 `p5-handover-p6.md` §三）
 - [x] 风险册定稿（§四 剩余风险显式接受：P95 9.2s / F-2 / F-1 / RPO / Neo4j 图谱 / ISS-038–041，ISS-042 已修复）
-- [x] 交付包封版（§七 清单：deploy / demo / docs / 台账 / 评测；凭据 `docs/P6-closure.md`，M6.4 达成）
+- [x] 交付包封版（§七 清单：deploy / demo / docs / 台账 / 评测；凭据 `docs/p6-gate-closure-2026-10-10.md`，M6.4 达成）
 
 ---
 

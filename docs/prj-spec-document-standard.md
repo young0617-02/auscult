@@ -175,6 +175,17 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 | `docs/handover-p5.md` | `docs/p4-handover-p5.md` | Phase 4 → Phase 5 移交清单 | p4 | 🟢 |
 | `docs/handover-p6.md` | `docs/p5-handover-p6.md` | Phase 5 → Phase 6 移交清单 | p5 | 🟢 |
 
+### 6.5 收口后命名纠错（2026-10-10 执行，2 项）
+
+> 背景：两项均为 2026-10-10 Phase 6 收口当日新增的文件，**未纳入 2026-10-08 的 §6.1–§6.4 全量整理**，故沿用了大写 `P` 的旧习惯名（违反 §二.1「全小写 ASCII」与 §二.2 阶段段必填）。
+
+| 旧名 | 新名 | 用途 | 阶段 | 状态 |
+|---|---|---|---|---|
+| `docs/P6-closure.md` | `docs/p6-gate-closure-2026-10-10.md` | **Phase 6 收口唯一凭据（M6.4）** | p6 | 🟢 |
+| `reports/P5-summary.md` | `reports/p5-summary-phase5-2026-10-10.md` | Phase 5 验收汇总（D15 / M5.4） | p5 | 🟢 |
+
+> 两项均走 `git mv` + 全仓引用改写（受影响 4 个文件：两份 plan、`docs/prj-spec-document-standard.md`、被改名文件自身）；**正文结论一字未改**，仅在各自「修订记录」追加一行。
+
 ---
 
 ## 七、本次整理的残留与已知问题（不隐藏）
@@ -188,6 +199,7 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 | 5 | 历史正文中的旧术语「**无效拒绝**」大量保留（各 plan/报告合计 26+ 处） | 与现行「拒止 / 澄清」两档并存 | 依 `ISS-036` 只在新文档统一术语，历史行**不追改**（改等于抹掉拆档前的判据史） |
 | 6 | `env/ports.md` 为 2026-09-23 快照，晚于 T1.1 的 `.wslconfig` 安装却未重采 | 端口冻结基线与 v2 环境基线时点不一致 | 已在文件头加时点声明；P1 起容器前重采并登记 `env/p1-audit-ports-<日期>.md` |
 | 7 | 新文档写入后，`plan/`、`docs/`、`reports/` 计数已变（本规范 §六 为权威清单） | 根 README 与索引需同步 | 已同步（`reports/README.md` §一、根 `README.md` 目录结构） |
+| 8 | **`docs/pitch.md` 不带阶段与类型前缀**（演示解说词，对外材料） | 与 §二 命名规则不符 | **保留不改**：演示/汇报场景需可读短名，已知偏差；若日后拆分为技术文档则按 §二 正名 |
 
 ---
 
@@ -208,3 +220,4 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 |---|---|---|---|
 | 2026-10-08 | 单人（本人） | 初始建立：Phase 0 过闸后全量文档整理（47 项重命名 / 搬运、1737 处引用改写）沉淀为本规范；含命名规则、状态三态、目录职责、不可改写区、全量映射表与 7 条残留问题 | 全仓文档 |
 | 2026-10-10 | 单人（本人） | Phase 6 D1–D5 文档收口：P3/P4/P5 移交清单命名规范化（旧名→新名映射，含全仓引用改写） | 3 项 `git mv`（`docs/handover-p4.md`→`docs/p3-handover-p4.md`、`docs/handover-p5.md`→`docs/p4-handover-p5.md`、`docs/handover-p6.md`→`docs/p5-handover-p6.md`）；受影响 10 个文件 29 处引用改写（`CHANGELOG.md`、`README.md`、`docs/prj-design-architecture.md`、`app/graph/build.py`、`app/api/runner.py`、3 份 plan、`reports/p3-summary.md`、`reports/P5-summary.md`） |
+| 2026-10-10 | 单人（本人） | **Phase 6 收口后命名纠错**：2 项 `git mv`（`docs/P6-closure.md`→`docs/p6-gate-closure-2026-10-10.md`、`reports/P5-summary.md`→`reports/p5-summary-phase5-2026-10-10.md`）+ 全仓引用改写 | 新增 §6.5 映射表；§七 新增残留 8（`docs/pitch.md` 保留可读短名的已知偏差）；受影响 4 个文件（两份 Phase 5/6 计划、本文件、被改名文件自身） |

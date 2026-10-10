@@ -1,7 +1,8 @@
-# Phase 6 正式收口（P6-Closure / M6.4）
+# Phase 6 正式收口（M6.4 收口裁决）
 
 > **级别**：Phase 6 收口唯一凭据
 > **对应里程碑**：`M6.4`（正式收口）
+> **阶段**：`p6` ｜ **状态**：🟢 **活动**（全项目当前阶段状态以本文件为准）
 > **最近更新**：2026-10-10
 > **上游依据**：`plan/Phase 6 详细开发计划（收敛与交付）.md` §四（D1–D10）；`docs/p0-spec-scope-mvp.md` §四（停止条件）；`docs/p5-handover-p6.md` §一–§五（Phase 5 出口）；`docs/prj-ledger-risk-register.md`（风险册）、`docs/prj-ledger-known-issues.md`（缺陷台账）、`docs/prj-ledger-version-lock.md`（版本锁）
 > **口径纪律**：本文件只汇总**既有台账已登记 / 已实测**的事实，不新增结论、不编造指标；凡未闭环项按原文标注「剩余风险（显式接受 / 登记不修）」。
@@ -43,10 +44,10 @@
 | 1 | 告警产生 | ✅ 闭环 | `scripts/alarm_engine.py` 实测（Phase 5 回归含告警链路） |
 | 2 | 告警去重 | ✅ 闭环 | Redis `dedup:alarm:` 5min 合并（`configs/alarm_rules.yml`） |
 | 3 | 传感器分析 | ⚠️ 部分/缺口 | `query_sensor` 聚合契约实测（P95≈26.2ms）已通过；但判据必填字段 `anomaly` 异常标记与 `p95` **未实现**（`app/graph/nodes/analyze_sensor.py` 的 `_compute_stats` 无此二字段）→ 与判据存在缺口。**复核注**：此缺口**未**在 ISS 台账登记（非登记不修，属 Phase 0 已标"部分实测"的遗留），Phase 6 收敛不新增、按现状如实标注 |
-| 4 | 混合检索 | ✅ 闭环（口径已复核校正） | Milvus 混合（Dense+BM25, RRF k=60）Recall@5：**Phase 0** 50 条评测集实测 **0.91**（`reports/p0-report-v2-hybrid-retrieval.md`）；**Phase 2 M2.4** 采用指标为 `Recall@5=**1.0** / MRR=0.7569 / NDCG=1.0 / P95=86.1ms`（`docs/p2-handover-p3.md`）。**复核注**：P6-closure 原误将 0.91 标为「Phase 2，p2-handover」——0.91 实出 Phase 0、p2-handover 无 0.91，已按实态区分 |
+| 4 | 混合检索 | ✅ 闭环（口径已复核校正） | Milvus 混合（Dense+BM25, RRF k=60）Recall@5：**Phase 0** 50 条评测集实测 **0.91**（`reports/p0-report-v2-hybrid-retrieval.md`）；**Phase 2 M2.4** 采用指标为 `Recall@5=**1.0** / MRR=0.7569 / NDCG=1.0 / P95=86.1ms`（`docs/p2-handover-p3.md`）。**复核注**：本文原误将 0.91 标为「Phase 2，p2-handover」——0.91 实出 Phase 0、p2-handover 无 0.91，已按实态区分 |
 | 5 | 图谱检索 | ⚠️ 登记不修 → 演示边界 | Neo4j 图谱数据未预置，`extract_triples` 依赖 P1 冻结产物；主场景口径见 `demo/scenario.md` §二（图谱支撑有限）与 `docs/pitch.md` A1（如实披露图谱为空）；**已修正引用**（原误引 "§四"，实为 §二） |
 | 6 | 诊断推理 | ✅ 闭环（口径已复核校正） | `app/graph/nodes/diagnose.py` 真实产出 root_causes/suggestions/confidence/risk_level 并经 `build.py` 条件路由接入；M0.2 工具调用能力留痕（`reports/p0-gate-m02-verdict-2026-10-08.md`）。**复核注**：M0.2\"达标\"为同日多轮聚合口径（3 轮合并 225 样本），且该报告如实声明残余风险（R1 单轮仍判中间区间、多工具档仅 75%）——此处如实带注，不因聚合口径而免声明 |
-| 7 | 证据引用强制 | ⚠️ 部分（契约层通过，运行时无硬强制） | **契约层**：`schemas/tools_v4.json`（generate_report）`evidence_refs` 为 required ≥1（工具调用参数必填），契约冻结成立。**运行时**：无「无引用不出报告」硬校验——`finalize.py` 对引用校验仅产 `W_` 非阻塞 warnings、`report/idempotency.py` 落库不检查 citations 空、`state.py` citations/evidence 允许空列表、`runner.py` 允许空 citations。**复核注**：P6-closure 原标「必填 ≥1（契约冻结）」可勉强成立，但不应理解为「强制出报告必须带引用」——运行时无此硬门槛，已如实降为 ⚠️ 部分 |
+| 7 | 证据引用强制 | ⚠️ 部分（契约层通过，运行时无硬强制） | **契约层**：`schemas/tools_v4.json`（generate_report）`evidence_refs` 为 required ≥1（工具调用参数必填），契约冻结成立。**运行时**：无「无引用不出报告」硬校验——`finalize.py` 对引用校验仅产 `W_` 非阻塞 warnings、`report/idempotency.py` 落库不检查 citations 空、`state.py` citations/evidence 允许空列表、`runner.py` 允许空 citations。**复核注**：本文原标「必填 ≥1（契约冻结）」可勉强成立，但不应理解为「强制出报告必须带引用」——运行时无此硬门槛，已如实降为 ⚠️ 部分 |
 | 8 | 报告生成 | ✅ 闭环 | 幂等落库已实测（重复 0 次）；PG `reports` 表已迁移（0003） |
 | 9 | 高风险审核 | ✅ 闭环 | `interrupt()` 强制 + 双审核人并发唯一（V5 T5.1/T5.5 实测） |
 | 10 | 业务表落库 | ✅ 闭环 | PG 迁移 0001–0006 已跑通（9 表/14 表含 ParadeDB 模板） |
@@ -125,4 +126,5 @@
 |---|---|
 | 2026-10-10 | D10 生成：M6.1–M6.3 复核、停止条件终核、风险收敛与剩余风险显式接受、后续路线图、交付包封版清单（M6.4 收口） |
 | 2026-10-10 | **最终人工复核修正（独立只读交叉验证）**：① Must #3 传感器分析由「✅ 闭环」改为「⚠️ 部分/缺口」（判据字段 `anomaly`/`p95` 未实现，且此缺口未在 ISS 台账登记——删除错误引用）；② Must #5 图谱检索与 §四剩余风险的 `demo/scenario.md §四` 错误章节引用改为 §二 + pitch.md A1；③ §三 表上方补「复核注」（标 ⚠️ 项不因收口转绿）；④ 其余 6 项（#2/#8/#10/#11/#12/#13 + S1）复核与实态一致 |
+| 2026-10-10 | **按 `docs/prj-spec-document-standard.md` 正名**：`docs/P6-closure.md` → `docs/p6-gate-closure-2026-10-10.md`（原名为大写 `P6`、缺阶段-类型分隔，违反 §二）；补齐文件头阶段与状态标记；消除正文两处对旧名的自引用。**正文结论一字未改** |
 | 2026-10-10 | **补充复核修正（剩余 #1/#4/#6/#7 + S2/S3）**：① Must #4 0.91 出处误标「Phase 2, p2-handover」→ 校正为 **Phase 0 `p0-report-v2-hybrid-retrieval.md`**（p2-handover 实为 Recall@5=1.0，无 0.91），如实区分两阶段；② Must #7 由「✅ 闭环」降为「⚠️ 部分」（契约层 `tools_v4` evidence_refs 必填成立，但运行时无「无引用不出报告」硬校验——finalize 仅 `W_` 非阻塞 warnings / idempotency 不查空 / state 允许空 / runner 允许空）；③ Must #6 补 M0.2「同日多轮聚合口径」+ 残余风险声明（不因聚合免声明）；④ §二 补 S2 逐字一致注 + S3 轻微口径注（risk-register 10-08、version-lock 标题 8 镜像实含 10 行）；其余 #1 告警产生、S2 与实态一致 |

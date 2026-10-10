@@ -1,6 +1,6 @@
 # Phase 5 验收汇总（D15 · M5.4）
 
-> **日期**：2026-10-10 ｜ **阶段**：Phase 5（评测与硬化） ｜ **出口**：M5.4 压测与收敛
+> **日期**：2026-10-10 ｜ **阶段**：Phase 5（评测与硬化） ｜ **出口**：M5.4 压测与收敛 ｜ **状态**：🟢 活动（Phase 5 范围内权威；全项目当前状态以 `docs/p6-gate-closure-2026-10-10.md` 为准）
 > **结论**：**M5.1–M5.4 全部达成**；停止条件三条同时满足 → **停止扩展范围，转入 Phase 6 收敛交付**
 > **总声明**：本阶段全部指标基于**模拟数据**（模拟语料 + 本地 7B 生成/判定），为本地验证初步结论，不代表生产级评测；golden 50 题待扩语料后重评。
 
@@ -123,7 +123,7 @@
 
 ### 4.4 报告
 
-`reports/p5-eval.md`、`p5-kappa.md`、`p5-hallucination.md`、`p5-backup.md`、`p5-security.md`、`p5-perf.md`、`P5-summary.md`（本文件）+ `docs/p5-handover-p6.md`
+`reports/p5-eval.md`、`p5-kappa.md`、`p5-hallucination.md`、`p5-backup.md`、`p5-security.md`、`p5-perf.md`、`p5-summary-phase5-2026-10-10.md`（本文件）+ `docs/p5-handover-p6.md`
 
 ### 4.5 实验留痕
 
@@ -175,3 +175,4 @@ Python 3.12 + uv ｜ RAGAS ｜ prometheus_client ｜ Locust 2.46.7 ｜ Redis Lua
 | 日期 | 修订人 | 内容 |
 |---|---|---|
 | 2026-10-10 | 单人（本人） | 初始建立：M5.1–M5.4 验收汇总（五项硬化 + 12 项指标终值 + 停止条件核对 + 交付物清单 + 已知问题/计划偏差登记） |
+| 2026-10-10 | 单人（本人） | **按 `docs/prj-spec-document-standard.md` 正名**：`reports/P5-summary.md` → `reports/p5-summary-phase5-2026-10-10.md`（原名为大写 `P5`、缺阶段-类型分隔，违反 §二）；补齐文件头状态标记；**正文结论一字未改**，仅改 §4.4 的自引用 |

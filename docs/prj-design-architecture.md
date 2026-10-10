@@ -275,9 +275,9 @@ confidence = 0.35 * retrieval_score      # Top-K 检索得分归一化均值
 
 ## 九、架构决策索引（ADR-001 – ADR-009）
 
-> ADR 文件**已创建（2026-10-10，Phase 6 D5 产出）**。计划原写 `docs/adr/ADR-001..009.md`，按 `docs/prj-spec-document-standard.md` §二 已裁决改为 `docs/prj-decision-adr-00N-<主题>.md`；下表「拟定文件名」列即为实际产出路径。
+> ADR 文件**已创建（2026-10-10，Phase 6 D5 产出）**。计划原写 `docs/adr/ADR-001..009.md` —— **该目录从未创建，仅作计划期代号引用**（2026-10-10 收口核查时明确标注，避免被当作悬空引用）；按 `docs/prj-spec-document-standard.md` §二 已裁决改为 `docs/prj-decision-adr-00N-<主题>.md`；下表第三列为**实际产出路径**。
 
-| ADR | 决策 | 拟定文件名（D5 产出） | 事实源 / 重叠说明 |
+| ADR | 决策 | 实际产出路径（已创建，D5 产出） | 事实源 / 重叠说明 |
 |---|---|---|---|
 | ADR-001 | 本地双模型分工（`qwen2.5:7b` 工具调用 + `deepseek-r1:7b` 推理） | `docs/prj-decision-adr-001-model-role.md` | **与现存 `docs/p0-decision-model-role.md` 重叠** → D5 改为引用而非重复 |
 | ADR-002 | 混合部署形态（本地优先 + 云端脱敏兜底）；**并须详细说明「不采用 LiteLLM 网关」的原因** | `docs/prj-decision-adr-002-hybrid-deployment.md` | 来源 `plan/工业设备诊断 Agent.md` §3.8；**用户裁定 2026-10-10：LiteLLM 未采用的完整原因必须在本 ADR 中详述**（见 §二 口径裁定） |

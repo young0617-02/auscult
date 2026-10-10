@@ -8,12 +8,58 @@
 
 ---
 
-## [未发布] — Phase 6（收敛与交付）进行中
+## [未发布] — Phase 6（收敛与交付）✅ 已完成并收口（`M6.4`，2026-10-10）
 
-> **总述**：**Phase 0–5 已全部完成**（`M0.6` 门禁 2026-10-08 放行；`M5.4` 2026-10-10 达成，停止条件三条满足），项目转入 **Phase 6 收敛与交付**。
-> **P1–P5 的逐条变更不在本文件展开**（避免与台账/报告重复），以阶段移交清单与实测报告为准：
+> **总述**：**Phase 0–6 已全部完成** —— `M0.6` 门禁 2026-10-08 放行、`M5.4` 2026-10-10 达成（停止条件三条满足）、**`M6.1`–`M6.4` 于 2026-10-10 全达成并正式收口**（停止条件 S1/S2/S3 三条同时满足、交付包封版）。收口凭据 = `docs/p6-gate-closure-2026-10-10.md`。
+> **P1–P5 的逐条变更原不在本文件展开**（避免与台账/报告重复）→ **本次已按阶段补登摘要条目**；逐项实测仍以阶段移交清单与实测报告为准：
 > `docs/p0-handover-p1.md`（P0→P1）｜`docs/p2-handover-p3.md`（P2→P3）｜`docs/p3-handover-p4.md`（P3→P4）｜`docs/p4-handover-p5.md`（P4→P5）｜`docs/p5-handover-p6.md`（P5→P6）｜报告索引 `reports/README.md`。
-> **残余风险（放行不等于风险消失）**：单轮口径仍不稳、多工具档余量 5.0pp、云端结论依赖 provider 版本（`ISS-028`/`R-V1-10`）、`P95` 端到端含生成未达标（9.25 s vs 3 s）→ 见 `docs/prj-ledger-risk-register.md` 与 `docs/p5-handover-p6.md` §五。
+> **残余风险（收口 ≠ 风险消失）**：`P95` 端到端含生成 9.25 s 未达 3 s、F-2 数据库短连接排队、F-1 health 探测阻塞事件循环、RPO 未定时化、Neo4j 图谱数据未预置、`ISS-038`–`ISS-041` 登记不修 → 见 `docs/p6-gate-closure-2026-10-10.md` §四 与 `docs/prj-ledger-risk-register.md`。
+
+### 2026-10-10（收口后）— 入口文档口径同步 + 命名纠错（**文档整理，零功能改动**）
+
+> 触发：Phase 6 收口后对全仓入口文档做一致性核查，发现 4 处口径/登记滞后。**零代码改动、零功能改动**。
+
+- **文档 · 阶段口径同步（`README.md`）**：头部与 §3.1 阶段表由「Phase 6 🚧 进行中」→ **✅ 全达成（`M6.4` 2026-10-10 收口）**；§五 一键启动由「⏳ 进行中」→ **已落地**（实测 8 容器 up / 7 基建 healthy / `deploy/smoke.ps1` **6/6 PASS**）；§4.4 注记由「D6–D7 将落地于 `deploy/init/`」→ 已落地为 `deploy/init.ps1`；§六 目录导航补 **`deploy/`** 与 **`demo/`**（交付包与演示资产此前未入导航）；§七 常用入口补四个一键脚本；§八 新增**纪律 8「收口后维护期：只修缺陷与文档口径、不新增功能范围」**；文末事实源索引改指向收口凭据。
+- **文档 · 变更记录补登（本文件）**：补写 **Phase 1–5 交付**与 **Phase 6 D2–D10** 全部条目 —— 此前自 Phase 0 过闸（10-08）直接跳至「Phase 6 D1」，中间 11 个提交无任何记录，与「变更以验证项 / 里程碑为粒度」的约定不符。
+- **文档 · 索引补登记（`reports/README.md`）**：§一 补登 **P1（11 份）/ P2（8 份）/ P3（2 份）/ P5（7 份）共 28 份报告**（此前仅登记 P0 的 25 份，而 `reports/` 实有 55 份）；§六 全局摘要按实况更正（脚本 **84 个 Python + 2 个 PowerShell〔36 含 `--selftest`〕**、回归 **183** 用例、`pytest==9.1.1` 已锁入 `requirements.txt` 与版本锁 §二.2.10）。
+- **文档 · 命名纠错（2 项 `git mv`）**：`docs/P6-closure.md` → **`docs/p6-gate-closure-2026-10-10.md`**、`reports/P5-summary.md` → **`reports/p5-summary-phase5-2026-10-10.md`** —— 原名为大写 `P` 且缺阶段-类型分隔，违反 `docs/prj-spec-document-standard.md` §二；全仓引用改写 4 个文件，映射登记于命名规范新增 **§6.5**；两份文件**正文结论一字未改**，仅在各自「修订记录」追加一行。另在命名规范 §七 登记**残留 8**：`docs/pitch.md` 保留可读短名（演示对外材料，已知偏差不改）。
+- **验证**：`pytest tests/ -q` = **183 passed**；`P6-closure` / `P5-summary` 旧名仅剩命名规范映射表与修订记录中的**旧名→新名**对照（有意保留）。
+
+### 2026-10-10（Phase 6 D10）— 正式收口：`M6.4` 达成
+
+- **文档**：新增收口凭据 `docs/p6-gate-closure-2026-10-10.md`（原名 `docs/P6-closure.md`，同日已按命名规范更正）—— M6.1–M6.3 出口复核、**停止条件终核**、Must 链 13 项终核、风险收敛与剩余风险显式接受、后续路线图（P0–P3 优先级）、交付包封版清单。
+- **数据 · 终核口径**：S2 三项指标 `Recall@5` **1.0** / `P95` 检索 **159.4 ms** / 工具调用首次成功率 **1.0**，与 `docs/p5-handover-p6.md` §二 逐字一致；S3 = 版本锁（10 镜像 digest）+ 风险册定稿。
+- **质量 · 两轮独立人工复核（诚实降档，未转绿）**：对收口稿做只读交叉验证，把 3 项 Must 由「✅ 闭环」**如实降为 ⚠️ 部分/缺口** —— ① **#3 传感器分析**：`query_sensor` 契约实测通过，但判据字段 `anomaly` / `p95` 在 `app/graph/nodes/analyze_sensor.py::_compute_stats` **未实现**；② **#5 图谱检索**：Neo4j 图谱数据**未预置**（演示边界，`docs/pitch.md` A1 如实披露）；③ **#7 证据引用强制**：契约层 `schemas/tools_v4.json` 的 `evidence_refs` required ≥1 成立，但**运行时无「无引用不出报告」硬校验**（`finalize.py` 仅产非阻塞 `W_` warnings）。另校正 Must #4 的 `0.91` 出处（实出 Phase 0 `reports/p0-report-v2-hybrid-retrieval.md`，非 `docs/p2-handover-p3.md`）。
+- **结论**：**`M6.4` 达成，Phase 6 正式收口**；此后进入维护期，只修缺陷与文档、不扩范围。
+
+### 2026-10-10（Phase 6 D8–D9）— 演示脚本 / 预置数据 / 排练与解说词（`M6.3`）
+
+- **数据 · 新增**：`demo/scenario.md`（主场景 S1 离心泵驱动端轴承振动端到端 + 备用 S2 高风险审核耗时降级 / S3 低置信降级 / S4 云端不可用）、`demo/data/alarms.json`（四场景预置触发输入，词表与 `configs/alarm_rules.yml` 一致）—— **仅编排既有资产，不新增功能**。
+- **文档 · 新增**：`docs/pitch.md`（90 s 电梯解说 + 主/备用解说词 + 高频与尖锐 Q&A A1–A5 诚实口径 + 失败兜底）、`demo/recording/rehearsal-log.md`（排练实测：基建 up → seed 用户 → 起后端 → 登录 → 触发 S1 → 线程推进至 `analyze_sensor`，`risk=high`）。
+- **配置**：`docs/prj-spec-operations.md` §1.3 转定稿表述（Milvus 端口口径统一为 `19531`）。
+
+### 2026-10-10（Phase 6 D6–D7）— 交付包工程化（`M6.2` 出口达成）+ `ISS-042` 修复
+
+- **代码 · 新增**：`deploy/docker-compose.yml`（全服务 + healthcheck + 依赖顺序 + 资源限额 + Nginx；镜像一律 `@sha256`）、`deploy/.env.example`、`deploy/images.digest.md`、`deploy/up.ps1`（一键启动 + 等待健康）、`deploy/init.ps1`（迁表 / 建库 / 建图谱 / 导入语料与演示数据，**幂等**）、`deploy/smoke.ps1`（健康检查 + Playwright E2E 子集）、`deploy/down.ps1`（可选 `-v` 清卷）。**既定决策弃用 Makefile。**
+- **代码 · 修复 `ISS-042`（Milvus 端点三口径）**：`scripts/retrieval_base.py` / `scripts/reconcile.py` / `scripts/outbox_worker.py` 三处硬编码 `http://127.0.0.1:39530` 改为读 `MILVUS_PORT` 环境变量（默认 **`19531`**，与 `app/api/config.py` 对齐）；P5 复现口径可设 `MILVUS_PORT=39530` 回退。
+- **实测（干净环境判据）**：8 容器 up、7 个基建 healthy、`deploy/smoke.ps1` **6/6 PASS** → **`M6.2` 达成**。
+
+### 2026-10-10（Phase 6 D2–D5）— 架构 / 部署运维 / API / 数据字典 / ADR 九条（`M6.1`）
+
+- **文档 · 新增**：`docs/prj-design-architecture.md`（分层 / 七模块 / 三条数据流 / 存储归属）、`docs/prj-spec-deployment.md`、`docs/prj-spec-operations.md`、`docs/prj-spec-api.md`、`docs/prj-spec-data-dictionary.md`、**`docs/prj-decision-adr-001..009.md`**（模型分工 / 混合部署 / Milvus BM25 / 置信度 / PG 权威源 / 跨存储一致性 / 图外写 / checkpoint 存储 / Nginx 后置）。
+- **文档 · 命名规范化（3 项 `git mv`）**：`docs/handover-p4.md` → `docs/p3-handover-p4.md`、`docs/handover-p5.md` → `docs/p4-handover-p5.md`、`docs/handover-p6.md` → `docs/p5-handover-p6.md`；全仓引用改写 10 个文件 29 处。
+- **如实标注（不因收口而声称已实现）**：`docs/prj-spec-api.md` §四 对 `E_TIMEOUT`（`ISS-038`）、§五 对 `qa_log`（`ISS-041`），`docs/prj-spec-data-dictionary.md` §三 对 `sess:*`（`ISS-040`）、§四 对告警状态机（`ISS-039`），均标注【未闭环 / 待确认】。
+- **结论**：**`M6.1` 达成**（六类文档齐备且与实现一致）。
+
+### 2026-10-09 ~ 10-10（Phase 1–5 交付，**补登**）— 数据层 / 检索层 / 工作流 / 前端 / 评测硬化
+
+> 说明：P1–P5 的逐条实测见各阶段报告（`reports/README.md` §一）；此处仅登记**阶段级交付与里程碑**，避免与报告重复。此前本文件自 Phase 0 过闸（10-08）直接跳至 Phase 6 D1，缺这五段记录。
+
+- **Phase 1（数据接入与知识库构建）**：MinerU 解析 Spike 通过 → B1 全量解析 → B2 Parent-Child 分块 → B3 Milvus 建库 → B4 三元组抽取（**91 节点 / 94 关系**，v2 准确率 **93%**）→ B5 元数据与工单导入 PG → B6 Outbox 一致性（失败注入对账零差异、补偿队列可自愈）→ **八项量化门禁全达标、`M1.4` 放行**。报告：`reports/p1-*.md`（11 份）。
+- **Phase 2（混合检索）**：W1 查询改写 / W2 三路召回 / W3 RRF 融合 / W4 重排 + W5 证据组装 / W6 `retrieve_knowledge` 工具 / W7 工具链 R-2/R-3 评测（**云端 16/16 Pass**）→ **M2.1–M2.4 全达成**；`Recall@5` **1.0** / `MRR` **0.7569** / `NDCG@5` **1.0** / `P95` **86.1 ms**。报告：`reports/p2-*.md`（8 份）。
+- **Phase 3（Agent 工作流实现）**：LangGraph 五节点 + 五档条件路由 + PG checkpointer + `interrupt` 人工审核；D20 可靠性（杀进程恢复 / 重复 resume / Redis 驱逐防护）→ **M3.1–M3.5 全达成**。报告：`reports/p3-reliability.md`、`reports/p3-summary.md`。
+- **Phase 4（前端与集成）**：七类页面 + Socket.IO 实时推送 + Nginx 单入口 `:9763`；**Playwright E2E 9/9** → **M4.1–M4.4 全达成**。⚠️ **如实登记文档资产缺口：本阶段无独立 `reports/p4-*.md` 报告**（仅有移交清单 `docs/p4-handover-p5.md`），实况以 `README.md` §3.1 与移交清单为准。
+- **Phase 5（评测与硬化）**：十二项指标 **8 达标 / 1 未达标（`P95` 端到端含生成 9,248.8 ms vs 3 s）/ 1 代理口径**；`κ`=**0.8344**、幻觉率 **0.0%**、工具首次成功率 **1.0**（12/12）、宿主资源峰值 **20.73 GB ≤ 24 GB**、安全回归 **8/8**、备份演练 PG RTO ≈**3.1 s**；**停止条件三条满足 → `M5.1`–`M5.4` 全达成**。报告：`reports/p5-*.md`（7 份，含 `p5-summary-phase5-2026-10-10.md`）。
 
 ### 2026-10-10（Phase 6 D1）— README 收口与过期口径清理
 
