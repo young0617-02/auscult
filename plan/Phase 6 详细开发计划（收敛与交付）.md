@@ -102,7 +102,7 @@ Phase 0–5（验证 → 实现 → 评测硬化）
 | 天 | 任务 | 产出 |
 |---|---|---|
 | D6 | 一键 Compose（全服务 + healthcheck + 依赖顺序 + 资源限额 + Nginx）；`.env.example`；镜像 digest 清单 | `deploy/docker-compose.yml` |
-| D7 | **初始化脚本**：建表/建库/建图谱 + 导入模拟语料 + 种子评测集 + 预置演示数据；一键脚本 `make up/demo/down` | `deploy/init/`、`Makefile` |
+| D7 | **初始化脚本**：建表/建库/建图谱（幂等）+ 预置演示数据；一键 PowerShell 脚本 `up.ps1 / init.ps1 / smoke.ps1 / down.ps1`（**既定决策弃用 Makefile**）；清理残留基线服务；`ISS-042` 修复（脚本侧硬编码端口改读 `MILVUS_PORT`） | `deploy/`（四 .ps1）、`deploy/docker-compose.yml` |
 
 > **出口 M6.2**：干净环境一键启动并冒烟通过。
 
@@ -349,10 +349,11 @@ project/
 - [ ] 无过期口径残留
 
 ### D6–D7（M6.2）
-- [ ] 干净环境一键启动成功
-- [ ] `make smoke` 通过
-- [ ] 版本锁定 + digest 清单完成
-- [ ] 初始化脚本可重复执行（幂等）
+- [x] 干净环境一键启动成功（`deploy/up.ps1` 实测全栈 up，7 基建容器 healthy）
+- [x] `deploy/smoke.ps1` 通过（**6/6 PASS**，2026-10-10 实测；`make smoke` 口径弃用 Makefile）
+- [x] 版本锁定 + digest 清单完成（`deploy/images.digest.md` + `docker-compose.yml` 全 `@sha256`）
+- [x] 初始化脚本可重复执行（幂等，`deploy/init.ps1` 实测 PG 迁移 NOTICE 跳过不中断）
+- [x] `ISS-042` 修复闭环（3 脚本硬编码 39530 → 读 `MILVUS_PORT`，默认 19531 对齐 config.py）
 
 ### D8–D9（M6.3）
 - [ ] 主场景演示全程复现
