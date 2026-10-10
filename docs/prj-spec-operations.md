@@ -18,7 +18,7 @@
 | 起业务库栈 | `docker compose -f docker/compose.v2.yml up -d` | `auscult_v2`@5433 + v2 Milvus@19531 |
 | 起时序接入栈（V3 链路） | `docker compose -f docker/compose.ingest.yml up -d` | ⚠️ 与 base 栈第 3 组端口冲突，**不得同时启** |
 | 起后端 | `.venv\Scripts\python.exe -m uvicorn app.api.main:socket_app --host 127.0.0.1 --port 8000` | 经 Nginx 回源时绑 `0.0.0.0` |
-| 起前端 | `cd client; pnpm dev` | :3000 |
+| 起前端 | `cd client; pnpm dev` | :3000；经 Nginx 的单入口为 :9763。⚠️ dev 跨源放行见 `ISS-043`：Next.js 16 dev 会阻断非白名单来源的 `/_next/hmr`（用 `127.0.0.1` 访问会**页面永不 hydrate 且零报错**，且错误只出现在 Next dev 服务端日志）；`client/next.config.ts` 已配 `allowedDevOrigins: ["127.0.0.1"]`，故本仓 `127.0.0.1` 与 `localhost` **均可用**；**未配置该字段的环境只能用 `localhost`** |
 | 起 Nginx（可选） | `docker compose -f docker/compose.nginx.yml up -d` | :9763 |
 | 停某一栈（**保卷**） | `docker compose -f <编排文件> down` | 卷保留，见部署手册 §7.3 |
 | 停并清卷（⚠️ 危险） | `docker compose -f <编排文件> down -v` | 仅限临时栈销毁或明确重建 |
