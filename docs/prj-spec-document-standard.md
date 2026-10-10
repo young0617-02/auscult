@@ -167,6 +167,14 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 
 **未改名**：`README.md`（根与 `reports/`、`reports/daily/` 三级索引，标准名保留）、`CHANGELOG.md`、`reports/daily/D1-status.md`、`env/env-baseline-v{1,2}.md`、`env/ports.md`、`experiments/**/*.md`。
 
+### 6.4 `docs/` 阶段移交清单命名规范化（2026-10-10 执行，3 项）
+
+| 旧名 | 新名 | 用途 | 阶段 | 状态 |
+|---|---|---|---|---|
+| `docs/handover-p4.md` | `docs/p3-handover-p4.md` | Phase 3 → Phase 4 移交清单 | p3 | 🟢 |
+| `docs/handover-p5.md` | `docs/p4-handover-p5.md` | Phase 4 → Phase 5 移交清单 | p4 | 🟢 |
+| `docs/handover-p6.md` | `docs/p5-handover-p6.md` | Phase 5 → Phase 6 移交清单 | p5 | 🟢 |
+
 ---
 
 ## 七、本次整理的残留与已知问题（不隐藏）
@@ -199,3 +207,4 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 | 日期 | 修订人 | 原因 | 影响范围 |
 |---|---|---|---|
 | 2026-10-08 | 单人（本人） | 初始建立：Phase 0 过闸后全量文档整理（47 项重命名 / 搬运、1737 处引用改写）沉淀为本规范；含命名规则、状态三态、目录职责、不可改写区、全量映射表与 7 条残留问题 | 全仓文档 |
+| 2026-10-10 | 单人（本人） | Phase 6 D1–D5 文档收口：P3/P4/P5 移交清单命名规范化（旧名→新名映射，含全仓引用改写） | 3 项 `git mv`（`docs/handover-p4.md`→`docs/p3-handover-p4.md`、`docs/handover-p5.md`→`docs/p4-handover-p5.md`、`docs/handover-p6.md`→`docs/p5-handover-p6.md`）；受影响 10 个文件 29 处引用改写（`CHANGELOG.md`、`README.md`、`docs/prj-design-architecture.md`、`app/graph/build.py`、`app/api/runner.py`、3 份 plan、`reports/p3-summary.md`、`reports/P5-summary.md`） |

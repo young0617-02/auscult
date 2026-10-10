@@ -78,7 +78,7 @@ def build_graph(checkpointer: Any) -> Any:
     """
     graph = StateGraph(DiagnosisState)
 
-    # 注册节点（P4 接入：trace_node 包裹，无 Tracer 时零开销降级——handover-p4 §三 遗留项）
+    # 注册节点（P4 接入：trace_node 包裹，无 Tracer 时零开销降级——p3-handover-p4 §三 遗留项）
     graph.add_node("parse_alarm", trace_node("parse_alarm")(parse_alarm))
     graph.add_node("analyze_sensor", trace_node("analyze_sensor")(analyze_sensor))
     graph.add_node("retrieve_evidence", trace_node("retrieve_evidence")(retrieve_evidence))

@@ -290,7 +290,7 @@ def submit_review(thread_id: str, action: str, comment: str, reviewer: str) -> d
     if rec.status != "waiting_review":
         raise ApiError("E_CONFLICT", "该诊断不在等待审核状态")
 
-    # 职责分离：诊断发起人不得自审（handover-p4 §2.2 / plan §六.5）
+    # 职责分离：诊断发起人不得自审（p3-handover-p4 §2.2 / plan §六.5）
     if not validate_submitter(reviewer, rec.submitter):
         raise ApiError("E_PERMISSION", "诊断发起人不能自审该报告，请更换审核员")
 

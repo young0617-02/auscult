@@ -222,7 +222,7 @@ client/
 | D17 | 图谱可视化：react-force-graph + 邻居查询 + 关系过滤 | `app/(main)/graph` |
 | D18 | 报告↔图谱联动、Trace 时间线展示 | `components/common/TraceTimeline.tsx` |
 | D19 | **Nginx 集成**：反代 `/`、`/api`、`/socket.io`（WS 透传）+ HTTPS | `docker/compose.nginx.yml`、`configs/nginx/` |
-| D20 | 端到端联调 + 验收 + `handover-p5.md` | **M4.4** |
+| D20 | 端到端联调 + 验收 + `p4-handover-p5.md` | **M4.4** |
 
 ---
 
@@ -453,7 +453,7 @@ project/
 ├─ docker/compose.nginx.yml
 └─ docs/
    ├─ p4-ui-spec.md
-   └─ handover-p5.md
+   └─ p4-handover-p5.md
 ```
 
 ### 11.2 交付物清单
@@ -466,7 +466,7 @@ project/
 | 权限 | RBAC 守卫 + 禁止自审 |
 | 集成 | Nginx 配置 + Compose 片段 + HTTPS |
 | 测试 | Playwright e2e 用例与报告 |
-| 移交 | `handover-p5.md` |
+| 移交 | `p4-handover-p5.md` |
 
 ---
 
@@ -498,7 +498,7 @@ project/
 - [ ] 图谱可视化 + 邻居查询
 - [ ] Nginx 单入口 HTTPS + WS 正常
 - [ ] F1–F11 e2e 全通过
-- [ ] `handover-p5.md` 齐备
+- [ ] `p4-handover-p5.md` 齐备
 
 ---
 

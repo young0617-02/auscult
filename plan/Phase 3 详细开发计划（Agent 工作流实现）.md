@@ -257,7 +257,7 @@ A,G ───────────►（贯穿）
 | D22 | 指标打点：节点耗时、置信度分布、升级率、降级率、审核覆盖率 | `app/observability/metrics.py` |
 | D23 | 端到端场景测试（主场景"离心泵轴承振动"+ 高风险/低置信/云端升级） | `tests/e2e/` |
 | D24 | 安全加固：输入净化（Prompt 注入）、工具白名单、审计落库 | `app/security/` |
-| D25 | 验收汇总 + `handover-p4.md` | **M3.5** |
+| D25 | 验收汇总 + `p3-handover-p4.md` | **M3.5** |
 
 ---
 
@@ -504,7 +504,7 @@ project/
 | 报告 | 报告 Schema + 图外幂等写 |
 | 可靠性 | Checkpointer 配置 + 恢复测试报告 |
 | 可观测 | Langfuse Trace + 指标打点 |
-| 移交 | `handover-p4.md` |
+| 移交 | `p3-handover-p4.md` |
 
 ---
 
@@ -540,7 +540,7 @@ project/
 - [ ] Langfuse Trace 全覆盖
 - [ ] E1–E10 端到端全部通过
 - [ ] 安全加固（注入/白名单/审计）
-- [ ] `handover-p4.md` 齐备
+- [ ] `p3-handover-p4.md` 齐备
 
 ---
 

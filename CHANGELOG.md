@@ -1,19 +1,25 @@
 # 变更日志（CHANGELOG）
 
-本项目为 Phase 0 技术验证项目，变更以**验证项 / 里程碑**为粒度记录。
+本项目为 Phase 0–6 全链路项目，变更以**验证项 / 里程碑**为粒度记录。
 版本锁定细节见 `docs/prj-ledger-version-lock.md`（含逐条修订记录）；缺陷见 `docs/prj-ledger-known-issues.md`。
+当前阶段与指标速览见 `README.md`；本阶段计划见 `plan/Phase 6 详细开发计划（收敛与交付）.md`。
 
 约定：日期为 +08:00；`代码` / `文档` / `配置` / `数据` 四类分开标注；**原始实验数据只增不改**。
 
 ---
 
-## [未发布] — Phase 1 待启动
+## [未发布] — Phase 6（收敛与交付）进行中
 
-- 门禁状态：✅ **M0.1 / M0.2 / M0.3 / M0.4 / M0.5 全部达成，M0.6 已于 2026-10-08 放行**（`M0.2` 依 `docs/p0-spec-gate-criteria.md` §3.1.3「同日多轮聚合口径」裁决；~~本行原写「M0.6 未放行、M0.2 仍为唯一阻塞」为 2026-10-07 时点，已由下文 10-08 条目取代**）。Phase 1 按 `docs/p0-handover-p1.md` 启动。
-- **残余风险（放行不等于风险消失）**：单轮口径仍不稳（R1 单轮仍判中间区间）、多工具档余量仅 5.0pp、云端结论依赖 provider 版本（`ISS-028` / `R-V1-10`）→ 三项列入 P1 持续监控，任何改动前后须按同口径复测。
-- 首日待办：MinerU 解析 Spike（R14）、A1 接入骨架、环境复用、PG 迁移、P0 遗留项收口。
-- **P1 开工前置（2026-10-08 文档整理新发现）**：`pytest` **未登记进 `requirements.txt` 与 `docs/prj-ledger-version-lock.md`** → 新机器上「改代码必跑 176 用例回归」不可执行（本机 `.venv` 即无 pytest，实跑于宿主 Python 3.12）；`env/ports.md` 为 2026-09-23 快照、未随 T1.1 重采，起容器前须重采。
-- **文档**：新增 `reports/p0-audit-status-2026-10-07.md`（**项目状态报告**，现名，🟡 时点快照）；当日现场验证 `pytest` **170 全绿**（**2026-10-08 复跑 176**）、git 工作区干净。
+> **总述**：**Phase 0–5 已全部完成**（`M0.6` 门禁 2026-10-08 放行；`M5.4` 2026-10-10 达成，停止条件三条满足），项目转入 **Phase 6 收敛与交付**。
+> **P1–P5 的逐条变更不在本文件展开**（避免与台账/报告重复），以阶段移交清单与实测报告为准：
+> `docs/p0-handover-p1.md`（P0→P1）｜`docs/p2-handover-p3.md`（P2→P3）｜`docs/p3-handover-p4.md`（P3→P4）｜`docs/p4-handover-p5.md`（P4→P5）｜`docs/p5-handover-p6.md`（P5→P6）｜报告索引 `reports/README.md`。
+> **残余风险（放行不等于风险消失）**：单轮口径仍不稳、多工具档余量 5.0pp、云端结论依赖 provider 版本（`ISS-028`/`R-V1-10`）、`P95` 端到端含生成未达标（9.25 s vs 3 s）→ 见 `docs/prj-ledger-risk-register.md` 与 `docs/p5-handover-p6.md` §五。
+
+### 2026-10-10（Phase 6 D1）— README 收口与过期口径清理
+
+- **文档**：`README.md` 全量重写并**对齐 V5.0 定稿口径** —— 新增一句话定位 / 分层架构图 / 七模块 / 三条数据流 / 五档条件路由 / 存储归属表 / 阶段状态（P0–P6）/ Phase 5 全量指标终值表 / 一键启动（D6–D7 落地段）；清理过期口径：阶段状态由「Phase 1 计划就绪」改为「**Phase 0–5 已完成、Phase 6 进行中**」、脚本计数 `22〔16 自检〕` → **84 Python + 2 PowerShell（36 含 `--selftest`）**、目录导航按实况重写（新增 `app/`、`client/`、`db/`、`monitoring/`、`blobs/chunks/parsed/`）。验证：`pytest` **183 passed**。
+- **文档 · 依赖漂移补正**：`requirements.txt` + `docs/prj-ledger-version-lock.md` 按**实装为真**回填 `langchain-core` **1.6.4 → 1.6.9**，并显式钉住 `langchain==1.4.4` / `langchain-openai==1.7.0`（目的 = 阻止解析器再次静默升/降 core）。验证：`uv pip install --dry-run -r requirements.txt` = **Would make no changes**。**`env/env-baseline-v2.md` 不升版**（5 条升版触发条件不含 Python 包版本）。
+- **说明**：本小节原为「`[未发布] — Phase 1 待启动`」工作注记（10-07 / 10-08 时点），其结论已由下方 2026-10-08 条目与 `docs/p5-handover-p6.md` 承载，故按用户裁定**降级为上方总述**（历史条目正文一字不改）。
 
 ---
 

@@ -79,7 +79,7 @@
 |---|---|
 | `reports/p3-reliability.md` | D20 可靠性测试报告 |
 | `reports/p3-summary.md` | 本文件（Phase 3 验收汇总） |
-| `docs/handover-p4.md` | Phase 3→4 移交清单 |
+| `docs/p3-handover-p4.md` | Phase 3→4 移交清单 |
 
 ---
 
@@ -108,7 +108,7 @@
 | 指标齐备 | D22 `metrics.py`（P95 + 分布 + 比率 + 快照） | ✅ 11/11 PASS |
 | e2e 通过 | D23 E1–E6 + D20 E7–E9 + D24 E10 | ✅ 10/10 场景 |
 | 安全加固 | D24 `security/sanitizer.py` | ✅ 11/11 PASS |
-| 移交 Phase 4 | `docs/handover-p4.md` | ✅ |
+| 移交 Phase 4 | `docs/p3-handover-p4.md` | ✅ |
 
 **M3.5 ✅ 达成。**
 

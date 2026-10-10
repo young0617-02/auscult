@@ -123,7 +123,7 @@
 
 ### 4.4 报告
 
-`reports/p5-eval.md`、`p5-kappa.md`、`p5-hallucination.md`、`p5-backup.md`、`p5-security.md`、`p5-perf.md`、`P5-summary.md`（本文件）+ `docs/handover-p6.md`
+`reports/p5-eval.md`、`p5-kappa.md`、`p5-hallucination.md`、`p5-backup.md`、`p5-security.md`、`p5-perf.md`、`P5-summary.md`（本文件）+ `docs/p5-handover-p6.md`
 
 ### 4.5 实验留痕
 
