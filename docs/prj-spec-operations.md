@@ -95,7 +95,7 @@ docker compose -f docker/compose.monitoring.yml down -v
 | RTO（恢复时间目标） | ≤30 min | PG：dump 1.0s + restore 2.1s + 校验 ≈ **3.1s**（不含应用重启） | ✅ 余量 >99% |
 | Neo4j / Milvus 冷备窗口 | — | **16.0s**（含 stop+start）/ **5.3s** | ✅ |
 | RPO（恢复点目标） | ≤24 h（每日备份） | 当前为**手动一次性备份**，「≤24h 持续达成」为**条件性结论** | ⚠️ 依赖每日定时任务落地（见 §3.4） |
-| TDengine 备份 | taosdump | **未执行**（profile 未启动，无数据可备） | ⏳ 待 P6 |
+| TDengine 备份 | taosdump | **仍未执行**（profile 未启动，无数据可备） | ⏳ **P6 未做 → 转后续路线 P2**：`docs/p6-gate-closure-2026-10-10.md` §四 已**显式接受**、§六 列为 P2「RPO 持续化 + TDengine `taosdump` 演练」；原「待 P6」口径**已随 P6 收口作废** |
 
 ### 3.2 备份产物清单（`backups\`，**不入 git**，含业务数据）
 
@@ -135,7 +135,7 @@ Get-ChildItem chunks -File | Get-FileHash -Algorithm SHA256 | Out-File backups/c
 ### 3.4 恢复演练步骤
 
 1. **PG**：按 §3.3 ① 恢复至临时库 → 核对 4 表行数一致 → 销毁临时库（实测 3.1s；`pg_restore` 对 `paradedb`/`tiger`/`topology` 3 个 schema 报非致命 already exists，系 ParadeDB 模板库预置，业务表零影响，可忽略——`reports/p5-backup.md` §四）；
-2. **Neo4j / Milvus**：停容器 → 将 tgz **反向解包回同名数据卷** → 起容器 → 按 §3.3 ② 验证节点数/卷结构。【待确认】反向解包的具体命令未在 `reports/p5-backup.md` 留档（该报告 §二 仅注明"恢复 = 反向解包至同卷 + 容器启动"）——**处置：随 Phase 6 D6–D7 补档至 `deploy/`（恢复脚本 + 本节回填）**；
+2. **Neo4j / Milvus**：停容器 → 将 tgz **反向解包回同名数据卷** → 起容器 → 按 §3.3 ② 验证节点数/卷结构。⚠️ **口径更正（2026-10-10）**：原【待确认】称「反向解包的具体命令未留档，处置：随 Phase 6 D6–D7 补档至 `deploy/`（恢复脚本 + 本节回填）」—— **该处置未兑现**：`deploy/` 落地的是 `up.ps1` / `init.ps1` / `smoke.ps1` / `down.ps1`，**无恢复脚本**，本节亦未回填 → **转后续路线 P2**（与 §3.5 每日定时备份同批）。
 3. **语料**：重算 SHA256 与 `corpus_checksums_*.sha256` 比对。
 
 ### 3.5 已知限制与待办（如实标注）
@@ -143,7 +143,7 @@ Get-ChildItem chunks -File | Get-FileHash -Algorithm SHA256 | Out-File backups/c
 | 项 | 状态 |
 |---|---|
 | Neo4j 社区版不支持在线 dump（`STOP DATABASE` 报 Unsupported administration command）→ 降级为停机卷 tar 冷备，实测窗口 16s 可接受 | 已定案（`reports/p5-backup.md` §四） |
-| **每日定时备份**（Windows 计划任务 + 产物滚动保留 7 份 + TDengine `taosdump` 演练） | **待 P6 落地**（RPO≤24h 持续达成的前置条件；`reports/p5-backup.md` §二/§四） |
+| **每日定时备份**（Windows 计划任务 + 产物滚动保留 7 份 + TDengine `taosdump` 演练） | ⏳ **P6 未落地 → 转后续路线 P2**：`docs/p6-gate-closure-2026-10-10.md` §四 已**显式接受**（RPO 持续化未落地）、§六 列为 P2 优先级；原「待 P6 落地」口径**已随 P6 收口作废**。故 **RPO≤24h 仍为条件性结论**（当前仅手动一次性备份，见 §3.1） |
 | `backups\` 生产化时应转存独立存储介质 | 待办（`reports/p5-backup.md` §四.5） |
 
 ---
@@ -207,3 +207,4 @@ Get-ChildItem chunks -File | Get-FileHash -Algorithm SHA256 | Out-File backups/c
 | 日期 | 修订人 | 原因 | 影响范围 |
 |---|---|---|---|
 | 2026-10-10 | 单人（本人） | 初始建立（Phase 6 D3 文档收口）：日常运维速查、临时监控栈纪律、备份恢复（RTO/RPO 目标 vs P5 实测 + 复现命令）、故障排查（含两项 P5 遗留"暂不修复，阻塞演示才修"裁定）、安全运维、资源门禁 | 新增本文档 |
+| 2026-10-10 | 单人（本人） | **Phase 6 收口后过期口径更正（3 处，均为如实降档 / 转后续路线，未把未做项写成已做）**：① §3.1 TDengine 备份「⏳ **待 P6**」→ **P6 未做、转后续路线 P2**（`docs/p6-gate-closure-2026-10-10.md` §四 显式接受、§六 列 P2「RPO 持续化 + TDengine `taosdump` 演练」），原口径随 P6 收口作废；② §3.4 第 2 条原【待确认】称「反向解包的具体命令随 Phase 6 D6–D7 补档至 `deploy/`（恢复脚本 + 本节回填）」—— **如实标注该处置未兑现**：`deploy/` 落地的是 `up.ps1` / `init.ps1` / `smoke.ps1` / `down.ps1`，**无恢复脚本**，本节亦未回填 → 转后续路线 P2；③ §3.5「每日定时备份」由「待 P6 落地」→ **P6 未落地、转后续路线 P2**，并明确 **RPO≤24h 仍为条件性结论**（当前仅手动一次性备份） | §3.1、§3.4、§3.5、修订记录 |

@@ -180,7 +180,7 @@ powershell -File scripts\check_ports.ps1 -ShowOwner
 .venv\Scripts\python.exe scripts/seed_users.py
 ```
 
-> 【待确认】迁移的单条执行命令未在 `README.md` §4.4 固化（仅注明"按序号执行"），将随 Phase 6 D6–D7 `deploy\init.ps1` 一键化落地后回填本节。
+> ⚠️ **口径更新（2026-10-10，`M6.2` 达成后核）**：原【待确认】为「迁移的单条执行命令未固化」—— 该诉求已由 **`deploy/init.ps1` 一键化覆盖**（实测幂等：PG 迁移 NOTICE 跳过、不中断；见 §八），**但单条迁移命令本身仍未在 `README.md` §4.4 逐条列出**（仍写"按序号执行"）。**如实保留此缺口**，不因一键化而声称已固化；手动排障仍按本节与 `README.md` §4.4 执行。
 
 验证：`seed_users.py` 输出四个种子账号创建/已存在；`docker exec auscult-v2-pg psql -U root -d auscult_v2 -c "\dt"` 能看到业务表。
 
@@ -366,24 +366,25 @@ uv pip install -r requirements.txt          # 依赖有变时
 
 ---
 
-## 八、一键启动（规划中，待 D6–D7 落地）
+## 八、一键启动（✅ 已落地，`M6.2` 达成）
 
-> ⏳ **状态声明**：`deploy\` 目录**当前不存在**，本章为目标行为定义（规划），**不构成可用交付物**；落地后本节改写为操作说明并追加修订记录。
+> ✅ **状态声明（2026-10-10 更正）**：`deploy/` 目录**已落地并封版**，本节为**可用交付物的操作说明**。原声明「`deploy\` 目录当前不存在，本章为目标行为定义（规划），不构成可用交付物」**已过期作废**。
+> **实测证据**：8 容器 up、7 个基建 healthy、`deploy/smoke.ps1` **6/6 PASS** → **`M6.2` 达成**。
 
-Phase 6 将把本文 §三 的手动步骤固化为交付包（`README.md` §五）：
+Phase 6 D6–D7 已将本文 §三 的手动步骤固化为交付包（`README.md` §五）：
 
-| 脚本 | 目标行为 |
+| 脚本 | 行为（已落地） |
 |---|---|
 | `deploy\up.ps1` | 一键启动：compose 全服务（healthcheck + 依赖顺序 + 资源限额）+ 等待健康 |
-| `deploy\init.ps1` | 一键初始化：迁表 / 建库 / 建图谱 / 导入语料与演示数据（幂等）——将回填 §三 步骤 5 的【待确认】 |
+| `deploy\init.ps1` | 一键初始化：迁表 / 建库 / 建图谱 / 导入语料与演示数据（**幂等**，实测 PG 迁移 NOTICE 跳过、不中断）—— 已覆盖 §三 步骤 5 的迁移与种子（该处【待确认】见 §三 的口径更新） |
 | `deploy\smoke.ps1` | 一键冒烟：健康检查 + Playwright E2E（F1–F11 子集） |
 | `deploy\down.ps1` | 一键停止（可选 `-v` 清卷） |
 
-配套：`deploy/docker-compose.yml`（含 `.env.example`、镜像 **digest** 清单，禁止裸 tag）；版本沿用 `docs/prj-ledger-version-lock.md`（不另建重复文件）。
+配套：`deploy/docker-compose.yml`（含 `.env.example`、镜像 **digest** 清单，禁止裸 tag）与 `deploy/images.digest.md`；版本沿用 `docs/prj-ledger-version-lock.md`（不另建重复文件）。
 
-**验收判据 = `M6.2`**：**干净环境**（全新 clone + 空数据卷 + 仅按交付文档操作）一键启动并冒烟通过（`README.md` §五；`plan/Phase 6 详细开发计划（收敛与交付）.md` §四 D6–D7）。
+**验收判据 = `M6.2`**：**干净环境**（全新 clone + 空数据卷 + 仅按交付文档操作）一键启动并冒烟通过（`README.md` §五；`plan/Phase 6 详细开发计划（收敛与交付）.md` §四 D6–D7）—— ✅ **已达成（2026-10-10 实测）**。
 
-> 口径差异说明：原计划 D7 另含 `Makefile`（`make up/demo/down`，`plan/Phase 6 详细开发计划（收敛与交付）.md` §四）；`README.md` D1 收口版定稿为上述 PowerShell 四脚本，以 README 为准。
+> 口径差异说明：原计划 D7 另含 `Makefile`（`make up/demo/down`，`plan/Phase 6 详细开发计划（收敛与交付）.md` §四）；`README.md` D1 收口版定稿为上述 PowerShell 四脚本，以 README 为准（**既定决策弃用 Makefile**）。
 
 ---
 
@@ -392,3 +393,4 @@ Phase 6 将把本文 §三 的手动步骤固化为交付包（`README.md` §五
 | 日期 | 修订人 | 原因 | 影响范围 |
 |---|---|---|---|
 | 2026-10-10 | 单人（本人） | 初始建立（Phase 6 D3 文档收口）：部署形态总览（compose 逐文件实测）、前置条件、首次部署步骤、环境变量清单（config.py 14 项实测）、镜像 digest 纪律（实测无裸 tag）、健康检查、升级回滚、一键启动规划段 | 新增本文档 |
+| 2026-10-10 | 单人（本人） | **收口后过期口径更正（D6–D7 已落地）**：① §八 标题「规划中，待 D6–D7 落地」→ **「已落地，`M6.2` 达成」**；② §八 状态声明原写「`deploy\` 目录**当前不存在**、本章为规划、**不构成可用交付物**」—— 与 `deploy/` 已封版（7 个文件，M6.2 实测 8 容器 up / 7 基建 healthy / smoke 6/6 PASS）**直接矛盾**，已更正为可用交付物说明并标注原声明作废；③ 四脚本表改「行为（已落地）」并补 `images.digest.md`；④ 验收判据标注 **已达成**；⑤ §三 步骤 5 的【待确认】改为口径更新：**一键化诉求已由 `init.ps1` 覆盖，但单条迁移命令仍未在 `README.md` §4.4 逐条列出 —— 如实保留该缺口**，不因一键化而声称已固化 | §三 步骤 5、§八、修订记录 |
