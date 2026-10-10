@@ -99,10 +99,12 @@ device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
 | 产物 | 路径 |
 |---|---|
 | 演示告警输入 | `demo/data/alarms.json` |
+| 演示脚本 / 解说词 | `demo/scenario.md` / `docs/pitch.md` |
+| 排练记录 | `demo/recording/rehearsal-log.md` |
 | 诊断 Trace | `reports/traces/{thread_id}.jsonl` |
 | 指标快照 | `reports/metrics/{date}.jsonl` |
 | 审计 | `reports/review_audit.jsonl` / `reports/cloud_audit.jsonl` |
-| 录屏留档（D9） | `demo/recording/` |
+| 录屏留档 | `demo/recording/` |
 
 ---
 

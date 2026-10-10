@@ -7,7 +7,7 @@
       "device_id": "C 0泵",
       "metric": "vib_rms",
       "value": 6.2,
-      "severity": "critical",
+      "severity": "high",
       "期望路径": "parse_alarm → analyze_sensor → retrieve_evidence(混合+图谱) → diagnose → risk=high → human_review 强制中断",
       "备注": "risk=high 命中强制审核线（五档路由第 4 档），演示 SoD + 双审核人 + 报告幂等"
     },
@@ -16,7 +16,7 @@
       "device_id": "C 0泵",
       "metric": "bearing_temp",
       "value": 92.0,
-      "severity": "critical",
+      "severity": "high",
       "期望路径": "同 S1，risk=high → human_review；补充演示超时自动降级（check_review_timeout）",
       "备注": "演示审核锁（lock:review SETNX）、备用审核人通知、24h 超时 resume 的降级"
     },
@@ -25,7 +25,7 @@
       "device_id": "C 0泵",
       "metric": "motor_current",
       "value": 16.8,
-      "severity": "warning",
+      "severity": "medium",
       "期望路径": "diagnose → confidence<0.50 → degrade（显式「初步判断，建议人工确认」+ degrade_reason）",
       "备注": "演示降级显式化（state.degrade_reason），不自动生成正式报告"
     },
@@ -34,7 +34,7 @@
       "device_id": "C 0泵",
       "metric": "vib_rms",
       "value": 5.1,
-      "severity": "warning",
+      "severity": "high",
       "期望路径": "低置信升级云端 → 云端失败/超时 → degrade_reason=cloud_unavailable 保留本地结果",
       "备注": "演示预算熔断（budget:cloud: 计数 340/天、超时 20s、脱敏 device_id）"
     }
