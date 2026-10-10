@@ -22,7 +22,9 @@ services:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      # 必须用 127.0.0.1：alpine busybox wget 会把 localhost 优先解析为 IPv6 ::1，
+      # 而 nginx 仅监听 IPv4 0.0.0.0:80，用 localhost 会恒判失败（假 negative）
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ || exit 1"]
       interval: 30s
       timeout: 5s
       retries: 3
