@@ -1,0 +1,44 @@
+{
+  "说明": "D8 演示预置告警样例（Phase 6 交付 · 不新增功能，仅作为演示触发输入）。",
+  "口径": "测点/阈值与 configs/alarm_rules.yml 一致（vib_rms≥4.5 high / bearing_temp≥85 high / motor_current≥14.145 medium）；词表与 app/api/ 契约一致。",
+  "场景集": {
+    "S1_主场景_轴承振动": {
+      "简介": "离心泵驱动端轴承振动超标（vib_rms=6.2 mm/s > 4.5，high）→ 诊断 → 图谱支撑 → 报告 → 高风险强制审核完整闭环",
+      "device_id": "C 0泵",
+      "metric": "vib_rms",
+      "value": 6.2,
+      "severity": "critical",
+      "期望路径": "parse_alarm → analyze_sensor → retrieve_evidence(混合+图谱) → diagnose → risk=high → human_review 强制中断",
+      "备注": "risk=high 命中强制审核线（五档路由第 4 档），演示 SoD + 双审核人 + 报告幂等"
+    },
+    "S2_备用_高风险审核": {
+      "简介": "轴承温度超限（bearing_temp=92 °C > 85，high）→ 强制审核 + 24h 超时降级路径说明",
+      "device_id": "C 0泵",
+      "metric": "bearing_temp",
+      "value": 92.0,
+      "severity": "critical",
+      "期望路径": "同 S1，risk=high → human_review；补充演示超时自动降级（check_review_timeout）",
+      "备注": "演示审核锁（lock:review SETNX）、备用审核人通知、24h 超时 resume 的降级"
+    },
+    "S3_备用_低置信降级": {
+      "简介": "电机电流超限（motor_current=16.8 A > 14.145，medium）但检索证据薄弱 → confidence<0.50 → 降级不自动出正式报告",
+      "device_id": "C 0泵",
+      "metric": "motor_current",
+      "value": 16.8,
+      "severity": "warning",
+      "期望路径": "diagnose → confidence<0.50 → degrade（显式「初步判断，建议人工确认」+ degrade_reason）",
+      "备注": "演示降级显式化（state.degrade_reason），不自动生成正式报告"
+    },
+    "S4_备用_云端不可用": {
+      "简介": "模拟云端兜底不可用 → degrade_reason=cloud_unavailable，保留本地诊断",
+      "device_id": "C 0泵",
+      "metric": "vib_rms",
+      "value": 5.1,
+      "severity": "warning",
+      "期望路径": "低置信升级云端 → 云端失败/超时 → degrade_reason=cloud_unavailable 保留本地结果",
+      "备注": "演示预算熔断（budget:cloud: 计数 340/天、超时 20s、脱敏 device_id）"
+    }
+  },
+  "触发约定": "POST /api/diagnose 传 {alarm:{device_id,metric,value,severity}}（内联对象）或先写 alerts 表再传 alarm_id。",
+  "注意": "severity 对内联对象须用契约词表 critical/warning/info（见 app/api/config 与 AlarmEvent 校验）。"
+}

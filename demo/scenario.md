@@ -1,0 +1,109 @@
+# Demo 演示脚本（demo/scenario.md）
+
+> **级别**：Phase 6 交付包 · 演示支撑（`M6.3` 输入）
+> **最近更新**：2026-10-10
+> **对应里程碑**：`D8`（演示脚本：主场景 + 备用场景）
+> **口径**：仅**编排既有资产**（语料入库 / seed_users / 既有 REST+Socket 契约 / deploy 栈），
+> 不新增功能、不改后端代码；触发输入见 `demo/data/alarms.json`。
+> **依赖**：`M6.2` 交付已就绪（`deploy/up.ps1` + `deploy/init.ps1` 跑通，见 `docs/prj-spec-deployment.md`）。
+
+---
+
+## 一、演示前环境就绪（一次）
+
+| 步骤 | 命令 / 说明 | 校验 |
+|---|---|---|
+| 1 起基建栈 | `.\deploy\up.ps1` | 8 容器 up，7 基建 healthy（nginx 依赖后端） |
+| 2 初始化 | `.\deploy\init.ps1`（幂等；PG 迁移 / Milvus 建库 36 行） | `.\deploy\smoke.ps1` 6/6 PASS |
+| 3 种子用户 | `.venv\Scripts\python.exe scripts\seed_users.py` | 幂等写入四角色 eng_dev/rev_dev/kb_dev/sys_dev |
+| 4 起后端 | `.venv\Scripts\python.exe -m uvicorn app.api.main:socket_app --host 127.0.0.1 --port 8000` | `curl http://127.0.0.1:8000/api/health` |
+| 5 起前端 | `cd client; pnpm dev`（:3000） | 经 nginx :9763 访问 `http://localhost:9763` |
+| 6 登录 | 四角色任一（默认密码 `Auscult#Dev2026`，生产须改密） | RBAC 看板可见 |
+
+> 演示默认只起 ① 后端 ③ 前端；若需展示实时推送，确保前端 `pnpm dev` 已起（Socket.IO :8000 由 nginx WS 透传）。
+
+---
+
+## 二、主场景 S1 —— 离心泵轴承振动诊断闭环（端到端）
+
+**目标**：从一条真实的 `vib_rms` 振动超限告警，走完「告警 → 证据 → 图谱 → 报告 → 高风险审核 → 审计」完整链路。
+
+### 触发输入（`demo/data/alarms.json` → S1）
+
+```
+device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
+```
+
+### 步骤
+
+| # | 操作 | 预期演示点 |
+|---|---|---|
+| 1 | POST `/api/diagnose` `{alarm:{device_id:"C 0泵", metric:"vib_rms", value:6.2, severity:"critical"}}` | 返回 `thread_id`，`status=running` |
+| 2 | 轮询 GET `/api/threads/{thread_id}` 或前端看 `diagnosis:progress` | 节点推进：parse_alarm → analyze_sensor → retrieve_evidence → diagnose |
+| 3 | 观察证据 | 检索召回**振动判据 / 离心泵手册 / 轴承磨损故障案例**（Milvus 混检 + 图谱 ≤2 跳） |
+| 4 | 等待 `diagnosis:done` | 出结构化报告：结论 + **带出处引用** + 置信度 |
+| 5 | 审核 | `risk=high` 命中 → `review:required` → **强制中断**，报告不自动定稿 |
+| 6 | 双角色演示 SoD | 提交人审自己 → `E_PERMISSION` 拒绝；换 rev_dev 审 → 通过 |
+| 7 | 定稿 + 审计 | 报告置定稿；`audit_logs` append-only 留痕（UPDATE/DELETE 拒） |
+
+### 验收点
+
+- 引用正确率口径：报告引用均指向语料 chunk（`citations` 字段，见 `docs/prj-spec-api.md` §2.4.3）；
+- 高风险覆盖率 100%：`risk=high` 必进审核（五档路由第 4 档，`docs/prj-design-architecture.md` §5.1）；
+- 职责分离：提交人不得自审（ISS-039 旁证：`validate_submitter`，`docs/prj-spec-data-dictionary.md`）。
+
+---
+
+## 三、备用场景 S2 —— 高风险强制审核 + 审核超时降级
+
+**触发输入**：S2 `{device_id:"C 0泵", metric:"bearing_temp", value:92.0, severity:"critical"}`
+
+| # | 操作 | 预期 |
+|---|---|---|
+| 1 | 触发 S2 告警 → POST `/api/diagnose` | 轴承温度 92°C > 85（`thr_bearing_temp`）→ high |
+| 2 | 等待强制中断 | `review:required`；流程挂起（checkpoint 落盘） |
+| 3 | 演示审核锁 | 首个 rev 领取后 `lock:review:{thread_id}` SETNX；第二审单被拒 |
+| 4 | 不审 → 演示超时 | 24h 超时自动降级（`resume({action:"timeout"})`），流程不挂死 |
+| 4b | （可选）预演通知 | 4h 通知备用审核人事件说明（`check_review_timeout`） |
+
+---
+
+## 四、备用场景 S3 —— 低置信度降级显式化
+
+**触发输入**：S3 `{device_id:"C 0泵", metric:"motor_current", value:16.8, severity:"warning"}`
+
+| # | 操作 | 预期 |
+|---|---|---|
+| 1 | 触发 S3 → POST `/api/diagnose` | 电流 16.8A > 14.145（`thr_motor_current`）→ medium |
+| 2 | 观察结局 | 证据薄弱 → `confidence < 0.50` → **不自动出正式报告** |
+| 3 | 验证降级显式化 | 响应含「初步判断，建议人工确认」+ `degrade_reason`（`docs/prj-design-architecture.md` §5.7） |
+
+---
+
+## 五、备用场景 S4 —— 云端兜底不可用降级
+
+**触发输入**：S4 `{device_id:"C 0泵", metric:"vib_rms", value:5.1, severity:"warning"}`
+
+| # | 操作 | 预期 |
+|---|---|---|
+| 1 | 触发 S4，强制模拟云端不可用 | 置信度 ∈ [0.50,0.75) 走 `escalate_cloud` |
+| 2 | 超时/失败 | 云端 20s 超时或失败 → `degrade_reason="cloud_unavailable"` |
+| 3 | 验证脱敏与预算 | 送云端前 `device_id`→`设备#<sha256[:6]>` 脱敏；`budget:cloud:` 按天计数（340/天） |
+
+> 备用场景为「能力证明」，非每场必演；S3/S4 依赖模型置信度随机性，演示前建议预跑一次确认路径。
+
+---
+
+## 六、数据与留痕（演示后）
+
+| 产物 | 路径 |
+|---|---|
+| 演示告警输入 | `demo/data/alarms.json` |
+| 诊断 Trace | `reports/traces/{thread_id}.jsonl` |
+| 指标快照 | `reports/metrics/{date}.jsonl` |
+| 审计 | `reports/review_audit.jsonl` / `reports/cloud_audit.jsonl` |
+| 录屏留档（D9） | `demo/recording/` |
+
+---
+
+> **演示纪律**：演示是「复现既有能力」，不是「演示新功能」；若现场某环节失败，按 `ISS-038–042` 台账口径如实说明、不编造（`docs/prj-ledger-known-issues.md`）。演示结束统一 `.\deploy\down.ps1` 复位。
