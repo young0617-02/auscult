@@ -112,8 +112,8 @@
 
 > ✅ **Python 环境口径统一为 uv（2026-10-10，方案 A）**：项目 `.venv` 由 **uv 0.11.31** 创建（`pyvenv.cfg` 含 `uv = 0.11.31`，无 pip）。仓库根新增 **`.python-version` = 3.12** 作为解释器发现的唯一锚定（与 §2.3 Python 3.12.8 一致）。命令口径：建环境 `uv venv --python 3.12`、装依赖 `uv pip install -r requirements.txt`、运行一律 `.venv\Scripts\python.exe`。
 > **不升版 env-baseline-v2**：该文件 §引用纪律 的 5 条升版触发条件（镜像 digest / 模型 digest / Ollama·Docker·WSL2 版本 / `.wslconfig` / 硬件）均不含解释器与包管理工具 → v2 结论不受影响、快照指纹不破坏。
-> ⛔ **禁用 `uv pip sync`**：`requirements.txt` 当前**仅声明直接依赖**，sync 会移除未声明包。
-> 🔴 **【待补声明】requirements.txt 与环境实装漂移（2026-10-10 发现，待裁决）**：下列**已被代码 import 且已实装、但未进 `requirements.txt`** 的直接依赖，违背该文件「本文件与本机实装不一致即视为环境漂移」纪律 → `sentence-transformers`（`scripts/rerank.py`/`retrieve_knowledge.py`/`probe_reranker.py`/`run_v2.py`）、`ragas`（`scripts/eval_ragas.py`）、`locust`（`scripts/locustfile.py`）、`prometheus-client`（`app/observability/prom_metrics.py`/`scripts/test_p5_d06_metrics.py`）、`numpy`（`scripts/build_milvus_v1.py`）。补声明须同步本表 §二 对应小节，故未擅自改动。
+> ⛔ **`uv pip sync` 口径（2026-10-10 实测复核，纠正当日早前表述）**：`uv pip sync` **不解析传递依赖**——`uv help pip sync` 原文「The input file is presumed to be the output of a `pip compile` or `uv export` operation, in which it will include all transitive dependencies. If transitive dependencies are not present in the file, they will not be installed.」。实测：对本项目 `requirements.txt`（仅直接依赖）`--dry-run` 的计划为**移除 136 个包**；未锁定文件（仅 `fastapi`）亦只解析 1 个包。→ **禁止直接 `uv pip sync requirements.txt`**；安全用法 = 先 `uv pip compile requirements.txt -o requirements.lock.txt`，再 sync 该产物。方案 C（`uv.lock`）于 P6 D6/D7 落地后转为确定性口径。
+> ✅ **【已补声明】requirements.txt 与环境实装漂移已闭环（2026-10-10，用户批准）**：下列**已被代码 import 且已实装、此前未进 `requirements.txt`** 的直接依赖已补齐声明并登记本表 **§二.2.24**：`sentence-transformers` / `ragas` / `locust` / `prometheus-client` / `numpy`。补声明后 `uv pip install -r requirements.txt --dry-run` 解析 **164 包**，与 `.venv` 实装差异收敛至 **3 处版本级差异**（`langchain` / `langchain-core` / `langchain-openai`，见 §二.2.24 🔴 待裁决项）。**未升版 `env-baseline-v2.md`**（仅补 Python 包声明，未触及 §引用纪律 的 5 条触发条件）。
 
 ### 2.4 硬件（实测）
 
@@ -516,6 +516,30 @@
 
 ---
 
+### 2.24 环境实装漂移补声明（P5 工具链 / 向量化 / 评测，2026-10-10 补锁）
+
+> **来源**：P5 收尾方案 A 的漂移核查（2026-10-10）。核查口径：全仓 `*.py` 的 `import` 语句 × `.venv` 实装（`uv pip list`）逐条比对 `requirements.txt`。
+> **缺口**：下列 5 项**已被代码直接 import、且已实装于 `.venv`，但未在 `requirements.txt` 声明** → 违背该文件「本文件与本机实装不一致即视为环境漂移」纪律。
+> **处置（2026-10-10，用户批准）**：补齐 `requirements.txt` 声明（新增「环境实装漂移补声明」段，全部 `==` 精确锁定）并登记本表；`.venv` 实装**未变动**（无升级/降级），回归测试 **183 passed** 复核通过。
+> **不升版 `env-baseline-v2.md`**：本次仅补 Python 包声明，未触及该文件 §引用纪律 的 5 条升版触发条件（镜像/模型 digest、Ollama·Docker·WSL2 版本、`.wslconfig`、硬件）。
+
+| # | 组件 | 版本 | 实测依据 | 采用状态 | 用途 |
+|---|---|---|---|---|---|
+| 1 | `sentence-transformers` | **6.1.0** | `.venv` 实装（`uv pip list` 实测）；`SentenceTransformer` 加载 BGE-M3（§二.2.2.1）、`CrossEncoder` 加载 bge-reranker-v2-m3（§二.2.2.2） | ✅ 已锁 | V2 向量化与重排运行时（`scripts/run_v2.py`、`rerank.py`、`retrieve_knowledge.py`、`probe_reranker.py`） |
+| 2 | `ragas` | **0.4.3** | `.venv` 实装 | ✅ 已锁 | P5 W1 评测（`scripts/eval_ragas.py`） |
+| 3 | `locust` | **2.46.7** | `.venv` 实装 | ✅ 已锁 | P5 D14 压测（`scripts/locustfile.py`；`reports/p5-perf.md`） |
+| 4 | `prometheus-client` | **0.26.0** | `.venv` 实装 | ✅ 已锁 | P5 W2 可观测（`app/observability/prom_metrics.py`、`scripts/test_p5_d06_metrics.py`） |
+| 5 | `numpy` | **2.5.3** | `.venv` 实装 | ✅ 已锁 | 向量归一化 / 建库（`scripts/build_milvus_v1.py`） |
+
+> **传递依赖（实装实测，仅留痕、不单独 pin）**：`torch` **2.14.0**、`transformers` **5.17.0**、`datasets` **5.1.0**、`langchain` **1.4.4**、`pandas` **3.0.6**、`scipy` **1.18.1**，由上述直接依赖解析带入。其中 `scripts/probe_reranker.py` 为**统计参数量**而 `import torch`（失败即跳过、不参与判据）——该包属 `sentence-transformers` 传递依赖，故不单列。
+> ⛔ **`uv pip sync` 提示（2026-10-10 实测）**：`uv pip sync` **不解析传递依赖**（官方口径：输入文件须为 `pip compile` / `uv export` 的产物）→ **禁止**对本文件直接 sync（`--dry-run` 计划移除 **136 包**）。安全用法：先 `uv pip compile requirements.txt -o requirements.lock.txt`，再 sync 该产物；P6 D6/D7 出 `uv.lock`（方案 C）后转确定性口径。
+> 🔴 **【待裁决】残留 3 处版本级漂移（2026-10-10 实测发现，本次未擅自处置）**：`uv pip install -r requirements.txt --dry-run` 与 `.venv` 实装的差异为 `langchain`（实装 **1.4.4** / 解析 **1.4.3**，且未在本文件声明）、`langchain-core`（实装 **1.6.9** / 本文件声明 **1.6.4**）、`langchain-openai`（实装 **1.7.0** / 解析 **1.6.6**，且未在本文件声明）。
+> **根因（dist-info 时间戳实测）**：`langchain*` 全链于 **2026-10-09 22:43–22:50** 批量安装，与 `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 同批 → 即 **P5 W1 评测引入 `ragas` 时，其 langchain 生态依赖把 `langchain-core` 由 1.6.4 升至 1.6.9**（同批新增 `langchain` / `langchain-openai` / `langchain-community` 0.4.2 / `langchain-classic` 1.0.8 / `langchain-ollama` 1.1.0 / `langchain-huggingface` 1.2.3 / `langchain-text-splitters` 1.1.3），但**未同步回本文件与 §二.2.9**。
+> **处置选项（待用户裁决）**：① **以实装为真** —— 将本文件与 §二.2.9 的 `langchain-core` 更新为 **1.6.9**，并补登记 `langchain` / `langchain-openai`（需按纪律 2 评估是否升版 `env-baseline-v2.md`）**（推荐）**；② 将 `.venv` 降回 `langchain-core==1.6.4` / `langchain==1.4.3` 并复跑回归；③ 暂不处置、仅登记。
+> ⚠️ **影响面提示**：`langchain-core` 是 **V5 LangGraph checkpoint 的直接依赖**（§二.2.9）→ 若采选项 ①/②，须按 §3.1.3 同口径复跑 `scripts/run_v5.py` 与回归套件，确认 V5 结论不受影响后再动 `env-baseline-v2.md` 升版判定。
+
+---
+
 ## 四、与各报告的交叉引用
 
 > **引用方式统一为**：报告在首部声明环境基线版本号，并在正文引用本文件的**具体小节**；凡本文件为「待锁定」的条目，报告中一律写 `【待 D<天> 实测填入】`，不得填估算值。
@@ -546,6 +570,7 @@
 | `reports/p2-d3-m2-metrics.md` | 引用 §二.2.20（M2.3 配套评测集指标 / D7 消融 / D11 延迟闭合 / 四项达标） | §二.2.20 第 1–7 行、裁定口径 |
 | `docs/p2-handover-p3.md` | 引用 §二.2.21（Phase 2 收尾 / M2.4 达成 / 移交 P3） | §二.2.21 第 1–3 行、遗留转 P3 |
 | `reports/p2-summary.md` | 引用 §二.2.21（Phase 2 总结报告 / 四项里程碑 / 关键决策 / 遗留） | §二.2.21 第 1–3 行 |
+| `requirements.txt` | **反向依赖**：其头部「版本唯一来源」逐条指向 §二.2.7 / §2.8 / §2.9 / §2.10 / §2.24；正文「本文件与本机实装不一致即视为环境漂移」即本文件 §一 纪律 | `requirements.txt` 头部注释；本文件 §一 纪律、§二.2.24 |
 
 ---
 
@@ -581,3 +606,5 @@
 | 2026-10-09 | 单人（本人） | **D7 重排消融**：更新 **§二.2.20** 第 6-7 行 + 裁定口径；`scripts/d7_ablation.py` 逐题对比 RRF-only vs rerank：rerank ΔMRR=**-0.0417（净负）**，RRF-only **MRR=0.7569≥0.75 达标** + P95=86.1ms；`RetrievalService` 增 `use_rerank` 开关，`eval_m2.py` 增 `--no-rerank`。**M2.3 四项指标全部达标**（Recall=1.0/MRR=0.7569/NDCG=1.0/P95=86ms） | 更新 §二.2.20；retrieve_knowledge.py；eval_m2.py；d7_ablation.py |
 | 2026-10-09 | 单人（本人） | **Phase 2 收尾（M2.4 达成）**：新增 **§二.2.21**（`docs/p2-handover-p3.md` + `reports/p2-summary.md`）；M2.4 三项通过条件全部达成（P95=86.1ms / retrieve_knowledge 可用 / 移交 P3）；**M2.1–M2.4 四项里程碑全部达成**；§四 补 handover/summary 交叉引用。遗留转 P3：golden 50 题、Redis 缓存、引用正确率、rerank 重评 | 新增 §二.2.21；§四 |
 | 2026-10-09 | 单人（本人） | **Phase 4 前端工程锁版（D1–D5）**：新增 **§二.2.23**（Next 16.4.0 / React 19.3.0 / Tailwind 4.3.3 / radix-ui 1.7.0 单包 / shadcn CLI 4.21.4 nova 预设 / react-query 5.104.1 / socket.io-client 4.8.4 / zustand 5.0.15 / vitest 5.0.3 / playwright 1.64.0 / Node v24.19.0+pnpm 11.7.0）；实测依据：next build 通过 + 单测 30/30 PASS + `pnpm list --depth=0` | 新增 §二.2.23 |
+| 2026-10-10 | 单人（本人） | **uv 环境口径统一（P5 收尾方案 A）**：§二.2.3 工具链表新增 **uv 0.11.31** 行；补 4 条说明（`.python-version`=3.12 为解释器唯一锚定、**不升版 `env-baseline-v2.md`** 的 5 条触发条件依据、`uv pip sync` 口径）。**未改正文快照指纹、未升版** | 更新 §二.2.3 |
+| 2026-10-10 | 单人（本人） | **环境实装漂移补声明（用户批准）**：新增 **§二.2.24**（`sentence-transformers` 6.1.0 / `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 / `numpy` 2.5.3 —— 均已被代码 import 且已实装、此前未进 `requirements.txt`）；同步 `requirements.txt`（新增「环境实装漂移补声明」段）。**当日实测纠正**：`uv pip sync` **不解析传递依赖**（`--dry-run` 计划移除 **136 包**）→ §二.2.3 口径定为「**禁止直接 sync**，须先 `uv pip compile` 出锁文件」（纠正同日早前「dry-run 后可选」的错误表述）；§2.3 的【待补声明】→【已补声明】；§四 补 `requirements.txt` 反向依赖行。**新增 🔴 待裁决项**：残留 3 处版本级漂移（`langchain` 1.4.4/1.4.3、`langchain-core` 1.6.9/1.6.4、`langchain-openai` 1.7.0/1.6.6，根因 = 2026-10-09 P5 引入 `ragas` 升级 langchain 链）。`.venv` 未变动，回归 **183 passed**；**未升版 `env-baseline-v2.md`** | 新增 §二.2.24；更新 §二.2.3、§四；`requirements.txt` |

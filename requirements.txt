@@ -5,13 +5,19 @@
 #   - §二.2.8 V2 检索方案新增锁定项（pymilvus / psycopg / jieba）
 #   - §二.2.9 V5 LangGraph checkpoint 依赖（2026-09-24）
 #   - §二.2.10 测试工具链依赖（pytest，2026-10-08 补锁）
+#   - §二.2.24 环境实装漂移补声明（sentence-transformers / ragas / locust /
+#              prometheus-client / numpy，2026-10-10 补锁）
 #
 # 安装（uv 口径，推荐）：
 #   uv venv --python 3.12                 # 建环境；解释器锚定 = 仓库根 `.python-version`（=3.12）
 #   uv pip install -r requirements.txt     # 按本文件安装/补齐（全部 `==` 精确锁定）
 #   # 回退方案：python -m venv .venv ; .venv\Scripts\python.exe -m pip install -r requirements.txt
 # 运行：一律用 `.venv\Scripts\python.exe`（其即 `uv venv` 产物，与 `uv run python` 等价）
-# 注：勿用 `uv pip sync`——本文件当前仅声明直接依赖，sync 会移除其它已装包（含 P5 工具链）
+# 注：⛔ 勿直接 `uv pip sync requirements.txt`——sync **不解析传递依赖**（官方口径：
+#     输入文件须为 `pip compile` / `uv export` 的产物）。实测（2026-10-10）：对本文件
+#     直接 sync 的 `--dry-run` 计划会**移除 136 个**未列出的包。
+#     安全用法：`uv pip compile requirements.txt -o requirements.lock.txt`，再
+#     `uv pip sync requirements.lock.txt`；方案 C（`uv.lock`）于 P6 D6/D7 落地。
 # 纪律：本文件与本机实装不一致即视为环境漂移；改动须同步 `docs/prj-ledger-version-lock.md`
 #       并升版 `env/env-baseline-v2.md`（纪律 2：变更即升版）。
 #       ★ 例外：`.python-version` 与 uv 工具链口径**不在** env-baseline 升版触发条件内
@@ -68,3 +74,13 @@ httpx==0.28.1        # TestClient 传输层（自测脚本依赖）
 anyio==4.14.2        # starlette 1.7.0 约束（自 4.15.1 降级，Agent 链路已回归验证）
 python-socketio==5.17.0   # D0-4 Socket.IO（含 python-engineio==4.14.0 / bidict==0.24.1）
 simple-websocket==1.1.0   # D0-4 WS 传输（含 wsproto==1.3.2）
+
+# ---------------- 环境实装漂移补声明（2026-10-10 补锁，P5 收尾方案 A） ----------------
+# 以下 5 项已被代码直接 import 且已实装于 .venv，此前未在本文件声明 → 违背本文件
+# 「与本机实装不一致即视为环境漂移」纪律，现补齐声明。
+# 见 docs/prj-ledger-version-lock.md §二.2.24
+sentence-transformers==6.1.0   # V2 向量化/重排运行时（run_v2 / rerank / retrieve_knowledge / probe_reranker）
+ragas==0.4.3                   # P5 W1 评测（scripts/eval_ragas.py）
+locust==2.46.7                 # P5 D14 压测（scripts/locustfile.py）
+prometheus-client==0.26.0      # P5 W2 可观测（app/observability/prom_metrics.py）
+numpy==2.5.3                   # 向量归一化/建库（scripts/build_milvus_v1.py）
