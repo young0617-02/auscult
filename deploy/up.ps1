@@ -1,4 +1,4 @@
-# =============================================================
+﻿# =============================================================
 # Phase 6 deploy/up.ps1 - Start all infrastructure services
 #
 # Usage:
@@ -48,12 +48,21 @@ if ($IncludeTDengine) {
 }
 
 Write-Host "[STEP 1/2] Pulling images (if missing)..." -ForegroundColor Cyan
-docker compose -f $ComposeFile pull 2>&1 | Out-Null
+# ⚠️ 陷阱（2026-10-11 实测修复）：docker 的拉取进度输出到 **stderr**。原写法
+#   `docker compose ... pull 2>&1 | Out-Null` 会把 stderr 并进 pipeline，PowerShell
+#   将其包装为 ErrorRecord；配合脚本顶部 $ErrorActionPreference="Stop"，会在执行
+#   `up -d` **之前**直接终止脚本 —— 干净环境（必然触发 pull 输出）100% 复现，
+#   一键启动完全不可用。故：①不做 stderr 合并；②调用 native 命令期间临时放宽 EAP。
+$prevEap = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+docker compose -f $ComposeFile pull | Out-Null
 
 Write-Host "[STEP 2/2] Starting services..." -ForegroundColor Cyan
 & docker @composeArgs
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "[FAIL] docker compose up failed (exit $LASTEXITCODE)" -ForegroundColor Red
+$composeExit = $LASTEXITCODE
+$ErrorActionPreference = $prevEap
+if ($composeExit -ne 0) {
+    Write-Host "[FAIL] docker compose up failed (exit $composeExit)" -ForegroundColor Red
     exit 1
 }
 

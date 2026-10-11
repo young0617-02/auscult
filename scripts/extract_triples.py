@@ -307,9 +307,16 @@ def import_neo4j(results_path: Path, uri: str, user: str, password: str,
     distinct_entities = 0
     rel_count = 0
     seen_nodes: set[str] = set()
+    skipped_unmapped: dict[str, int] = {}
     for t in triples:
+        cql_rel = rel_slug.get(t["relation"])
+        if cql_rel is None:
+            # 受控词表外关系（实测：v1 基线 extract_results.jsonl 含 75 条「关联」）。
+            # 原实现直接下标取值 → KeyError 使整个导入崩溃；改为跳过并计数，
+            # 静默丢弃才危险，故在函数末尾显式告警（见下方 [b4][warn]）。
+            skipped_unmapped[t["relation"]] = skipped_unmapped.get(t["relation"], 0) + 1
+            continue
         hid, tid = entity_id(t["head_type"], t["head"]), entity_id(t["tail_type"], t["tail"])
-        cql_rel = rel_slug[t["relation"]]
         cid = t["source_chunk_id"]
         if hid not in seen_nodes:
             statements.append(
@@ -339,6 +346,10 @@ def import_neo4j(results_path: Path, uri: str, user: str, password: str,
             f"r.source_count = size(coalesce(r.source_chunk_ids, []))")
         rel_count += 1
     _neo4j_tx(uri, user, password, statements)
+    if skipped_unmapped:
+        print(f"[b4][warn] {sum(skipped_unmapped.values())} 条三元组的关系不在受控词表内，"
+              f"已跳过未入图（明细 {skipped_unmapped}）；请核对结果文件是否为 v2 终态 "
+              f"extract_results_v2.jsonl", file=sys.stderr)
     return distinct_entities, distinct_entities, rel_count
 
 

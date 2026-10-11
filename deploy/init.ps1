@@ -1,4 +1,4 @@
-# =============================================================
+﻿# =============================================================
 # Phase 6 deploy/init.ps1 - Idempotent initialization
 #
 # Steps:
@@ -96,7 +96,9 @@ if ($SkipNeo4j) {
 } else {
     Write-Host ""
     Write-Host "[STEP 3/3] Neo4j triples import (extract_triples.py --import-neo4j)..." -ForegroundColor Cyan
-    & $Python "$ProjectRoot\scripts\extract_triples.py" --import-neo4j 2>&1
+    # 显式指向 P1 收口的 **v2 终态**：--results 缺省为 out_dir/extract_results.jsonl（v1 基线），
+    # 实测含 75 条受控词表外关系「关联」（占 30.6%），与 P1-D9 门禁判定所依据的 v2 口径不一致。
+    & $Python "$ProjectRoot\scripts\extract_triples.py" --import-neo4j --results "$ProjectRoot\experiments\p1\b4\extract_results_v2.jsonl" 2>&1
     if ($LASTEXITCODE -eq 0) {
         Write-Host "  [OK] Neo4j triples imported" -ForegroundColor Green
     } else {

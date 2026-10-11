@@ -40,7 +40,7 @@ device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
 |---|---|---|
 | 1 | POST `/api/diagnose` `{alarm:{device_id:"C 0泵", metric:"vib_rms", value:6.2, severity:"critical"}}` | 返回 `thread_id`，`status=running` |
 | 2 | 轮询 GET `/api/threads/{thread_id}` 或前端看 `diagnosis:progress` | 节点推进：parse_alarm → analyze_sensor → retrieve_evidence → diagnose |
-| 3 | 观察证据 | 检索召回**振动判据 / 离心泵手册 / 轴承磨损故障案例**（Milvus 混检 + 图谱 ≤2 跳） |
+| 3 | 观察证据 | 检索召回**振动判据 / 离心泵手册 / 轴承磨损故障案例**（Milvus 混检 + 图谱 ≤2 跳；图谱已预置 **105 节点 / 127 关系 / 11 类受控关系**，见 `docs/pitch.md` A1 —— 数据来自合成语料，规模有限） |
 | 4 | 等待 `diagnosis:done` | 出结构化报告：结论 + **带出处引用** + 置信度 |
 | 5 | 审核 | `risk=high` 命中 → `review:required` → **强制中断**，报告不自动定稿 |
 | 6 | 双角色演示 SoD | 提交人审自己 → `E_PERMISSION` 拒绝；换 rev_dev 审 → 通过 |
