@@ -271,6 +271,61 @@ def test_e6_retry_exhausted_degrade() -> None:
 # 主入口
 # ================================================================
 
+
+
+# ================================================================
+# E6b/E6c LLM 不可达 -> diagnose 自循环重试（2026-10-14 修复覆盖）
+# ================================================================
+
+def _make_flaky_diagnose(fail_times: int):
+    """前 fail_times 次返回 E_LLM_UNREACHABLE（不设 diagnosis、retry_count++），
+    之后转为成功。模拟 Ollama 偶发超时（对应审计实证的第 3 次诊断失败）。"""
+    calls = {"n": 0}
+
+    def _mock(state):
+        calls["n"] += 1
+        if calls["n"] <= fail_times:
+            return {
+                "retry_count": state.retry_count + 1,
+                "errors": [{"node": "diagnose", "code": "E_LLM_UNREACHABLE",
+                            "msg": f"Ollama 第 {calls['n']} 次超时"}],
+            }
+        return _make_diagnose(confidence=0.82, risk="medium")(state)
+
+    _mock.calls = calls  # 便于断言调用次数
+    return _mock
+
+
+def test_e6b_llm_unreachable_retry_success() -> None:
+    """E6b. LLM 偶发失败 2 次后成功 -> 自循环重试 -> 正常出报告。"""
+    diagnose = _make_flaky_diagnose(fail_times=2)
+    result, _ = _run_graph(diagnose)
+    assert diagnose.calls["n"] == 3, \
+        f"应重试至第 3 次成功，实际调用 {diagnose.calls['n']} 次"
+    assert result.get("report_id", "").startswith("RPT-"), \
+        "重试成功后应正常出报告"
+    assert "degrade_reason" not in result, \
+        "重试成功不应降级"
+    print(f"[PASS] E6b LLM 偶发失败重试成功（{result.get('report_id')}, "
+          f"diagnose 调用 {diagnose.calls['n']} 次）")
+
+
+def test_e6c_llm_unreachable_retry_exhausted() -> None:
+    """E6c. LLM 连续失败 3 次 -> 重试耗尽 -> degrade。"""
+    diagnose = _make_flaky_diagnose(fail_times=99)
+    result, _ = _run_graph(diagnose)
+    assert diagnose.calls["n"] == 3, \
+        f"应最多重试 3 次，实际调用 {diagnose.calls['n']} 次"
+    assert result.get("report_id", "").startswith("RPT-")
+    assert result.get("degrade_reason") is not None, \
+        "重试耗尽应降级"
+    codes = [e.get("code") for e in result.get("errors", [])]
+    assert codes.count("E_LLM_UNREACHABLE") == 3, \
+        f"应记录 3 次 E_LLM_UNREACHABLE: {codes}"
+    print(f"[PASS] E6c LLM 连续失败重试耗尽降级（{result.get('report_id')}, "
+          f"reason={result.get('degrade_reason')}）")
+
+
 def main() -> int:
     tests = [
         ("E1 主场景", test_e1_main_scenario),
@@ -280,6 +335,8 @@ def main() -> int:
         ("E4 云端升级成功", test_e4_cloud_escalation_success),
         ("E5 云端不可用降级", test_e5_cloud_unavailable_degrade),
         ("E6 重试超限降级", test_e6_retry_exhausted_degrade),
+        ("E6b LLM 偶发失败重试成功", test_e6b_llm_unreachable_retry_success),
+        ("E6c LLM 连续失败重试耗尽", test_e6c_llm_unreachable_retry_exhausted),
     ]
     failures = 0
     for name, test_fn in tests:

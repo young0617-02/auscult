@@ -237,6 +237,21 @@ deploy\down.ps1      # 一键停止（可选 -v 清卷）
 - 版本：沿用 `docs/prj-ledger-version-lock.md`（不另建重复文件）；
 - 判据：**干净环境**（全新 clone + 空数据卷 + 仅按交付文档操作）一键启动并冒烟通过（`M6.2`）—— **已达成**；
 
+### 时序样本数据（TDengine，`init.ps1` 之后的独立步骤）
+
+`init.ps1` 只建 **schema**（`iot` 库 + 超级表），**不灌样本数据** —— 时序数据走生产形态的真实链路（MQTT → 自研 Sparkplug B 解码器 → TDengine），需单独执行：
+
+```powershell
+# 1) 常驻解码器（本地直跑，订阅 Mosquitto -> 写 TDengine REST 6041；另开一个终端）
+.venv\Scripts\python.exe scripts\self_decoder.py --prj-spec-schema-mapping configs\decoder_schema_mapping.json --mqtt-host 127.0.0.1 --td-host 127.0.0.1
+# 2) 批量造数（3 设备 x 1h x 1Hz，PUMP-A 注入异常段；固定 seed 可复现）
+.venv\Scripts\python.exe scripts\gen_sparkplug.py
+```
+
+- 实测（2026-10-14）：**10800 行**落库（3600 x 3 设备），PUMP-A `vib_rms` 峰值 **4.855 mm/s**（越 ISO 10816 C 区上界 4.5，**2 个** 5min 超限窗口），PUMP-B/C 正常态 ~1.30 mm/s；
+- 验证：`scripts\verify_query_sensor.py`（3 设备 x 13 窗口 exit 0、`P95~24.2ms`，`ISS-047` 修复后复跑通过）；
+- 复灌 = 重跑上面两步（DBIRTH 建表幂等、DDATA 按 ts 主键去重）；不需要时关闭解码器终端即可，已落库数据不受影响。
+
 ## 六、目录导航
 
 ```

@@ -10,6 +10,9 @@ D1 产出：骨架可编译 + Checkpointer 可连接 PG
   D6–D8: diagnose（接入 deepseek-r1:7b + 根因/建议抽取）
 
 条件路由（plan §3.3，严格优先级，首个命中生效）：
+  0. diagnose 失败（diagnosis=None）且 0 < retry_count < 3 → 自循环重试 diagnose
+     （2026-10-14 修复：否则首次 LLM 失败即被「confidence<0.50」命中 degrade，
+       retry_count≥3 护栏对该路径不生效）
   1. retry_count ≥ 3 → degrade
   2. confidence < 0.50 → degrade
   3. confidence < 0.75 → escalate_cloud；云端失败 → degrade
@@ -39,6 +42,13 @@ from .nodes.finalize import finalize
 
 def _route_condition(state: DiagnosisState) -> str:
     """严格优先级，首个命中生效（plan §3.3）。返回下一节点名。"""
+    # diagnose 因 LLM 不可达/错误失败（diagnosis 仍为 None）且未达重试上限
+    # → 自循环重试 diagnose。背景（2026-10-14 修复）：confidence 初始为 0.0，
+    # 若无此分支，首次 LLM 失败即被下面「confidence < 0.50」命中 degrade，
+    # 「retry_count ≥ 3」的护栏对该路径永远不生效 —— 偶发超时直接降级、零重试。
+    # E_JSON_PARSE 路径 diagnosis 非空（取原文前 500 字），故不会进入本分支。
+    if 0 < state.retry_count < 3 and state.diagnosis is None:
+        return "diagnose"
     if state.retry_count >= 3:
         return "degrade"
     if state.confidence < 0.50:

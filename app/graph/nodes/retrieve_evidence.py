@@ -91,6 +91,10 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
             hits = graph_result.get("hits", [])
             pm.inc_tool_call("query_graph", "ok" if hits else "empty")
             for hit in hits:
+                # graph 证据的 text 恒为空串是**设计使然**（非缺陷，勿"修"）：
+                # 图谱证据的形态 = chunk_id（图谱实体关联的文档块）+ source_type="graph"
+                # + 独立 graph_paths 通道（实体/路径），其出处形式与 knowledge 证据
+                # （chunk 原文 + 向量/BM25 分数）不同，不存在可填充的 chunk 原文。
                 evidence_items.append(EvidenceItem(
                     chunk_id=hit.get("chunk_id", ""),
                     text="",

@@ -2,13 +2,16 @@
 # Phase 6 deploy/up.ps1 - Start all infrastructure services
 #
 # Usage:
-#   .\deploy\up.ps1                 # start base stack (no tdengine)
-#   .\deploy\up.ps1 -IncludeTDengine  # start with tdengine profile
+#   .\deploy\up.ps1                 # start full stack (tdengine included by default)
+#   .\deploy\up.ps1 -IncludeTDengine  # accepted for compatibility; tdengine is
+#                                     # already enabled by default since 2026-10-14
 #
 # Prerequisites:
 #   - Docker Desktop running
 #   - .wslconfig applied (20GB / 10 vCPU)
 #   - deploy/.env created from deploy/.env.example (optional)
+#   - No leftover auscult-ingest-* containers holding ports 6030/6041/1883
+#     (legacy ingest stack, superseded by local self_decoder.py; see ISS-046)
 # =============================================================
 
 param(

@@ -28,12 +28,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # 标识符白名单：列名与 device_id 会直接拼入 SQL（TDengine REST 无参数化占位符），
 # 故先校验再拼接，避免注入。
 SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+# device_id 宽松口径（2026-10-14 对齐 alarm_engine.py 与 app/tools/query_sensor.py）：
+# 实际设备号形如 PUMP-A/PUMP-B（含连字符），严格标识符白名单会误拒，导致告警链路
+# 对合法设备直接 ValueError。宽松集拒绝引号/分号/注释等注入面，列名仍走严格白名单。
+SAFE_VALUE_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./\-\u4e00-\u9fff]{0,255}$")
 
 
 def poll_device_series(conn, column: str, device_id: str):
     if not SAFE_IDENT_RE.match(column or ""):
         raise ValueError(f"非法列名（--column）：{column!r}")
-    if not SAFE_IDENT_RE.match(device_id or ""):
+    if not SAFE_VALUE_RE.match(device_id or ""):
         raise ValueError(f"非法 device_id：{device_id!r}")
     res = conn.query(
         f"SELECT ts, {column} FROM iot.st_pump_metrics "

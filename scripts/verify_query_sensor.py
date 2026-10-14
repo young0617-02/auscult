@@ -31,6 +31,10 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # 标识符白名单：列名 / 设备号会直接拼入 SQL（TDengine REST 不支持参数化占位符）
 SAFE_IDENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,63}$")
+# device_id 宽松口径（2026-10-14 对齐 alarm_engine.py 与 app/tools/query_sensor.py）：
+# 实际设备号形如 PUMP-A/PUMP-B（含连字符），严格标识符白名单会误拒合法设备
+# （实测 ValueError: 非法 device_id：'PUMP-B'）。宽松集仍拒绝引号/分号/注释等注入面。
+SAFE_VALUE_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_./\-\u4e00-\u9fff]{0,255}$")
 
 # 契约默认测点（prj-spec-schema-mapping 主表固定列）
 DEFAULT_METRICS = ["vib_rms", "bearing_temp", "motor_current", "pump_speed"]
@@ -68,7 +72,7 @@ def build_agg_sql(device_id: str, metrics: list[str], window: str,
     列名 / 设备号直接拼入 SQL（TDengine REST 无参数化占位符），故先做标识符白名单校验；
     `window` 经 `window_to_secs` 的字典查表限定为 s/m/h/d，非法值在此抛错。
     """
-    if not SAFE_IDENT_RE.match(device_id or ""):
+    if not SAFE_VALUE_RE.match(device_id or ""):
         raise ValueError(f"非法 device_id：{device_id!r}")
     for name in list(metrics) + ([col] if col else []):
         if not SAFE_IDENT_RE.match(name or ""):

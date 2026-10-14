@@ -13,7 +13,19 @@
 > **总述**：**Phase 0–6 已全部完成** —— `M0.6` 门禁 2026-10-08 放行、`M5.4` 2026-10-10 达成（停止条件三条满足）、**`M6.1`–`M6.4` 于 2026-10-10 全达成并正式收口**（停止条件 S1/S2/S3 三条同时满足、交付包封版）。收口凭据 = `docs/p6-gate-closure-2026-10-10.md`。
 > **P1–P5 的逐条变更原不在本文件展开**（避免与台账/报告重复）→ **本次已按阶段补登摘要条目**；逐项实测仍以阶段移交清单与实测报告为准：
 > `docs/p0-handover-p1.md`（P0→P1）｜`docs/p2-handover-p3.md`（P2→P3）｜`docs/p3-handover-p4.md`（P3→P4）｜`docs/p4-handover-p5.md`（P4→P5）｜`docs/p5-handover-p6.md`（P5→P6）｜报告索引 `reports/README.md`。
-> **残余风险（收口 ≠ 风险消失）**：`P95` 端到端含生成 9.25 s 未达 3 s、F-2 数据库短连接排队、F-1 health 探测阻塞事件循环、RPO 未定时化、Neo4j 图谱数据未预置、`ISS-038`–`ISS-041` 登记不修 → 见 `docs/p6-gate-closure-2026-10-10.md` §四 与 `docs/prj-ledger-risk-register.md`。
+> **残余风险（收口 ≠ 风险消失）**：`P95` 端到端含生成 9.25 s 未达 3 s、F-2 数据库短连接排队、F-1 health 探测阻塞事件循环、RPO 未定时化、`ISS-038`–`ISS-041` 登记不修 → 见 `docs/p6-gate-closure-2026-10-10.md` §四 与 `docs/prj-ledger-risk-register.md`。
+
+### 2026-10-14（收口后维护期）— 时序样本数据灌数闭环 + 两项健壮性修复（**零功能扩范围**）
+
+> 触发：处理收口遗留的四项观察（TDengine 表已建无数据 / graph 证据无文本语义 / `E_LLM_UNREACHABLE` 偶发超时 / 旧容器名冲突）。`pytest` **185 passed**。
+
+- **数据 · 时序样本数据灌数（遗留项闭环）**：`init.ps1` 只建 schema 不灌数据（`ISS-046` 同源背景）→ 按生产形态链路补灌：常驻 `scripts/self_decoder.py`（本地直跑，Mosquitto → TDengine REST 6041）+ `scripts/gen_sparkplug.py`（默认 3 设备 × 1h × 1Hz，PUMP-A 注入异常段，固定 seed）。**实测 10800 行落库**（3600×3，轮询口径差 213 点系写盘可见性延迟，终态一致）；PUMP-A `vib_rms` 峰值 **4.855 mm/s**（越 ISO 10816 C 区上界 4.5）、**2 个** 5min 超限窗口，B/C 正常态 ≈1.30。
+- **代码 · 修复 `ISS-047`（device_id 白名单三口径漂移）**：`verify_query_sensor.py` 与 `run_v3_alert.py` 用严格标识符白名单（不允许连字符），而运行时 `app/tools/query_sensor.py` 与 `alarm_engine.py` 支持 `PUMP-A`、`gen_sparkplug.py` 默认产 `PUMP-A/B/C` → 灌数后验证脚本对合法设备直接 `ValueError` 崩溃、契约验证链断裂。两脚本改用与 `alarm_engine.py` 同款宽松 `SAFE_VALUE_RE`（列名仍走严格白名单，注入防护不放松）。修复后 3 设备 × 13 窗口 exit 0、`P95≈24.2ms`。
+- **代码 · 修复 `ISS-048`（LLM 不可达无自动重试）**：`_route_condition` 无重试分支，diagnose 失败时 `confidence` 仍为初始 0.0 → 被「`confidence < 0.50`」先命中 degrade，`retry_count ≥ 3` 护栏对该路径**永不生效**（偶发 Ollama 超时零重试直接降级；E6 用例只 mock 终态、从未覆盖循环）。新增**第 0 优先级自循环重试分支**（仅 `diagnosis is None` 时重试，`E_JSON_PARSE` 不重试；云端失败不动 `retry_count` 故不受影响）；补 **E6b/E6c** 回归用例（偶发失败 2 次后成功出报告 / 连续失败 3 次降级）。
+- **代码 · graph 证据语义固化**：`retrieve_evidence.py` 注释明确 graph 类证据 `text=""` 为**设计使然**（形态 = chunk_id + `graph_paths`），防止后续被误判为缺陷「修坏」。
+- **配置 · `deploy/up.ps1` 头部注释修正**：用法注释仍写「start base stack (no tdengine)」与默认启用 profile 的实现矛盾（`ISS-044` 修复时引入）；并补 ISS-046 端口前提。
+- **文档 · 台账三连登记**：`docs/prj-ledger-known-issues.md` 新增 **`ISS-046`**（旧接入栈容器 `auscult-ingest-*` 与交付包**端口相同** → 升级环境冲突，**可规避**：`docker rm -f auscult-ingest-*`）、**`ISS-047`**、**`ISS-048`**（后两者已修复）；`README.md` §五 补「时序样本数据」独立步骤（解码器 + 造数命令、复灌方式、实测口径）。
+- **验证**：`pytest tests/ -q` = **185 passed**；七个脚本 `--selftest` 全 exit 0；三写对账零差异；`deploy` 四个 `.ps1` BOM/编码合规、`up.ps1` 解析错误 0。
 
 ### 2026-10-11（收口后维护期）— 交付包两处 P0 修复 + 图谱数据填充（**首次起栈实测暴露**）
 
