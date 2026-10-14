@@ -19,6 +19,17 @@ from typing import Any
 
 from ..state import DiagnosisState, RootCause, Suggestion
 
+
+def _normalize_cite(cite: str) -> str:
+    """规范化证据引用：兼容 LLM 产出的 `chunk_id=<id>` 与纯 `<id>` 两种形态。
+
+    背景（2026-10-14 修复）：diagnose 提示词示例给出的是纯 id，但模型实际常输出
+    `chunk_id=<id>`；而 evidence 的 chunk_id 为纯 id。不规范化会导致
+    finalize 的引用校验恒判「无效」→ 误报 + 幂等键随格式漂移。
+    """
+    c = (cite or "").strip()
+    return c[len("chunk_id="):].strip() if c.startswith("chunk_id=") else c
+
 # ---------------------------------------------------------------- Ollama 配置
 
 OLLAMA_URL = "http://127.0.0.1:11434/v1/chat/completions"
@@ -304,10 +315,12 @@ def diagnose(state: DiagnosisState) -> dict[str, Any]:
 
     # 提取字段
     diagnosis_text = parsed.get("diagnosis", "")
+    # 引用规范化（2026-10-14 修复）：LLM 常把引用写成 `chunk_id=<id>`，而 evidence 的
+    # chunk_id 为纯 id —— 不规范化会使 finalize 的引用校验恒判无效（误报 + 幂等键漂移）。
     root_causes = [
         RootCause(
             cause=rc.get("cause", ""),
-            citations=rc.get("citations", []),
+            citations=[_normalize_cite(c) for c in rc.get("citations", [])],
             confidence_hint=rc.get("confidence_hint", 0.0),
         )
         for rc in parsed.get("root_causes", [])
@@ -315,7 +328,7 @@ def diagnose(state: DiagnosisState) -> dict[str, Any]:
     suggestions = [
         Suggestion(
             action=s.get("action", ""),
-            citations=s.get("citations", []),
+            citations=[_normalize_cite(c) for c in s.get("citations", [])],
             risk=s.get("risk", "low"),
         )
         for s in parsed.get("suggestions", [])

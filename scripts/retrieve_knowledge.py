@@ -173,7 +173,12 @@ class RetrievalService:
         lat["total_ms"] = round((time.perf_counter() - tt) * 1000, 1)
 
         degraded = bool(rr["degraded"]) or bool(ev["degraded"]) or bool(recall["degraded_routes"])
-        return {"items": ev["items"], "total": ev["total"],
+        # 契约对齐（2026-10-14 修复）：`assemble_evidence` 产出的 items 键为 `content`，
+        # 而图节点 `app/graph/nodes/retrieve_evidence.py` 读取 `item.get("text")` ——
+        # 键名不匹配使 `EvidenceItem.text` 恒为空串（证据原文丢失，"证据驱动"被架空）。
+        # 此处统一补齐 `text`（值取 content），并保留 `content` 以兼容既有消费者。
+        items = [{**i, "text": i.get("text") or i.get("content") or ""} for i in ev["items"]]
+        return {"items": items, "total": ev["total"],
                 "graph_support": ev["graph_support"], "degraded": degraded,
                 "degraded_routes": recall["degraded_routes"],
                 "latency": lat,
@@ -181,7 +186,7 @@ class RetrievalService:
                                   "mode": mode, "rewrite": rw,
                                   "weights": fused["weights"], "k": fused["k"]},
                 "evidence_refs": [{"type": "chunk", "ref": i["chunk_id"]}
-                                  for i in ev["items"]]}
+                                  for i in items]}
 
 
 def _selftest() -> int:

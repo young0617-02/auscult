@@ -41,10 +41,14 @@ if (Test-Path $EnvFile) {
 }
 
 # Build compose args
-$composeArgs = @("compose", "-f", $ComposeFile, "up", "-d")
+# 2026-10-14：**默认即启用 tdengine profile** —— 诊断主场景的 analyze_sensor 依赖
+# iot.st_pump_metrics 时序数据，原先默认不带 TDengine 使主场景必现
+# E_TD_TIMEOUT / sensor_report=None（审计实证）。-IncludeTDengine 保留为兼容参数。
+$composeArgs = @("compose", "-f", $ComposeFile, "--profile", "tdengine", "up", "-d")
 if ($IncludeTDengine) {
-    $composeArgs = @("compose", "-f", $ComposeFile, "--profile", "tdengine", "up", "-d")
-    Write-Host "[INFO] Starting with tdengine profile" -ForegroundColor Yellow
+    Write-Host "[INFO] Starting with tdengine profile (default since 2026-10-14)" -ForegroundColor Yellow
+} else {
+    Write-Host "[INFO] tdengine profile 默认启用（诊断主场景 analyze_sensor 依赖时序数据）" -ForegroundColor Yellow
 }
 
 Write-Host "[STEP 1/2] Pulling images (if missing)..." -ForegroundColor Cyan
@@ -74,8 +78,6 @@ Write-Host "  Redis:    localhost:6379" -ForegroundColor Gray
 Write-Host "  Neo4j:    localhost:7474 / 7687" -ForegroundColor Gray
 Write-Host "  MQTT:     localhost:1883" -ForegroundColor Gray
 Write-Host "  Nginx:    localhost:9763" -ForegroundColor Gray
-if ($IncludeTDengine) {
-    Write-Host "  TDengine: localhost:6030 / 6041" -ForegroundColor Gray
-}
+Write-Host "  TDengine: localhost:6030 / 6041 (默认启用；schema 由 init.ps1 初始化)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "Next: .\deploy\init.ps1  (idempotent initialization)" -ForegroundColor Cyan

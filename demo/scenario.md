@@ -49,8 +49,10 @@ device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
 ### 验收点
 
 - 引用正确率口径：报告引用均指向语料 chunk（`citations` 字段，见 `docs/prj-spec-api.md` §2.4.3）；
+- **引用硬校验（2026-10-14 起）**：引用无效（不在本次 evidence 的 chunk_id 集合内）时 `finalize` **不产出 `report_id`** → 报告不落库，thread 带 `E_INVALID_CITATION` 与 `degrade_reason=invalid_citation_blocked`。**演示若遇此态属"正确地拒绝"，不可绕过**；
 - 高风险覆盖率 100%：`risk=high` 必进审核（五档路由第 4 档，`docs/prj-design-architecture.md` §5.1）；
-- 职责分离：提交人不得自审（ISS-039 旁证：`validate_submitter`，`docs/prj-spec-data-dictionary.md`）。
+- 职责分离：提交人不得自审（ISS-039 旁证：`validate_submitter`，`docs/prj-spec-data-dictionary.md`）；
+- **时序数据降级（预期内）**：`deploy/up.ps1` 自 2026-10-14 起默认启用 TDengine，`init.ps1` 会建 `iot` 库与 3 个超级表；但**时序样本数据不在初始化范围内**（需另跑 `scripts/gen_sparkplug.py` + 自研解码器灌入）。未灌数时 `analyze_sensor` 走降级：`sensor_report=null` + `E_TD_TIMEOUT`，报告仍可生成（证据驱动不依赖传感器数据）—— 演示时如需完整传感器分析，须先灌数。
 
 ---
 

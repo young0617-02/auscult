@@ -227,6 +227,7 @@ docker compose -f docker/compose.nginx.yml up -d      # http://127.0.0.1:9763
 
 ```powershell
 deploy\up.ps1        # 一键启动：compose 全服务（healthcheck + 依赖顺序 + 资源限额）+ 等待健康
+                    #   注：2026-10-14 起默认含 TDengine profile（诊断主场景 analyze_sensor 依赖时序数据）
 deploy\init.ps1      # 一键初始化：迁表 / 建库 / 建图谱 / 导入语料与演示数据（幂等）
 deploy\smoke.ps1     # 一键冒烟：健康检查 + Playwright E2E（F1–F11 子集）
 deploy\down.ps1      # 一键停止（可选 -v 清卷）
