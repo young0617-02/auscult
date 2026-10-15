@@ -1,4 +1,4 @@
-# =============================================================
+﻿# =============================================================
 # Phase 6 deploy/down.ps1 - Stop and optionally destroy services
 #
 # Usage:
@@ -16,6 +16,24 @@ $ComposeFile = "$ProjectRoot\deploy\docker-compose.yml"
 
 Write-Host "=== auscult deploy: down ===" -ForegroundColor Cyan
 
+# ---------------------------------------------------------------- docker 调用辅助
+# ⚠️ 陷阱（同 ISS-044 根因，2026-10-15 修复）：`docker compose down` 停止容器时的
+#   进度/警告走 stderr，PS 5.1 将其包装为 ErrorRecord；脚本顶部 EAP="Stop" 会在
+#   下方退出码判定**之前**直接终止脚本（用户看到红色异常、收不到 [OK]/[FAIL]
+#   反馈）。修复：调用期间临时 SilentlyContinue（Continue 只不终止、仍打印噪音），
+#   结束后恢复 EAP，并以显式退出码为唯一判定依据。
+function Invoke-DockerQuiet {
+    param([Parameter(Mandatory)][string[]]$Command)
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    try {
+        & docker @Command
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
 if ($Volumes) {
     Write-Host "[WARN] Destroying volumes - ALL DATA WILL BE LOST" -ForegroundColor Red
     $confirm = Read-Host "Type 'yes' to confirm"
@@ -24,15 +42,15 @@ if ($Volumes) {
         exit 0
     }
     Write-Host "[STEP] Stopping services + destroying volumes..." -ForegroundColor Cyan
-    docker compose -f $ComposeFile down -v
+    $downExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "down", "-v")
 } else {
     Write-Host "[STEP] Stopping services (volumes preserved)..." -ForegroundColor Cyan
-    docker compose -f $ComposeFile down
+    $downExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "down")
 }
 
-if ($LASTEXITCODE -eq 0) {
+if ($downExit -eq 0) {
     Write-Host "[OK] Services stopped." -ForegroundColor Green
 } else {
-    Write-Host "[FAIL] docker compose down failed (exit $LASTEXITCODE)" -ForegroundColor Red
+    Write-Host "[FAIL] docker compose down failed (exit $downExit)" -ForegroundColor Red
     exit 1
 }

@@ -15,6 +15,25 @@
 > `docs/p0-handover-p1.md`（P0→P1）｜`docs/p2-handover-p3.md`（P2→P3）｜`docs/p3-handover-p4.md`（P3→P4）｜`docs/p4-handover-p5.md`（P4→P5）｜`docs/p5-handover-p6.md`（P5→P6）｜报告索引 `reports/README.md`。
 > **残余风险（收口 ≠ 风险消失）**：`P95` 端到端含生成 9.25 s 未达 3 s、F-2 数据库短连接排队、F-1 health 探测阻塞事件循环、RPO 未定时化、`ISS-038`–`ISS-041` 登记不修 → 见 `docs/p6-gate-closure-2026-10-10.md` §四 与 `docs/prj-ledger-risk-register.md`。
 
+### 2026-10-15（收口后维护期）— `ISS-044` 修复不彻底性补修：`up.ps1` / `down.ps1` 剩余 docker 调用点（**零功能改动**）
+
+> 触发：2026-10-15 清理 `ISS-046` 旧接入栈容器后重跑 `up.ps1`，实测 `up -d` 阶段 `Container xxx Starting` 等 stderr 进度行仍被 PS 5.1 包装为 **RemoteException 红色噪音**打印（功能不受影响、exit=0）。追查确认 **ISS-044 的「同类自查」漏掉了两个脚本的其余调用点**，且「放宽到 `Continue`」本身不彻底。`pytest` 185 不受影响（纯脚本改动）。
+
+- **代码 · `deploy/up.ps1`**：新增 `Invoke-DockerQuiet` 辅助函数（native 调用期间 `SilentlyContinue`、`finally` 恢复 EAP、返回退出码），`pull` 与 `up -d` 两处调用统一走它；**`pull` 补显式退出码判定**（原实现失败会被静默吞掉、带着坏镜像进 `up -d`）。
+- **代码 · `deploy/down.ps1`（ISS-044 同根因的第二个脚本、第三个暴露点）**：裸调 `docker compose down` / `down -v` 在顶部 `EAP="Stop"` 下，**会在退出码判定之前直接终止脚本**（用户收不到 [OK]/[FAIL] 反馈）—— 比 up.ps1 的噪音更严重（功能级）；改用同一辅助函数 + 显式退出码判定。
+- **代码 · `deploy/down.ps1` 补 UTF-8 BOM**：新增中文注释后按 `ISS-021` 纪律补 BOM（实测无 BOM 时 PS 5.1 解析错误 1 处）；四个 `.ps1` 现全部 BOM/编码合规、解析错误 0。
+- **文档 · `docs/prj-ledger-known-issues.md`**：`ISS-044` 行补记「2026-10-15 修复不彻底性」段（三个暴露点、`Continue` vs `SilentlyContinue` 的区别、`pull` 退出码缺失、BOM 纪律），**不新开编号**（同一缺陷的修复遗留面，非新缺陷）。
+- **实测**：`up.ps1` 幂等重跑 **exit=0、零 ErrorRecord 噪音**；`init.ps1` / `smoke.ps1` 本就 `Continue` + 显式重定向，不受影响、未改。
+
+### 2026-10-15（收口后维护期）— `ISS-046` 规避执行：旧接入栈容器与卷清理（**零数据损失**）
+
+> 触发：用户确认旧容器可删。执行前先逐一核实挂载卷无业务数据，删除后零残留；顺带发现并恢复交付栈（与本次删除无因果关系，时间戳可证）。
+
+- **数据 · 删前核实（先证明安全再动手）**：`auscult-ingest_tdengine-data` 30MB **仅管理节点系统表 `mnode/sdb.data`、无任何 vnode 时序文件**（旧实例从未落业务数据）；`auscult-ingest_mosquitto-data` 8KB 仅 47 字节 `mosquitto.db`（空库）。
+- **配置 · 执行清理**：`docker rm -v` 删两容器（含匿名卷）+ `docker volume rm` 删三命名卷 → `auscult-ingest` **容器与卷零残留**；端口 1883/6030/6041 归交付栈独占。未触碰其他项目容器（`kee-*` / `pal-*` / `neo4j-cq`）与交付栈资源。
+- **运维 · 顺带发现交付栈已停并恢复**：删除后验证时发现交付栈 9 容器全部 Exited，时间戳为「11 hours ago」（2026-10-14 22:30 前后，退出码 0/143/137 混合、`kee-*` 同期全停，属 `compose down` / Docker Desktop 重启的全局停止事件；**本次删除发生在 10-15 09:2x，与停止无因果关系**）。已用 `deploy\up.ps1` 恢复并逐项验证数据完好：TDengine 时序 **10800 行**、PG documents=19 / doc_chunks=36 / work_orders=48 / outbox=72 全消费 / reports=9 / users=4、Neo4j **105 节点 / 127 关系**；9 容器 Up、8 healthy（nginx unhealthy 属**预期**：其健康检查 `wget /` 代理到宿主 Next.js :3000 / FastAPI :8000，交付栈本就不含应用服务，返回 502 而非拒连恰证明 nginx 本身正常）。
+- **文档 · `docs/prj-ledger-known-issues.md`**：`ISS-046` 主表与 §五 对应关系行补记「2026-10-15 已执行清理」及删前数据核实结论。
+
 ### 2026-10-14（收口后维护期）— 时序样本数据灌数闭环 + 两项健壮性修复（**零功能扩范围**）
 
 > 触发：处理收口遗留的四项观察（TDengine 表已建无数据 / graph 证据无文本语义 / `E_LLM_UNREACHABLE` 偶发超时 / 旧容器名冲突）。`pytest` **185 passed**。

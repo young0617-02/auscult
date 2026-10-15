@@ -54,20 +54,37 @@ if ($IncludeTDengine) {
     Write-Host "[INFO] tdengine profile 默认启用（诊断主场景 analyze_sensor 依赖时序数据）" -ForegroundColor Yellow
 }
 
+# ---------------------------------------------------------------- docker 调用辅助
+# ⚠️ 陷阱（ISS-044，2026-10-11 实测修复；2026-10-15 补全剩余调用点）：
+#   docker compose 的进度/警告输出到 **stderr**，PS 5.1 会把 native stderr 包装为
+#   ErrorRecord。原 `pull 2>&1 | Out-Null` 写法把 stderr 并进 pipeline，配合顶部
+#   $ErrorActionPreference="Stop" 会在 `up -d` 之前直接终止脚本（干净环境 100%
+#   复现，一键启动完全不可用）。
+#   2026-10-15 补充：仅把 EAP 放宽到 "Continue" 并不够 —— Continue 只保证**不终止**，
+#   ErrorRecord 仍会以红色噪音打印（`up -d` 的 stderr 进度行即此现象，功能不受影响
+#   但观感与排障体验差）；须 "SilentlyContinue" 才静默。故统一收敛到本辅助函数：
+#   静默 stderr + 显式退出码判定（调用方不得依赖 stdout/stderr 输出，以退出码为准）。
+function Invoke-DockerQuiet {
+    param([Parameter(Mandatory)][string[]]$Command)
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = "SilentlyContinue"
+    try {
+        & docker @Command
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEap
+    }
+}
+
 Write-Host "[STEP 1/2] Pulling images (if missing)..." -ForegroundColor Cyan
-# ⚠️ 陷阱（2026-10-11 实测修复）：docker 的拉取进度输出到 **stderr**。原写法
-#   `docker compose ... pull 2>&1 | Out-Null` 会把 stderr 并进 pipeline，PowerShell
-#   将其包装为 ErrorRecord；配合脚本顶部 $ErrorActionPreference="Stop"，会在执行
-#   `up -d` **之前**直接终止脚本 —— 干净环境（必然触发 pull 输出）100% 复现，
-#   一键启动完全不可用。故：①不做 stderr 合并；②调用 native 命令期间临时放宽 EAP。
-$prevEap = $ErrorActionPreference
-$ErrorActionPreference = "Continue"
-docker compose -f $ComposeFile pull | Out-Null
+$pullExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "pull")
+if ($pullExit -ne 0) {
+    Write-Host "[FAIL] docker compose pull failed (exit $pullExit)" -ForegroundColor Red
+    exit 1
+}
 
 Write-Host "[STEP 2/2] Starting services..." -ForegroundColor Cyan
-& docker @composeArgs
-$composeExit = $LASTEXITCODE
-$ErrorActionPreference = $prevEap
+$composeExit = Invoke-DockerQuiet $composeArgs
 if ($composeExit -ne 0) {
     Write-Host "[FAIL] docker compose up failed (exit $composeExit)" -ForegroundColor Red
     exit 1
