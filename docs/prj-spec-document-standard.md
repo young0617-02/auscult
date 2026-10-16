@@ -49,6 +49,7 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 | `checklist` | 勾选清单 | `p0-checklist-daily.md` |
 | `template` | 登记模板 | `prj-template-experiment-log.md` |
 | `ledger` | 台账（逐条追加、只增不删） | `prj-ledger-risk-register.md` |
+| `guide` | 面向最终用户的操作手册/使用说明（活文档，不带日期） | `prj-guide-user-manual.md` |
 
 4. **日期规则**：**一次性快照**（报告、审计、裁决、总结）**必须**带 `-YYYY-MM-DD`；**活文档**（台账、规范、模板、计划、索引）**不带**日期，改在文件头写「**最近更新**：YYYY-MM-DD」。
 5. **复审记录的版号**：`r<N>` 表示**第 N 份复审记录文件**，与文档自身的修订次数无关；`r1` 位置由主报告占用时**不补空文件**，靠 `reports/README.md` §一 的对照说明解释（现状：`r2`=第一轮、`r3`=第二轮（F1–F6）、`r4`=第四轮（H8），**第三轮无独立文件**）。
@@ -221,3 +222,4 @@ Phase 0 结束时仓内共 60+ 份 Markdown，三种命名风格并存（`docs/`
 | 2026-10-08 | 单人（本人） | 初始建立：Phase 0 过闸后全量文档整理（47 项重命名 / 搬运、1737 处引用改写）沉淀为本规范；含命名规则、状态三态、目录职责、不可改写区、全量映射表与 7 条残留问题 | 全仓文档 |
 | 2026-10-10 | 单人（本人） | Phase 6 D1–D5 文档收口：P3/P4/P5 移交清单命名规范化（旧名→新名映射，含全仓引用改写） | 3 项 `git mv`（`docs/handover-p4.md`→`docs/p3-handover-p4.md`、`docs/handover-p5.md`→`docs/p4-handover-p5.md`、`docs/handover-p6.md`→`docs/p5-handover-p6.md`）；受影响 10 个文件 29 处引用改写（`CHANGELOG.md`、`README.md`、`docs/prj-design-architecture.md`、`app/graph/build.py`、`app/api/runner.py`、3 份 plan、`reports/p3-summary.md`、`reports/P5-summary.md`） |
 | 2026-10-10 | 单人（本人） | **Phase 6 收口后命名纠错**：2 项 `git mv`（`docs/P6-closure.md`→`docs/p6-gate-closure-2026-10-10.md`、`reports/P5-summary.md`→`reports/p5-summary-phase5-2026-10-10.md`）+ 全仓引用改写 | 新增 §6.5 映射表；§七 新增残留 8（`docs/pitch.md` 保留可读短名的已知偏差）；受影响 4 个文件（两份 Phase 5/6 计划、本文件、被改名文件自身） |
+| 2026-10-16 | 单人（本人） | **类型枚举扩展 `guide` + 用户手册建立**：§三.3 类型表新增 `guide`（面向最终用户的操作手册，活文档不带日期），首例 = `docs/prj-guide-user-manual.md`（2026-10-16 建立，全流程实跑验证 + `docs/images/manual/` 10 张实跑截图）；同批在根 `README.md` §六目录导航与文末索引、`reports/README.md` §六文档计数（37 → 39）登记；**截图资产（`docs/images/*.png`）不在本规范适用范围**（非叙述性 Markdown），位置随手册引用相对路径 `images/manual/<name>.png` | §三.3 类型表、修订记录；根 `README.md`、`reports/README.md`、`docs/prj-guide-user-manual.md`（新） |

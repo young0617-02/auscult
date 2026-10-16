@@ -2,7 +2,7 @@
 # Phase 6 deploy/init.ps1 - Idempotent initialization
 #
 # Steps:
-#   1. PG migrations (0001-0006, ordered, idempotent)
+#   1. PG migrations (0001-0007, ordered, idempotent)
 #   2. Milvus collection build (build_milvus_v1.py)
 #   3. Neo4j triples import (extract_triples.py --import-neo4j)
 #
@@ -40,7 +40,7 @@ if (-not (Test-Path $Python)) {
 
 # ---- Step 1: PG Migrations ----
 Write-Host ""
-Write-Host "[STEP 1/4] PG migrations (0001-0006)..." -ForegroundColor Cyan
+Write-Host "[STEP 1/4] PG migrations (0001-0007)..." -ForegroundColor Cyan
 
 # 宿主无需 psql：迁移经 auscult-pg 容器内 psql 执行（干净环境不依赖宿主安装）
 $PgContainer = "auscult-pg"
@@ -49,10 +49,17 @@ $Migrations = @(
     "0003_reports.sql",
     "0004_users.sql",
     "0005_knowledge_admission.sql",
-    "0006_audit_logs.sql"
+    "0006_audit_logs.sql",
+    "0007_alerts_auto_trigger.sql"
 )
 
 # 把迁移目录拷入容器（挂载已在 compose；此处 cp 保证脚本可独立运行）
+# ⚠️ 陷阱（2026-10-16 修复）：`docker cp SRC_DIR CONTAINER:/tmp/x` 在目标**已存在**时
+#   会把 SRC_DIR 拷成 `/tmp/x/migrations/` 子目录（嵌套），而非平铺 —— 幂等重跑时
+#   新迁移文件（如 0007）进不了顶层，psql 报 "No such file or directory"，且该错误
+#   被 `2>$null` 静默吞掉（2026-10-16 实测：0001-0006 因首次已平铺而能找到，仅 0007
+#   找不到，极易误判为"文件未生成"）。故：先删目标目录再拷，保证平铺语义。
+docker exec $PgContainer rm -rf /tmp/auscult-migrations 2>$null | Out-Null
 docker cp "$ProjectRoot\db\migrations" "${PgContainer}:/tmp/auscult-migrations" 2>$null | Out-Null
 
 foreach ($mig in $Migrations) {

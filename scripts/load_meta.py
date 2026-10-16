@@ -218,25 +218,33 @@ def write_outbox_idempotent(cur, rows: list[tuple], targets: tuple[str, ...] = (
 
 
 def import_all(dsn: str, chunks: list[dict[str, Any]], workorders: list[tuple]) -> dict[str, int]:
+    """导入 B5 元数据三表 + 幂等补写 outbox。
+
+    幂等口径（2026-10-16 修复）：原实现用 `COPY ... FROM STDIN`，而 **COPY 协议不支持
+    `ON CONFLICT`** —— 重复导入（`init.ps1` 幂等重跑）必撞 `documents_pkey` 唯一约束
+    使整个 Step 4 崩溃（实测 `psycopg.errors.UniqueViolation`，2026-10-16 首次在
+    「documents 已导入」状态下重跑 init.ps1 时暴露）。这与 P1 报告口径
+    （`reports/p1-d7-d8-b5-meta.md`：`ON CONFLICT DO UPDATE` 幂等）存在**文档—实现漂移**。
+    修复：三张表改逐行 `INSERT ... ON CONFLICT (pk) DO NOTHING`（数据源为同一 chunks
+    文件、doc_id 由 uuid5 确定性生成，内容不变，故 DO NOTHING 即等价于 DO UPDATE）；
+    批量走 `execute_values` 需要 `psycopg.extras`（本 venv 未安装该模块，见
+    2026-10-16 实测），故用纯 `cur.execute` 循环 —— 数据量 19/36/48 行，性能无感。
+    """
     docs = build_documents_rows(chunks)
     doc_chunks = build_doc_chunks_rows(chunks)
     with connect(dsn) as conn, conn.cursor() as cur:
-        with cur.copy(
-            "COPY documents (doc_id,title,source,doc_type,device_model,checksum) FROM STDIN"
-        ) as cp:
-            for r in docs:
-                cp.write_row(r)
-        with cur.copy(
-            "COPY doc_chunks (chunk_id,doc_id,parent_id,content,section,page,token_count) FROM STDIN"
-        ) as cp:
-            for r in doc_chunks:
-                cp.write_row(r)
-        if workorders:
-            with cur.copy(
-                "COPY work_orders (order_id,device_id,fault,action,result,created_at) FROM STDIN"
-            ) as cp:
-                for r in workorders:
-                    cp.write_row(r)
+        for r in docs:
+            cur.execute(
+                "INSERT INTO documents (doc_id,title,source,doc_type,device_model,checksum) "
+                "VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (doc_id) DO NOTHING", r)
+        for r in doc_chunks:
+            cur.execute(
+                "INSERT INTO doc_chunks (chunk_id,doc_id,parent_id,content,section,page,token_count) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (chunk_id) DO NOTHING", r)
+        for r in workorders:
+            cur.execute(
+                "INSERT INTO work_orders (order_id,device_id,fault,action,result,created_at) "
+                "VALUES (%s,%s,%s,%s,%s,%s) ON CONFLICT (order_id) DO NOTHING", r)
         # B6：与三表同事务补写 outbox（幂等，重复导入不重复插）
         outbox_written = write_outbox_idempotent(cur, build_outbox_rows(chunks))
     return {"documents": len(docs), "doc_chunks": len(doc_chunks), "work_orders": len(workorders),

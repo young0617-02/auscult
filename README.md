@@ -75,6 +75,8 @@ PDF/工单/规程 → MinerU 解析 → Parent-Child 分块 → 元数据标注
 
 ```
 MQTT 告警 → 去重(Redis 滑动窗口) → LangGraph 触发
+   （P7：自动触发默认关闭——AUSCULT_AUTO_TRIGGER=1 启用后由 app/api/auto_trigger.py
+     轮询 alerts 表发起；未启用时经人工 POST /api/diagnose）
    → 告警解析 → 传感器分析(query_sensor) → 知识检索(retrieve_knowledge+query_graph)
    → 历史工单(get_maintenance_history) → 诊断推理(置信度计算)
    → [置信度<0.75 → 云端升级 / 重检索] → 报告生成(generate_report)
@@ -107,9 +109,9 @@ MQTT 告警 → 去重(Redis 滑动窗口) → LangGraph 触发
 | 三元组 | Neo4j | ✅ | 图谱 |
 | 文档元数据/版本 | PostgreSQL | ✅ | `knowledge_versions` |
 | 报告 | PostgreSQL | ✅ | `reports` 表 |
-| 工作流状态 | Redis（运行态）/ PostgreSQL（报告态） | **PostgreSQL** | V5 checkpoint |
+| 工作流状态 | PostgreSQL（checkpointer，唯一权威） | **PostgreSQL** | V5 checkpoint；P7 起 Redis db 1 只读缓存为非权威加速层（`docs/p7-design-redis-cache-layer-2026-10-16.md`） |
 | 审核 / 审计记录 | PostgreSQL | ✅ | `audit_logs`（append-only 触发器） |
-| 会话上下文 | Redis（TTL 24h） | — | 非权威，可重建 |
+| 会话上下文 | Redis（TTL 24h，db 1 只读缓存）+ PG（权威） | — | 非权威，可重建；P7 落地（原口径为漂移声明，代码实现在 2026-10-16 补齐） |
 
 ## 三、阶段状态与验收指标
 
@@ -260,15 +262,15 @@ auscult/
 ├─ CHANGELOG.md         变更日志（以验证项 / 里程碑为粒度）
 ├─ requirements.txt     Python 依赖锁（版本唯一来源 docs/prj-ledger-version-lock.md）
 ├─ .python-version      解释器锚定（3.12）
-├─ app/                 后端 FastAPI 应用（api / graph / tools / report / review / router / security / observability）
+├─ app/                 后端 FastAPI 应用（api / graph / tools / report / review / router / security / observability / cache[P7]）
 ├─ client/              前端 Next.js 16 + shadcn/ui + Socket.IO（app/(auth)login、app/(main){alarms,diagnosis,reports,knowledge,graph,audit}）
-├─ db/migrations/       PostgreSQL 迁移（0001 / 0003 / 0004 / 0005 / 0006）
+├─ db/migrations/       PostgreSQL 迁移（0001 / 0003 / 0004 / 0005 / 0006 / 0007[P7 自动触发]）
 ├─ deploy/              ★ 交付包：docker-compose.yml + up/init/smoke/down.ps1 + .env.example + images.digest.md
 ├─ demo/                ★ 演示：scenario.md（主场景 S1 + 备用 S2–S4）/ data/alarms.json / recording/rehearsal-log.md
 ├─ docker/              compose.base / compose.ingest / compose.v2 / compose.nginx / compose.monitoring / compose.v4b-iso + Dockerfile.decoder
 ├─ monitoring/          Prometheus + Grafana（临时件：压测期启动、测后销毁）
 ├─ configs/             alarm_rules / risk_rules / retrieval / logging / mosquitto / redis / decoder_schema_mapping / triple_schema
-├─ scripts/             84 个 Python 执行器（36 含 --selftest）+ 2 个 PowerShell 运维脚本
+├─ scripts/             85 个 Python 执行器（37 含 --selftest，P7 增 embedding_cache）+ 2 个 PowerShell 运维脚本
 ├─ tests/               回归测试（pytest；含 tests/e2e/ 的免 Playwright 场景级 E2E）
 ├─ schemas/             tools_v1(FROZEN) … tools_v5 + tools_p2_retrieve（**当前基线 = tools_v4**）
 ├─ prompts/             工具调用 / 拒止 / R-4 提示词（v4 为当前最优候选；v2 含泄漏禁用）
@@ -278,6 +280,10 @@ auscult/
 │                 ★ Phase 6 D1–D5 收口新增：prj-design-architecture（架构）/ prj-spec-{deployment,operations}（部署运维）
 │                            / prj-spec-{api,data-dictionary}（API 与数据字典）/ prj-decision-adr-001..009（架构决策记录）
 │                 ★ Phase 6 D10 收口新增：p6-gate-closure-2026-10-10.md（**阶段状态唯一凭据**）
+│                 ★ 2026-10-15 新增：prj-design-requirements-main-flow.md（**需求主流程**，跨阶段全景）
+│                 ★ 2026-10-16 新增：prj-guide-user-manual.md（**用户操作手册**，实跑验证 + 截图）
+│                            / p7-design-redis-cache-layer-2026-10-16.md（P7：Redis 缓存层 + 告警自动触发）
+│                 └─ images/manual/   用户手册截图资产（01-login … 08b-audit，2026-10-16 实跑采集）
 ├─ plan/                阶段计划（Phase 0–6）与设计
 ├─ reports/             实测报告 / 审计 / 裁决 / 总结 + reports/daily/
 ├─ env/                 环境基线 v2（+v1 留档）/ hardware.json / ports.md / cloud.json（含 key，已 gitignore）
@@ -336,4 +342,4 @@ auscult/
 
 > **文档事实源索引**：环境基线 `env/env-baseline-v2.md` ｜ 版本与 digest `docs/prj-ledger-version-lock.md` ｜
 > 已知缺陷 `docs/prj-ledger-known-issues.md` ｜ 风险 `docs/prj-ledger-risk-register.md` ｜ 命名规范 `docs/prj-spec-document-standard.md` ｜
-> **阶段状态与收口凭据 `docs/p6-gate-closure-2026-10-10.md`** ｜ 报告索引 `reports/README.md` ｜ 变更记录 `CHANGELOG.md`。
+> **阶段状态与收口凭据 `docs/p6-gate-closure-2026-10-10.md`** ｜ 报告索引 `reports/README.md` ｜ 变更记录 `CHANGELOG.md` ｜ **用户操作手册 `docs/prj-guide-user-manual.md`**。

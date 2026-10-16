@@ -8,12 +8,38 @@
 
 ---
 
+### 2026-10-16（收口后维护期 · **所有者指示的指示性扩范围**）— P7：Redis 缓存层 + 告警自动触发（README §2.3/§2.5 两处漂移修正 + 数据流补环）
+
+> 触发：代码考古确认 Redis 实为"协调原语"（限流/预算/审核锁/告警去重 4 处）而**零缓存**；README §2.5 声称的"工作流状态 Redis 运行态 / 会话上下文 TTL 24h"代码不存在；§2.3 数据流"MQTT 告警 → 去重 → LangGraph 触发"缺最后一环（诊断只能人工 POST）。设计文档：`docs/p7-design-redis-cache-layer-2026-10-16.md`（判据前置 C1–C5）。**纪律声明**：M6.4 收口后为维护期，本次为所有者显式指示实施，非自发扩范围。
+> 实测：`pytest tests/ -q` = **208 passed**（新增 25 例）；`embedding_cache` / `retrieve_knowledge` 两个 `--selftest` exit 0；app 全量 import OK。
+
+- **代码 · 新增 `app/cache/`（缓存基础设施）**：`client.py`（RedisCache 单例 + `cache_*` 分层便捷函数，全方法 fail-open：读=miss/写=跳过/set_nx=放行，错误落审计）+ `keys.py`（`auscult:cache:v1:{layer}:{hash}` 规范；**失效=换 key**——模型 digest/知识版本/messages 进 hash，无原地失效逻辑）。**db 1 与 db 0 协调原语隔离**；256KB 体积闸门（防挤爆 maxmemory 1gb 牵连 db 0 预算/锁）。
+- **代码 · 六层缓存接入**：① `emb`——`scripts/embedding_cache.py` CachedEmbedder 代理（外挂式，不改 run_v2 EmbeddingClient 契约；模型 token=路径+size+mtime）；② `retr`——`RetrievalService.retrieve` 结果缓存（**仅缓存非降级结果**；knowledge_versions.max(id) 版本令牌，进程内 30s 缓存，PG 不可达退化 `"unknown"`；节点侧 `cache_key=device_id|metric` **剔除告警数值**保命中率）；③ `state`/④ `values`——`runner.py` 仅包**重启回退路径** read-through（进程内注册表永远权威，不读缓存）；变更点（追问追加/审核恢复）显式失效；⑤ `llm`——`_call_ollama` 缓存 content 原文（think 剥离/解析/置信度照常，**不改变下游语义**；命中落审计 `llm_cache_hit`）；⑥ `trig`——触发 SETNX 护栏。
+- **代码 · 新增 `app/api/auto_trigger.py`（告警自动触发）**：补全 §2.3 数据流最后一环。daemon 线程 5s 轮询 `alerts WHERE status='open' AND diagnosed_thread_id IS NULL` → severity 过滤 → Redis SETNX 护栏 → **PG 条件 UPDATE 两阶段占位**（`trigger-pending` → 真实 thread_id，防扫描-启动间隙双触发）→ `start_diagnosis(submitter="system:auto-trigger")`。选型：**不引 Redis Stream/MQTT 订阅**（告警引擎是批处理外部进程，PG 即天然事件日志；重启自重建，不回放不丢失）。**默认关闭**（`AUSCULT_AUTO_TRIGGER=0`），关闭时仍打点 `disabled` 供 /metrics 观测开关状态。
+- **代码 · `db/migrations/0007_alerts_auto_trigger.sql`**：`alerts.diagnosed_thread_id`（NULL=未触发，权威标记）+ 部分索引（低扫描面，对齐 outbox pending 写法）。
+- **代码 · 配置 `app/api/config.py`**：`AUSCULT_CACHE_*`（独立 env，**不复用** db 0 的 `AUSCULT_REDIS_URL`；TTL 分层默认 24h/6h/30d/24h）+ `AUSCULT_AUTO_TRIGGER*`。**指标**：`auscult_cache_ops_total{op,result}` / `auscult_auto_trigger_total{result}`。
+- **测试 · 新增 25 例（全离线，Redis/PG 不可达即验降级路径）**：`tests/test_cache_layer.py` 14 例（key 五维隔离/fail-open 三态/jsonable 归一化/代理直通语义）；`tests/test_auto_trigger.py` 11 例（severity 过滤/两阶段标记/护栏拦截/单条失败不阻断/PG 挂了跳过轮次）。
+- **文档 · 漂移修正**：README §2.5 两行（会话上下文/工作流状态）随本次落地转为真实口径；目录导航补 `app/cache/` 与 migration 0007；`configs/redis.conf` 头部注释仍为 V5 候选 A 遗产口径（**未改配置**，改动须走 ADR——见设计文档 §六 Won't）。
+- **未做（判据前置声明）**：Redis checkpointer 不复活（B7 未解）；缓存不做权威化；`configs/redis.conf` 不动；冻结区零触碰。
+
+---
+
 ## [未发布] — Phase 6（收敛与交付）✅ 已完成并收口（`M6.4`，2026-10-10）
 
 > **总述**：**Phase 0–6 已全部完成** —— `M0.6` 门禁 2026-10-08 放行、`M5.4` 2026-10-10 达成（停止条件三条满足）、**`M6.1`–`M6.4` 于 2026-10-10 全达成并正式收口**（停止条件 S1/S2/S3 三条同时满足、交付包封版）。收口凭据 = `docs/p6-gate-closure-2026-10-10.md`。
 > **P1–P5 的逐条变更原不在本文件展开**（避免与台账/报告重复）→ **本次已按阶段补登摘要条目**；逐项实测仍以阶段移交清单与实测报告为准：
 > `docs/p0-handover-p1.md`（P0→P1）｜`docs/p2-handover-p3.md`（P2→P3）｜`docs/p3-handover-p4.md`（P3→P4）｜`docs/p4-handover-p5.md`（P4→P5）｜`docs/p5-handover-p6.md`（P5→P6）｜报告索引 `reports/README.md`。
 > **残余风险（收口 ≠ 风险消失）**：`P95` 端到端含生成 9.25 s 未达 3 s、F-2 数据库短连接排队、F-1 health 探测阻塞事件循环、RPO 未定时化、`ISS-038`–`ISS-041` 登记不修 → 见 `docs/p6-gate-closure-2026-10-10.md` §四 与 `docs/prj-ledger-risk-register.md`。
+
+### 2026-10-16（收口后维护期）— 全栈实跑验证 + 用户操作手册建立（**零功能改动**）
+
+> 触发：按用户要求「把项目跑起来 + 根据需求文档写用户操作手册并给真实截图」。全程实跑验证：起栈 → 初始化（修复两处幂等缺陷）→ 灌数复验 → 起后端/前端 → 登录 → S1 诊断 → 审核 → 审计。`pytest` 185 不受影响（脚本 + 文档改动，另有 2 个新增测试文件随 P7 未提交代码一并存在）。
+
+- **代码 · 修复 `init.ps1` 幂等缺陷 A（`docker cp` 嵌套，2026-10-16 复跑 init 暴露）**：`docker cp SRC_DIR CONTAINER:/tmp/x` 在目标已存在时把目录拷成 `/tmp/x/migrations/` 子目录而非平铺 —— 幂等重跑时新迁移（0007）进不了顶层，psql 报 `No such file or directory`，且错误被 `2>$null` 静默吞掉（易误判为「文件未生成」）。修复：cp 前 `docker exec ... rm -rf` 目标目录。修复后 0001–0007 全部 `[OK]`。
+- **代码 · 修复 `load_meta.py` 幂等缺陷 B（`COPY` 不支持 `ON CONFLICT`）**：`import_all` 原用 `COPY ... FROM STDIN` 导入三表，而 COPY 协议无 `ON CONFLICT` —— 在「documents 已导入」状态重跑 `init.ps1`（Step 4，2026-10-14 新增）必撞 `documents_pkey` 唯一约束使整个初始化崩溃（实测 `UniqueViolation`）。这与 P1 报告口径（`reports/p1-d7-d8-b5-meta.md`：`ON CONFLICT DO UPDATE` 幂等）存在**文档—实现漂移**，且 10-14 新增 Step 4 时 PG 表为空故未暴露。修复：三表改逐行 `INSERT ... ON CONFLICT (pk) DO NOTHING`（doc_id / chunk_id / order_id；数据源同一 chunks 文件 + uuid5 确定性，DO NOTHING 等价 DO UPDATE；`psycopg.extras` 在本 venv 未安装，故用纯 `cur.execute` 循环，19/36/48 行性能无感）。修复后幂等重跑 `documents=19 | doc_chunks=36 | work_orders=48 | outbox=0`、对账零差异。
+- **运维 · 全栈实跑验证通过**：9 容器 healthy（nginx 除外——其健康检查代理到宿主应用服务，基建态下 502 属预期）；后端 `/api/health` 200（PG/Milvus/Neo4j/TDengine/Redis 全 up）；nginx `:9763/login` 200；S1 实跑闭环：告警（PUMP-A/vib_rms/critical，`insert_test_alarm.py` 预置）→ 发起诊断 → 六节点轨迹全过（传感器分析读到 10800 行时序、PUMP-A 峰值 4.855 mm/s）→ 云端 20.2s 超时显式降级 `cloud_unavailable` → 报告 `RPT-5cbb850`（conf 0.63 / medium）→ 审核员通过 → 审计留痕（`cloud_audit.jsonl` / `traces/`）。
+- **文档 · 新增 `docs/prj-guide-user-manual.md`（用户操作手册）**：按需求主流程文档（`prj-design-requirements-main-flow.md`）撰写；含快速开始（up/init/灌数/起应用/入口）、四角色 RBAC 矩阵、六页功能操作（告警看板/诊断控制台/报告工作台/知识库/图谱/审计）、S1 主流程实跑走查表、FAQ 7 条、已知边界 7 条（如实：P95 9.25s、图谱规模、审计页 D20 数据接入未完成等）；**10 张截图全部来自 2026-10-16 实跑**（`docs/images/manual/`）。顺带实测确认：RBAC 守卫生效（审核员访问 /audit 被拒）、图谱实体精确匹配（「联轴器不对中」→ 9 节点/8 关系/243.6ms）。
+- **文档 · 命名规范扩展 `guide` 类型**（§三.3 类型表新增一行，首例即用户手册）；根 `README.md` §六目录导航补手册/P7 设计/images 目录、文末索引加手册指针；`reports/README.md` §六 docs 计数 37 → 39 并登记。
 
 ### 2026-10-15（收口后维护期）— `ISS-044` 修复不彻底性补修：`up.ps1` / `down.ps1` 剩余 docker 调用点（**零功能改动**）
 
