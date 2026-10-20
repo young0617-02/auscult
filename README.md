@@ -198,6 +198,18 @@ docker compose -f docker/compose.ingest.yml up -d
 #   · 需经 Nginx 容器回源时将 --host 改为 0.0.0.0
 ```
 
+> **P7 诊断 Agent 化（2026-10-19，可选开关，默认关闭=既有确定性形态）**：
+> 统一 LLM 客户端 `app/llm/`（本地 Ollama / 云端双传输）+ Agent 循环 `app/graph/nodes/agent_diagnose.py`
+> （LLM 自主调只读工具取证，`max_steps` 封顶，写操作护栏，失败走既有重试/降级路由）。
+> 测试开发期云端承载：`$env:AUSCULT_DIAGNOSIS_MODE="agent"; $env:AUSCULT_LLM_BACKEND="cloud"`；
+> 后期回本地（换硬件 + qwen3:32b）：`AUSCULT_LLM_BACKEND=local` + `AUSCULT_LOCAL_MODEL_AGENT/DIAGNOSE=qwen3:32b`。
+> 设计与切换 Runbook、判据闸门、未决项 U1–U4：`docs/p7-design-agent-diagnosis-2026-10-19.md`。
+> **判据闸门结论（2026-10-20 实测，请勿误读为"Agent 已上线"）**：云端 Agent 形态**未过 V1 分档闸门** ——
+> `EXP-P7-GATE`（3 轮 75 样本）多轮 77.8% 中间区间；`v1-019` 重释义为「不得调用写操作」后，`EXP-P7-GATE2`
+> 仍 **No-Go**（多轮 66.7%、整体 63/75 = 84.0%），根因登记 **`ISS-052`**（判据工具面含 `generate_report`，
+> 与产品 4 只读工具面不一致 → 判据测非所测）。**故 `AUSCULT_DIAGNOSIS_MODE` 默认保持 `deterministic`**，
+> Agent 形态仅为可选开关；下一步（路径 C/D 与产品形态口径）见 `experiments/v1/EXP-P7-GATE2.md` §四。
+
 ### 4.6 启动前端
 
 ```powershell
@@ -253,6 +265,7 @@ deploy\down.ps1      # 一键停止（可选 -v 清卷）
 - 实测（2026-10-14）：**10800 行**落库（3600 x 3 设备），PUMP-A `vib_rms` 峰值 **4.855 mm/s**（越 ISO 10816 C 区上界 4.5，**2 个** 5min 超限窗口），PUMP-B/C 正常态 ~1.30 mm/s；
 - 验证：`scripts\verify_query_sensor.py`（3 设备 x 13 窗口 exit 0、`P95~24.2ms`，`ISS-047` 修复后复跑通过）；
 - 复灌 = 重跑上面两步（DBIRTH 建表幂等、DDATA 按 ts 主键去重）；不需要时关闭解码器终端即可，已落库数据不受影响。
+- ⚠️ **落库不满自查（ISS-050，2026-10-20）**：单轮灌数 10804 报文应全部落库（`select count(*) from iot.st_pump_metrics` 增量核对）。若增量明显偏小（历史缺陷：QoS 0 订阅下 broker 对慢订阅者不排队、静默丢消息），确认解码器为 **QoS 1 订阅**（`scripts/self_decoder.py` 已修）且 `configs/mosquitto.conf` 的 `max_queued_messages=20000` 已生效（改后需 `docker restart auscult-mosquitto`）；解码器落库速率上限 ≈48 行/s（逐行 REST 写），批量 INSERT 优化列 P1。
 
 ## 六、目录导航
 
@@ -262,7 +275,7 @@ auscult/
 ├─ CHANGELOG.md         变更日志（以验证项 / 里程碑为粒度）
 ├─ requirements.txt     Python 依赖锁（版本唯一来源 docs/prj-ledger-version-lock.md）
 ├─ .python-version      解释器锚定（3.12）
-├─ app/                 后端 FastAPI 应用（api / graph / tools / report / review / router / security / observability / cache[P7]）
+├─ app/                 后端 FastAPI 应用（api / graph / tools / report / review / router / security / observability / cache[P7] / llm[P7] / agent[P7]）
 ├─ client/              前端 Next.js 16 + shadcn/ui + Socket.IO（app/(auth)login、app/(main){alarms,diagnosis,reports,knowledge,graph,audit}）
 ├─ db/migrations/       PostgreSQL 迁移（0001 / 0003 / 0004 / 0005 / 0006 / 0007[P7 自动触发]）
 ├─ deploy/              ★ 交付包：docker-compose.yml + up/init/smoke/down.ps1 + .env.example + images.digest.md
@@ -270,7 +283,7 @@ auscult/
 ├─ docker/              compose.base / compose.ingest / compose.v2 / compose.nginx / compose.monitoring / compose.v4b-iso + Dockerfile.decoder
 ├─ monitoring/          Prometheus + Grafana（临时件：压测期启动、测后销毁）
 ├─ configs/             alarm_rules / risk_rules / retrieval / logging / mosquitto / redis / decoder_schema_mapping / triple_schema
-├─ scripts/             85 个 Python 执行器（37 含 --selftest，P7 增 embedding_cache）+ 2 个 PowerShell 运维脚本
+├─ scripts/             86 个 Python 执行器（39 含 --selftest，P7 增 embedding_cache / smoke_agent_cloud 云端 Agent 实跑冒烟）+ 2 个 PowerShell 运维脚本
 ├─ tests/               回归测试（pytest；含 tests/e2e/ 的免 Playwright 场景级 E2E）
 ├─ schemas/             tools_v1(FROZEN) … tools_v5 + tools_p2_retrieve（**当前基线 = tools_v4**）
 ├─ prompts/             工具调用 / 拒止 / R-4 提示词（v4 为当前最优候选；v2 含泄漏禁用）

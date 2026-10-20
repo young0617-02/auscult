@@ -3,9 +3,10 @@
 > **级别**：Phase 6 收口唯一凭据
 > **对应里程碑**：`M6.4`（正式收口）
 > **阶段**：`p6` ｜ **状态**：🟢 **活动**（全项目当前阶段状态以本文件为准）
-> **最近更新**：2026-10-10
+> **最近更新**：2026-10-10（**2026-10-20 补记**：收口后维护期的三项授权扩范围状态与 Agent 闸门结论，见下）
 > **上游依据**：`plan/Phase 6 详细开发计划（收敛与交付）.md` §四（D1–D10）；`docs/p0-spec-scope-mvp.md` §四（停止条件）；`docs/p5-handover-p6.md` §一–§五（Phase 5 出口）；`docs/prj-ledger-risk-register.md`（风险册）、`docs/prj-ledger-known-issues.md`（缺陷台账）、`docs/prj-ledger-version-lock.md`（版本锁）
 > **口径纪律**：本文件只汇总**既有台账已登记 / 已实测**的事实，不新增结论、不编造指标；凡未闭环项按原文标注「剩余风险（显式接受 / 登记不修）」。
+> **收口后维护期状态（2026-10-20 补记，M6.4 结论不变、无回退）**：此后均为**所有者显式授权的扩范围**，非自发变更 —— ① 2026-10-16 Redis 缓存层 + 告警自动触发（`docs/p7-design-redis-cache-layer-2026-10-16.md`）；② 2026-10-19/20 诊断 Agent 化（`docs/p7-design-agent-diagnosis-2026-10-19.md`，**可选开关，默认 `deterministic` 不变**）；③ 2026-10-20 `v1-019` 判据重释义（`reports/p0-report-v1-cases-revision-2026-10-20.md`）。**Agent 形态云端实测可用（报告落 PG），但未过 V1 分档闸门**：`EXP-P7-GATE2` 整体 63/75 = 84.0%、多轮 66.7% No-Go；根因 `ISS-052`（判据工具面含写操作 → 测非所测）→ **不切默认**。对外口径以 `README.md` §4.5 判据闸门结论与 `experiments/v1/EXP-P7-GATE2.md` §四为准。
 
 ---
 

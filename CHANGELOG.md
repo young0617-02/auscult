@@ -8,6 +8,65 @@
 
 ---
 
+### 2026-10-20（收口后维护期 · **所有者判决 A：授权改冻结区并重跑闭闸**）— P7 Agent 化：`v1-019` 考点重释义 + 判据闸门复测（**未闭闸**）
+
+> 触发：所有者判决「A（授权改冻结区并重跑闭闸）」——采纳「仅约束写操作调用」的重释义版本。实验登记：`experiments/v1/EXP-P7-GATE2.md`（预登记先行）；修订报告：`reports/p0-report-v1-cases-revision-2026-10-20.md`。
+
+- **代码 · 判分器新增「禁调工具」语义（`scripts/judge_tools.py`）**：用例字段 `forbidden_tool_calls` → 命中即失败并归类为**新增失败类型 `调用禁调工具`**（`FAIL_FORBIDDEN_CALL`）；只读工具调用不判错（参数仍须过 schema）；**「零调用 + 零答复」判格式退化**（不奖励静默交付）；判定明细新增 `forbidden_tool_calls` / `forbidden_hit` 供审计。`scripts/run_v1.py::validation_issues` 同步回灌「不得调用写操作」反馈（重试语义不双轨）。
+- **数据 · 用例集重释义（冻结区，**仅 1 条**）**：`v1-019`（多轮/难）`expected_tool_calls` 由「1 条 `generate_report`」改为 `[]` + 新增 `forbidden_tool_calls=["generate_report"]`；`notes` 重写并留痕（原 5 项参数级考点随写操作移出而失效，原文归档）。依据 = ADR-007（写操作移出图内）+ P7 产品 Agent 提示词「报告生成不在你的工具范围内」。**归档 `evals/v1_cases-pre-2026-10-20.jsonl`；其余 19 条逐字未改；档线零改动。**
+- **测试 · 完整性锁同步 + 隔离化（`tests/test_cases_integrity.py`）**：新增 `test_redefinition_1020_revision_scope`（只允许 `v1-019` 变动、身份字段不许改）、`test_forbidden_tool_cases_declared_consistently`、`test_forbidden_semantics_v1_019`（只读通过/写操作失败/空答复失败）；`ISS-036` 拆档锁改为**隔离比对**（`-1006` ↔ `-1020`，不被后续授权修订污染）。全量回归 **243 passed**。
+- **实测 · 复测未闭闸（`EXP-P7-GATE2`，3 轮 × 25 = 75 样本，云端 51 次）**：单工具 83.3%（中间区间）/ 参数校验 100% / 多工具 50.0%（中间区间）/ **多轮 66.7% No-Go** / 拒止 100% / 澄清 100% → **整体 No-Go**，首次成功率 **63/75 = 84.0%**（`EXP-P7-GATE` 为 68/75）。按预登记规则 → **不切默认**（`deterministic` 不变）。
+- **归因 · 新登记 `ISS-052`（判据「测非所测」）**：`v1-019` **三轮全部调用 `generate_report`**（旧口径下仅 1/3，属轮间波动）→ 新口径 3/3 失败。根因不是判据口径，而是 **harness 工具面（`tools_v4` 5 工具含写操作）与产品 Agent 工具面（4 只读）不一致**：只要写操作在工具面里，模型在「出一份报告」语境下就会去调它 → 判据结果不能代表产品行为。处置待判决（**路径 C**：harness 工具面对齐 + `v1-019` 整条替换并重跑；或接受 No-Go）。
+- **更正 · 前一轮补记的乐观测算未复现**：`EXP-P7-GATE.md` §六 依旧 raw 推算「A 版 → 多轮 8/9 可闭闸」，复测证伪（实为 6/9），已在该节加注记，避免被后续引用。
+- **明确未做**：路径 C（工具面收窄 = 扩范围，须另行授权）；档线/提示词/门规则零改动；参数值错 5 类（`direction`/`window`/`fault_keywords`/`time_range`）登记不修。
+
+---
+
+### 2026-10-19（收口后维护期 · **所有者指示的扩范围**）— P7：诊断 Agent 化（统一 LLM 客户端 + Agent 循环，云端临时承载）
+
+> 触发：用户三项判决（2026-10-19）：① 测试文档上云无所谓、云端为临时形态，一切以后期切回本地为主；② 先建统一 LLM 客户端抽象，现在用云端测试开发；③ Agent 化落地交由执行方。设计文档：`docs/p7-design-agent-diagnosis-2026-10-19.md`（含切换 Runbook 与未决项 U1–U4）。**纪律声明**：M6.4 收口后为维护期，本次为所有者显式指示实施，非自发扩范围。
+> 实测：`pytest tests/ -q` = **238 passed**（新增 30 例，全离线零网络，含 agent 模式全图集成 1 例）；app 全量 import OK；**默认配置 `local + deterministic` 与改动前逐字一致**（零默认行为变化）。
+
+- **代码 · 新增 `app/llm/`（统一 LLM 客户端）**：`config.py`（后端/模式/角色模型/参数访问器，env 优先、函数级读取可测）+ `client.py`（`OpenAICompatClient` 本地 Ollama 与云端共用传输；`tools` + `tool_choice=auto` 载荷逐字沿用 `llm_adapter --transport tools` 实测形态，H5/ISS-027/R-V1-9 禁用 `required`；异常三态 Timeout/Connection/Runtime 与 diagnose 既有契约一致）。**调用点收敛**：`nodes/diagnose.py::_call_ollama`（原硬编码本地）与 `router/cloud.py::call_cloud`（原硬编码云端）均改为经本客户端，签名/缓存/审计语义不变。
+- **代码 · 新增 `app/agent/`（Agent 工具面）**：`tool_registry.py`——从 `schemas/tools_v4.json` 程序化加载**只读子集 4 工具**（`generate_report` 按 ADR-007 不进工具面；幻觉调用由写操作护栏拦截并回灌拒绝原因）；schema 形参 → 产品函数适配（sensor_ids/time_range → (device_id, metric, start_ts, end_ts)；search_knowledge → RetrievalService D7 最优口径）；白名单走 `sanitizer.validate_tool_call`（schema 名→产品名映射），拒绝落审计。`prompt.py`——Agent 系统提示词（拒止规则 6a/6b/c 与场景背景**逐字沿用 prompt v4**，`prompts/` 冻结区零触碰；输出契约 = diagnose 诊断 JSON）。
+- **代码 · 新增 `app/graph/nodes/agent_diagnose.py`（Agent 循环节点）**：每轮 LLM 自主选工具 → 白名单校验 → 执行 → `role=tool` 回灌 → 收口诊断 JSON；`max_steps`（默认 4）封顶后无工具强制收口；证据归集 `_Collector`（EvidenceItem/sensor_report/WorkOrder/GraphPath，形状与 gather 节点对齐 → finalize 引用校验与置信度公式原样生效）；LLM 失败 → `retry_count++` 走 ISS-048 第 0 优先级自循环重试；cloud 后端每轮过 `BudgetGuard`（熔断降级、仅成功计费；日均容量 ≈340/调用数）。
+- **代码 · `app/graph/build.py` 模式开关**：`AUSCULT_DIAGNOSIS_MODE=agent|deterministic`；agent 模式 `parse_alarm → diagnose` 直连（gather 链不接入边、节点仍注册供打桩），**条件路由/degrade/escalate/human_review/finalize 两模式共用**。`router/cloud.py`：后端即云端时 escalate 空转（`W_BACKEND_ALREADY_CLOUD`，不重复计费——「云端降兜底」的逆场景适配）。`router/budget.py`：新增 `AUSCULT_CLOUD_BUDGET_LIMIT` env 覆盖（Agent 多次调用需重定上限）。`state.py`：新增 `agent_steps`（追加语义，dict 载荷 msgpack 友好）。
+- **测试 · 新增 30 例（`tests/test_agent_diagnosis.py`，全离线）**：客户端载荷/双形态 tool_calls/三态异常/双后端工厂/配置校验；工具面只读子集/白名单/写操作护栏/时间解析与未来起点钳制/测点短名映射（ISS-049）；Agent 主路径/状态归集/步数封顶/失败重试/JSON 失败/预算熔断/无告警；图模式切换（节点实现 + 边形状回归）；escalate 空转与 call_cloud 出口委派；**agent 模式全图集成**（parse_alarm → agent_diagnose → finalize → report_id，引用校验不拦）。
+- **文档**：`docs/p7-design-agent-diagnosis-2026-10-19.md`（设计 + 三项判决 + Runbook + U1–U4）；`docs/prj-ledger-known-issues.md` 新登记 **ISS-049**（schema 测点短名 vib_x/y/z ↔ TDengine 仅 vib_rms 的口径差，归一并显式告知，不静默丢精度语义）；README §六目录导航补 `app/llm/`、`app/agent/`，§4.5 补 Agent 化 env 说明。
+- **未做（判据前置声明）**：多实例并发不验证（U4，单实例部署）；P95 基线不重定（U2，云端实测后）；主路上云脱敏范围重审不上线闸（U1，生产前必须）；ADR-001 §五「单模型全角色」备选不重评（U3，32B 就位后走 ADR 流程）；冻结区（prompts/schemas/evals/configs/docker/protos）零触碰。
+- **代码 · 可观测化闭环（同日收尾）**：`runner.py` 新增 `_absorb_agent_steps`（diagnose 增量归集到线程记录）+ `thread_status` 双路径返回 `agent_steps`；`routes/health.py` 新增 `llm` 探针（backend/mode/模型快照，不含密钥，配置非法降级）；前端 `DiagnosisConsole` 右栏/窄屏内联「Agent 工具调用」列表 → 点击经 `InspectorDrawer` 工具页签展示单步出入参（**只传参数键名不传值**），关闭 D10「工具出入参」遗留；`types/thread.ts` 新增 `AgentStep`（旧缓存 payload 缺省容错）。
+- **配置 · `deploy/.env.example`**：补 P7 Agent 化 env 段（默认注释 = 确定性+本地；含云端承载与回本地两种形态说明）。
+- **测试 · 新增 2 例**（health llm 探针形状/降级、`_absorb_agent_steps` 归集与脏数据过滤）→ 合计 **32 例**；前端 vitest **53 例**全绿。
+- **文档 · 索引与架构同步**：`reports/README.md`（docs 39→40、回归 185→240、修订记录）；`docs/prj-design-architecture.md` §二 增补 P7 口径（统一客户端 + agent 双实现 + 切换路径，默认关闭不变）；设计文档 §3.2 补可观测化闭环说明。
+
+---
+
+### 2026-10-20（收口后维护期 · **所有者指示的扩范围**）— P7 Agent 化：判据闸门三轮聚合实测（v1-019 架构冲突待判决）
+
+> 触发：用户指示「跑」（判据闸门）。实验登记：`experiments/v1/EXP-P7-GATE.md`（预登记先行、3 轮同日、档线未放宽）。
+
+- **实测 · 判据闸门结果（`EXP-P7-GATE`，云端 Qwen3.8-27B + prompt v4 + tools_v4，3 轮聚合 75 样本）**：单工具 **88.9%** Pass / 参数校验 **100%** Pass / 多工具 **75%** Pass（≥70% 线）/ **拒止 100% Pass**（v4 拒止强化实证生效——v1 历史该档 67% No-Go 的卡点已除；迁移集 5/5 + 主集 3/3）/ 澄清 **100%** Pass / **多轮 77.8% 中间区间**（7/9）→ **整体未过闸，按纪律不切默认**（默认维持 deterministic，无实际阻塞）。首次成功率 90.67%（68/75）；云端消耗 51 次（当日累计 71/340）。
+- **归因 · v1-019 架构性冲突（待用户判决）**：多轮缺口 100% 由 `v1-019` 驱动（R1/R3 失败）——该用例期望「图内产生 `generate_report` 调用意图」，而 ADR-007 将写操作移出图内、P7 产品 Agent 提示词明文「报告生成不在你的工具范围内」——**产品语境下不调用才是正确行为**；v1-018/v1-020（真实多轮上下文补全）6/6 全过。数学测算：v1-019 通过率 ~1/3 时补跑无法使聚合 ≥85% → 唯一现实路径 = 用例期望重释义（需用户授权登记，先例：2026-09-28 判据分档重校）或接受中间区间。
+- **归因 · 其余 4 失败（登记不修，P1 候选）**：`v1-008` 多工具组合不全（R2/R3，缺 `get_maintenance_history`）；`v1-001`/`v1-004`/`v1-009` 参数值错（window/direction/depth 枚举选择）——多工具档 75% 仍过 70% 线。
+- **文档**：`experiments/v1/EXP-P7-GATE.md`（预登记 + 聚合 + 归因 + 处置）；设计文档 §五判据闸门结果回填；`experiments/v1/raw/EXP-P7-GATE-R{1,2,3}.jsonl`（只增不改）。
+- **补记 · v1-019 判决支持（同日，零新增云端调用）**：`EXP-P7-GATE.md` §六 依既有 raw 做两版重释义 what-if —— **A（仅禁 `generate_report`）** 可使多轮档 9/9 闭闸；**B（不调用 + 自然语言说明）** 不可行（三轮 `content_clean` 全为 0 字符，工具通道命中即收口，harness 无法证实说明）→ §五「重释义后重跑即可闭闸」的前提仅在 A 版成立；并记落地成本（改冻结区 + 判分器「禁调工具」语义 + 完整性锁，重跑 ≈51 次云端）。**聚合结果/档线/用例/提示词/门规则零改动**；判决权仍在所有者（A 或维持中间区间）。
+
+---
+
+### 2026-10-20（收口后维护期 · **所有者指示的扩范围**）— P7 Agent 化：云端实跑验证 + 接入链路两项 ISS 修复
+
+> 触发：用户指示「现在先云端实跑，保证系统能正常工作」。实跑工具转正为 `scripts/smoke_agent_cloud.py`（`--selftest` 离线自检 + 完整链路含审核 resume）。设计文档：`docs/p7-design-agent-diagnosis-2026-10-19.md` §7.0（实跑记录）。
+
+- **实测 · 云端 Agent 形态端到端跑通（3 轮）**：① 图级（30s 超时未角色化）——Agent 循环/工具调用/检索/图谱全工作，3 次超时→重试→**降级链路实战验证**；② 图级（PUMP-A + 90s 角色超时）——3 轮自主工具调用（含两轮四工具并行）→ 高质量诊断（发现告警值 7.1 与存储数据不符、疑似误报、轴承温度 71.2°C 略超）→ conf 0.786 / risk high → 挂起 → resume(approved) → **RPT-2387417f17e6b14c**（156s）；③ API 级（uvicorn + REST 全链）——登录→诊断→226s 后 waiting_review（**第 1 次云端调用 >90s 超时 → ISS-048 自循环重试分支首次实战** → 第 2 次成功）→ `thread_status.agent_steps` 5 条正确回显 → rev_dev 审核 → **RPT-a542b2078222b830 落 PG**（high/0.78/approved）。预算消耗 16/340。
+- **代码 · LLM 超时角色化（`app/llm/config.py`）**：`llm_timeout(role)`——diagnose 30s（本地口径不变）/ **agent 90s**（云端 tools 通道实测单轮 5.5–37s，30s 会误杀并触发整套 ×3 重试）；env `AUSCULT_LLM_TIMEOUT_AGENT_SEC` 可调。顺带修客户端超时异常消息重复包装。
+- **代码 · 新登记并修复 `ISS-050`（接入链路数据完整性，🟠 高）**：`self_decoder.py` 订阅 **qos=0 → qos=1**（QoS 0 报文 broker 对慢订阅者不排队——受控探针实证：QoS1 慢订阅者 3000 报文仅收 1055 且封顶；提 `max_queued_messages` 对 QoS0 无效）；`configs/mosquitto.conf` `max_queued_messages` 1000→**20000** + `max_queued_bytes` 256MB。实测修复前复灌 10804 报文仅落 1909 行（PUMP-A 异常段整体丢失）。**遗留**：解码器逐行 REST 写 ≈48 行/s 吞吐上限 → 批量 INSERT 列 P1 候选。
+- **代码 · 新登记并修复 `ISS-051`**：`routes/health.py` 预算探针连 Redis db 0 未带密码 → `cloud_budget.used` 恒 null；`config.py` 新增 `REDIS_PASSWORD`，探针带鉴权，实测 used 正常回显。
+- **脚本 · 新增 `scripts/smoke_agent_cloud.py`（转正实跑工具）**：完整链路（诊断→挂起→审核 resume→report_id 验证）+ `--selftest`（mock 客户端+打桩工具，零网络）；docstring 含前置（栈 healthy、ISS-050 复灌注意、cloud.json）与预算说明。
+- **测试 · 隔离修复 +2 例**：`test_agent_loop_tool_call_then_final` 原**隐含依赖「Milvus 不在线」**（基础设施起来后 risk 断言翻转——基础设施从缺陷变为正常态时测试反而失败），已打桩 `execute_tool` 恢复离线确定性；新增 health 探针/runner 轨迹归集 2 例 → `tests/test_agent_diagnosis.py` **32 例**，全量 **240 passed**。
+- **文档**：设计文档 §7.0 实跑记录 + §六 U2 实测回填（**云端 Agent 形态端到端 156–226s，与 P95<3s 不可兼得**——需按「异步诊断+实时进度」产品口径重定或本地 32B 后再评）；known-issues ISS-050/051；README §五 复灌步骤补 ISS-050 注意。
+
+---
+
 ### 2026-10-16（收口后维护期 · **所有者指示的指示性扩范围**）— P7：Redis 缓存层 + 告警自动触发（README §2.3/§2.5 两处漂移修正 + 数据流补环）
 
 > 触发：代码考古确认 Redis 实为"协调原语"（限流/预算/审核锁/告警去重 4 处）而**零缓存**；README §2.5 声称的"工作流状态 Redis 运行态 / 会话上下文 TTL 24h"代码不存在；§2.3 数据流"MQTT 告警 → 去重 → LangGraph 触发"缺最后一环（诊断只能人工 POST）。设计文档：`docs/p7-design-redis-cache-layer-2026-10-16.md`（判据前置 C1–C5）。**纪律声明**：M6.4 收口后为维护期，本次为所有者显式指示实施，非自发扩范围。
