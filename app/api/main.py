@@ -22,6 +22,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
 from app.api.config import JWT_SECRET
+from app.api.auto_trigger import start_auto_trigger_watcher
 from app.api.errors import ApiError, ERROR_STATUS, fail, get_trace_id, ok, set_trace_id
 from app.api.routes import alarms, auth, diagnose, graph, health, knowledge, reports, review
 from app.api.socket import sio as sio_server, start_background_tasks
@@ -36,6 +37,7 @@ async def lifespan(_: FastAPI):
     setup_logging()               # 结构化 JSON 日志（P5-W2/D8）
     start_background_tasks()      # alarm:new 轮询桥接（D0-4）
     start_lifecycle_watcher()     # 审核 4h 通知 / 24h 超时降级（D0-5）
+    start_auto_trigger_watcher()  # 告警自动触发诊断（P7；默认关闭，AUSCULT_AUTO_TRIGGER=1 启用）
     yield
 
 

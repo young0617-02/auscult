@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -34,6 +35,10 @@ from fuse_rrf import fuse_rrf
 from query_rewrite import rewrite as q_rewrite
 from retrieval import retrieve_all
 from rerank import rerank
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ---------------------------------------------------------------- 工具定义（OpenAI 兼容）
@@ -75,6 +80,37 @@ def with_tools(existing: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 # ---------------------------------------------------------------- 常驻服务
 
+# 知识版本令牌进程内缓存（P7 检索缓存失效维度；PG 不可达 → "unknown"，
+# 退化为「无版本隔离 + TTL 有界」模式，30s 刷新窗口封顶陈旧度）
+_VERSION_TOKEN_TTL_SEC = 30.0
+_version_token_cache: tuple[str, float] | None = None
+
+
+def _knowledge_version_token() -> str:
+    """knowledge_versions.max(id) 字符串化；任何失败 → "unknown"（不抛）。"""
+    global _version_token_cache
+    now = time.monotonic()
+    if _version_token_cache and now - _version_token_cache[1] < _VERSION_TOKEN_TTL_SEC:
+        return _version_token_cache[0]
+    token = "unknown"
+    try:
+        import psycopg                                          # noqa: PLC0415
+        conn = psycopg.connect(
+            host=os.environ.get("PG_HOST", "127.0.0.1"),
+            port=int(os.environ.get("PG_PORT", "5433")),
+            dbname=os.environ.get("PG_DB", "auscult_v2"),
+            user=os.environ.get("PG_USER", "root"),
+            password=os.environ.get("PG_PASSWORD", "123456"),
+            connect_timeout=2)
+        with conn:
+            row = conn.execute("SELECT max(id) AS m FROM knowledge_versions").fetchone()
+        token = str(row[0]) if row and row[0] is not None else "empty"
+    except Exception:                                         # noqa: BLE001 - 降级不抛
+        pass
+    _version_token_cache = (token, now)
+    return token
+
+
 class RetrievalService:
     """进程内常驻的 W1→W5 检索服务（模型/索引仅加载一次）。"""
 
@@ -85,7 +121,7 @@ class RetrievalService:
         self.top_k = top_k
         self.mode = mode
         self.use_rerank = use_rerank      # D7消融：False→跳过重排，直接用RRF排序
-        self._embedder = None            # BGE-M3（惰性）
+        self._embedder = None            # BGE-M3（惰性，P7 起经 CachedEmbedder 代理）
         self._reranker = None            # CrossEncoder（惰性）
         self._text_index: dict[str, str] | None = None
         self._sub_index: dict | None = None
@@ -96,7 +132,10 @@ class RetrievalService:
         if self._embedder is None:
             from run_v2 import BGE_M3_MODEL_PATH        # noqa: PLC0415
             from run_v2 import EmbeddingClient as Emb   # noqa: PLC0415
-            self._embedder = Emb(BGE_M3_MODEL_PATH)
+            from embedding_cache import wrap_embedder   # noqa: PLC0415
+            # P7：外挂缓存代理（接口与 EmbeddingClient 一致，透明替换）
+            self._embedder = wrap_embedder(Emb(BGE_M3_MODEL_PATH),
+                                           BGE_M3_MODEL_PATH)
         return self._embedder
 
     def _reranker_once(self):
@@ -133,7 +172,55 @@ class RetrievalService:
         return texts, subs, pars
 
     # -- 主流程 --
-    def retrieve(self, question: str, *, mode: str | None = None) -> dict[str, Any]:
+    def retrieve(self, question: str, *, mode: str | None = None,
+                 cache_key: str | None = None) -> dict[str, Any]:
+        """W1→W5 检索（P7：可经 Redis 缓存，命中直接返回）。
+
+        Args:
+          question: 原始检索问题（进 prompt/链路，也默认进缓存 key）
+          mode: 改写模式（rules/llm）
+          cache_key: 缓存 key 用的归一化语义（如 "PUMP-A-01|振动烈度"）。
+             **不得含告警数值等逐次变化的字段**——调用方负责归一化；
+             不传则退化为 question 原文（CLI 场景）。
+        """
+        mode = mode or self.mode
+        qkey = cache_key if cache_key is not None else question
+        try:
+            from app.cache import (                               # noqa: PLC0415
+                cache_get_retrieval, cache_set_retrieval,
+            )
+            vt = _knowledge_version_token()
+            hit = cache_get_retrieval(vt, mode=mode, top_k=self.top_k,
+                                      use_rerank=self.use_rerank,
+                                      cache_key=qkey)
+        except Exception:                                         # noqa: BLE001 - 缓存故障直穿
+            hit = None
+        if hit is not None:
+            # 命中：latency 归零（标注 cache_hit，不伪造分段耗时），
+            # 其余契约键原样返回（items/evidence_refs/degraded 均来自落盘值）
+            hit = dict(hit)
+            hit["latency"] = {k: 0.0 for k in hit.get("latency", {})}
+            hit["latency"]["cache_hit"] = True
+            hit["tool_metadata"] = {**hit.get("tool_metadata", {}),
+                                    "cache_hit": True,
+                                    "knowledge_version_token": vt}
+            return hit
+
+        result = self._retrieve_uncached(question, mode=mode)
+        try:
+            from app.cache import cache_set_retrieval             # noqa: PLC0415
+            # 仅缓存成功（非降级）结果：降级结果往往是临时故障产物，
+            # 缓存会把「一时不可用」固化成「一段时间不可用」
+            if not result.get("degraded"):
+                cache_set_retrieval(vt, mode=mode, top_k=self.top_k,
+                                    use_rerank=self.use_rerank,
+                                    cache_key=qkey, payload=result)
+        except Exception:                                         # noqa: BLE001 - 写失败不影响结果
+            pass
+        return result
+
+    def _retrieve_uncached(self, question: str, *,
+                           mode: str | None = None) -> dict[str, Any]:
         mode = mode or self.mode
         lat: dict[str, float] = {}
         tt = time.perf_counter()
