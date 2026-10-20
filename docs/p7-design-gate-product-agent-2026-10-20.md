@@ -93,7 +93,7 @@ V1 用例 ──▶ 产品 Agent 本体（agent_diagnose 循环 + tool_registry 
 
 1. 所有者授权开工（本文档即立项凭据，开工需一句确认）；
 2. `app/agent/` + `agent_diagnose` 全绿（已满足：`tests/test_agent_diagnosis.py` 32 例）；
-3. 预算：当日 `budget:cloud:{date}` 余量 ≥ 102（当前口径 195/340 已用，需另选日期或先调锁）；
+3. 预算：当日 `budget:cloud:{date}` 余量 ≥ 102（2026-10-20 口径已用 195/340，余 145，**单日可容纳**；若与其它实验同日叠加则须先调锁）；
 4. 档线与聚合口径**书面声明不变**（本档线一字不改）。
 
 ## 八、修订记录
