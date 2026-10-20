@@ -1,8 +1,10 @@
-"""V1 用例集完整性测试 —— 锁定「路径 B」修订（`ISS-029` / `R-V1-11`）。
+"""V1 用例集完整性测试 —— 锁定历次授权修订。
 
 作用：防止 (a) 用例集被静默改动、(b) 「非考点参数」被重新塞回 `expected` 而使
-     `ISS-029` 复发、(c) `lenient_param_defaults` 多解机制失效。
-依据：`reports/p0-review-v1-criteria-r4.md`、`reports/p0-report-v1-cases-revision-2026-10-05.md`
+     `ISS-029` 复发、(c) `lenient_param_defaults` 多解机制失效、
+     (d) 2026-10-20 的 `v1-019` 重释义被扩散到其他用例或丢失「禁调」语义。
+依据：`reports/p0-review-v1-criteria-r4.md`、`reports/p0-report-v1-cases-revision-2026-10-05.md`、
+     `reports/p0-report-v1-cases-revision-2026-10-20.md`
 """
 import json
 from pathlib import Path
@@ -15,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CASES_PATH = ROOT / "evals" / "v1_cases.jsonl"
 ARCHIVE = ROOT / "evals" / "v1_cases-pre-2026-10-05.jsonl"          # 路径 B 之前
 ARCHIVE_1006 = ROOT / "evals" / "v1_cases-pre-2026-10-06.jsonl"     # ISS-036 拆档之前
+ARCHIVE_1020 = ROOT / "evals" / "v1_cases-pre-2026-10-20.jsonl"     # v1-019 重释义之前
 SCHEMA = ROOT / "schemas" / "tools_v4.json"
 
 CASES = [json.loads(l) for l in CASES_PATH.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -38,6 +41,10 @@ def test_case_required_keys_present(case):
     if case["expect_reject"]:
         # 「无效拒绝」用例的正确行为是**不调用工具** → 期望调用列表必须为空
         assert case["expected_tool_calls"] == [], f"{case['case_id']} 是拒绝用例，不应有期望调用"
+    elif case.get("forbidden_tool_calls"):
+        # 禁调用例（2026-10-20 v1-019 重释义）：考点是「不得产生被禁调用」→ 正向期望为空
+        assert case["expected_tool_calls"] == [], \
+            f"{case['case_id']} 是禁调用例，不应同时声明正向期望"
     else:
         assert case["expected_tool_calls"], f"{case['case_id']} 无期望调用"
 
@@ -56,6 +63,47 @@ def test_every_expected_tool_exists_in_schema():
     for c in CASES:
         for call in c["expected_tool_calls"]:
             assert call["name"] in SCHEMAS, f"{c['case_id']} 引用了未知工具 {call['name']}"
+        for name in c.get("forbidden_tool_calls") or []:
+            assert name in SCHEMAS, f"{c['case_id']} 禁调了未知工具 {name}"
+
+
+def test_forbidden_tool_cases_declared_consistently():
+    """禁调声明只允许出现在**非拒绝**用例上，且当前仅 `v1-019`（防扩散/防双轨）。"""
+    for c in CASES:
+        if c.get("forbidden_tool_calls"):
+            assert c["expect_reject"] is False, \
+                f"{c['case_id']} 既声明拒绝又声明禁调 —— 判分语义双轨"
+            assert "refusal_kind" not in c, \
+                f"{c['case_id']} 非拒绝用例不应带 refusal_kind"
+    assert BY_ID["v1-019"].get("forbidden_tool_calls") == ["generate_report"], \
+        "v1-019 的禁调目标应为 generate_report（写操作，ADR-007 移出图内）"
+
+
+def test_forbidden_semantics_v1_019():
+    """重释义后的判分语义：只读调用通过 / 调用写操作失败 / 空答复失败。"""
+    case = BY_ID["v1-019"]
+
+    def _rec(calls, content=""):
+        return {"model": "mock", "attempt": 1, "repeat": 1, "cold_start": True,
+                "expected": case,
+                "result": {"tool_calls": calls, "tool_calls_missing": not calls,
+                           "content_clean": content, "latency_ms": 1.0}}
+
+    read_call = [{"name": "search_knowledge", "arguments": {"query": "振动 标准限值"}}]
+    assert jt.judge_record(_rec(read_call), SCHEMAS)["success"], "只读调用不应判错"
+
+    write_call = [{"name": "generate_report",
+                   "arguments": {"device_id": "PUMP-A-01",
+                                 "diagnosis_summary": "驱动端轴承磨损，建议停机更换",
+                                 "evidence_refs": [{"type": "sensor",
+                                                    "ref": "PUMP-A-01.vib_x"}]}}]
+    judged = jt.judge_record(_rec(write_call), SCHEMAS)
+    assert not judged["success"] and judged["failure"] == jt.FAIL_FORBIDDEN_CALL
+    assert judged["forbidden_hit"] == ["generate_report"]
+
+    assert jt.judge_record(_rec([], "报告须经审核后由系统生成。"), SCHEMAS)["success"], \
+        "零调用但有答复应通过（A 版判据：仅约束写操作调用）"
+    assert not jt.judge_record(_rec([], ""), SCHEMAS)["success"], "零调用且零答复应判失败"
 
 
 def test_type_coverage():
@@ -187,16 +235,49 @@ def test_pre_revision_archive_exists_and_differs():
             assert old[cid][k] == mid[cid][k], f"{cid}.{k} 不应被修订"
 
 
+def _load(path: Path) -> dict[str, dict]:
+    return {json.loads(l)["case_id"]: json.loads(l)
+            for l in path.read_text(encoding="utf-8").splitlines() if l.strip()}
+
+
 def test_iss036_split_revision_scope():
-    """`ISS-036` 拆档修订：相对 `-pre-2026-10-06` 应**只新增** `refusal_kind`，其余字段零改动。"""
-    before = {json.loads(l)["case_id"]: json.loads(l)
-              for l in ARCHIVE_1006.read_text(encoding="utf-8").splitlines() if l.strip()}
-    added = [cid for cid in BY_ID if "refusal_kind" in BY_ID[cid]]
-    assert sorted(added) == sorted(cid for cid in BY_ID if BY_ID[cid]["expect_reject"]), \
+    """`ISS-036` 拆档修订：`-pre-2026-10-06` → `-pre-2026-10-20` **只新增** `refusal_kind`。
+
+    按修订**隔离**比对（不拿当前文件比，避免后续授权修订污染该锁）。
+    """
+    assert ARCHIVE_1020.exists(), "缺少 -pre-2026-10-20 归档件（v1-019 重释义前）"
+    before, after = _load(ARCHIVE_1006), _load(ARCHIVE_1020)
+    added = [cid for cid in after if "refusal_kind" in after[cid]]
+    assert sorted(added) == sorted(cid for cid in after if after[cid]["expect_reject"]), \
         "refusal_kind 只应加在 expect_reject 用例上"
-    for cid in BY_ID:
-        x, y = before[cid], BY_ID[cid]
+    for cid in after:
+        x, y = before[cid], after[cid]
         assert set(y) - set(x) == ({"refusal_kind"} if y["expect_reject"] else set()), \
             f"{cid} 除 refusal_kind 外不应新增字段"
         for k in x:
             assert x[k] == y.get(k), f"{cid}.{k} 不得在拆档修订中被改动"
+
+
+def test_redefinition_1020_revision_scope():
+    """2026-10-20 重释义：相对 `-pre-2026-10-20` **只允许** `v1-019` 变动。
+
+    允许变动字段 = `expected_tool_calls` / `notes`，以及新增 `forbidden_tool_calls`；
+    身份字段（`input` / `type` / `difficulty` / `expect_reject`）不得改，其余 19 条须逐字一致。
+    """
+    before = _load(ARCHIVE_1020)
+    assert set(before) == set(BY_ID)
+    changed = [cid for cid in BY_ID if before[cid] != BY_ID[cid]]
+    assert changed == ["v1-019"], f"本次修订只应改 v1-019，实际 {changed}"
+
+    x, y = before["v1-019"], BY_ID["v1-019"]
+    assert set(y) - set(x) == {"forbidden_tool_calls"}, "只应新增 forbidden_tool_calls"
+    for k in ("input", "type", "difficulty", "expect_reject"):
+        assert x[k] == y[k], f"v1-019.{k} 不得在重释义中被改动"
+    assert y["expected_tool_calls"] == [], "重释义后正向期望应为空"
+    assert "【重释义 2026-10-20" in y["notes"], "重释义须在 notes 留痕（审计可追溯）"
+    # 非本用例的其余字段零改动（逐字比对，防顺手改参数）
+    for cid in BY_ID:
+        if cid == "v1-019":
+            continue
+        assert before[cid] == BY_ID[cid], f"{cid} 不得在重释义修订中被改动"
+

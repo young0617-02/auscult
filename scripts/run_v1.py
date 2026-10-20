@@ -136,8 +136,15 @@ def validation_issues(case: dict[str, Any], result: AdapterResult,
         issues.extend(judge_tools.validate(tool_schema, call.arguments, f"$.{call.name}"))
 
     expected_calls = case.get("expected_tool_calls", [])
+    forbidden = [str(x) for x in (case.get("forbidden_tool_calls") or [])]
     if case.get("expect_reject"):
         issues.append("该问题信息不足或超出范围，不应调用任何工具")
+    elif forbidden:
+        # 禁调用例（2026-10-20 v1-019 重释义）：只回报被禁调用，不要求正向匹配
+        hit = [c.name for c in result.tool_calls if c.name in forbidden]
+        if hit:
+            issues.append("写操作不在图内执行，不得调用：%s；报告生成由系统在审核后完成"
+                          % "、".join(sorted(set(hit))))
     else:
         ok, call_issues = judge_tools.match_expected_calls(
             expected_calls,

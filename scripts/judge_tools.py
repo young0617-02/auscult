@@ -42,7 +42,9 @@
   - 指标 5（首次成功率）与指标 6（重试后成功率）**必须分行报**，禁止只报「成功率」；
   - `tool_calls` 缺失属 **R-V1-3 静默退化**，记为 `格式退化`，**不得**混入「工具名错」；
   - `generate_report.idempotency_key` 由模型自生成，**只校验正则、不比对具体值**；
-  - 判据适用对象是**首次成功率**，重试后成功率仅作辅助。
+  - 判据适用对象是**首次成功率**，重试后成功率仅作辅助；
+  - **禁调用例**（`forbidden_tool_calls`，2026-10-20 起 `v1-019`）：正向期望为空，考点是
+    「不得产生被禁调用」，只读工具调用不判错，但「零调用 + 零答复」判失败（空答复）。
 
 自检：`python scripts/judge_tools.py --selftest`
 用法：`python scripts/judge_tools.py --raw experiments/v1/raw/results.jsonl --out experiments/v1/summary.csv`
@@ -84,6 +86,7 @@ FAIL_SHOULD_REJECT = "该拒绝却调用"
 FAIL_SHOULD_CALL = "该调用却拒绝"
 FAIL_DEGRADED = "格式退化"
 FAIL_STEP_CHAIN = "多工具步骤链失败"   # D4（P6 拆步）：execution_mode=step_chain 用例的链式失败
+FAIL_FORBIDDEN_CALL = "调用禁调工具"   # 2026-10-20 v1-019 重释义：写操作不得在图内产生
 
 # 由模型自生成、只校验格式不比对值的参数
 FORMAT_ONLY_PARAMS = {("generate_report", "idempotency_key")}
@@ -588,6 +591,10 @@ def judge_record(record: dict[str, Any],
     result = record["result"]
     expected_calls = case.get("expected_tool_calls", [])
     expect_reject = bool(case.get("expect_reject"))
+    # 2026-10-20 重释义（`v1-019`）：`forbidden_tool_calls` = **禁调用例**。
+    # 正向期望为空，考点是「不得在图内产生写操作调用」（ADR-007：写操作移出图内）；
+    # 只读工具调用**不判错**，但空答复（无调用且无文本）视为退化。
+    forbidden = [str(x) for x in (case.get("forbidden_tool_calls") or [])]
     _KIND, _KIND_SRC = refusal_kind_of(case)       # ISS-036：拒止 / 澄清 考点细分
     # D4（P6 拆步）：execution_mode=step_chain 时，实际调用来自逐步落盘的 result["steps"]；
     # 展平后仍走同一套 schema_valid 门槛（所有步的调用一并校验）。
@@ -601,7 +608,9 @@ def judge_record(record: dict[str, Any],
     # **期望行为**，不视为退化；仅真实请求错误（error）计入退化。
     degraded = result.get("error") is not None or (
         bool(result.get("tool_calls_missing")) and not expect_reject
+        and not forbidden      # 禁调用例：无调用属合法答复，退化的判据是"空答复"（见下）
     )
+    forbidden_hit = [c.get("name") for c in actual_calls if c.get("name") in forbidden]
 
     first_tool_match = bool(actual_calls) and bool(expected_calls) \
         and actual_calls[0].get("name") == expected_calls[0]["name"]
@@ -674,16 +683,29 @@ def judge_record(record: dict[str, Any],
     tool_set_match = Counter(c["name"] for c in expected_calls) == \
         Counter(c["name"] for c in actual_calls)
 
+    forbidden_case = bool(forbidden)
     if expect_reject:
         success = not actual_calls and not degraded
+    elif forbidden_case:
+        # 禁调用例：不产生被禁调用即为达标；若有调用须能通过 schema 门槛；
+        # 「零调用 + 零文本」= 空答复，判失败（不奖励静默交付）。
+        answer_text = (result.get("content_clean") or result.get("content_raw") or "").strip()
+        success = (not forbidden_hit
+                   and result.get("error") is None
+                   and (not actual_calls or not schema_errors)
+                   and (bool(actual_calls) or bool(answer_text)))
     else:
         success = bool(actual_calls) and calls_ok and not degraded and schema_valid
 
     # 失败归类（互斥，按优先级取首个）
     failure: str | None = None
     if not success:
-        if degraded and not actual_calls:
+        if forbidden_hit:
+            failure = FAIL_FORBIDDEN_CALL
+        elif degraded and not actual_calls:
             failure = FAIL_DEGRADED
+        elif forbidden_case and not actual_calls:
+            failure = FAIL_DEGRADED      # 禁调用例的空答复：既无调用也无文本
         elif should_reject_but_called:
             failure = FAIL_SHOULD_REJECT
         elif should_call_but_rejected:
@@ -731,6 +753,9 @@ def judge_record(record: dict[str, Any],
         "call_issues": "; ".join(call_issues),
         "should_reject_but_called": should_reject_but_called,
         "should_call_but_rejected": should_call_but_rejected,
+        # 2026-10-20 重释义（禁调用例）：被禁工具清单与实际命中，供审计追溯
+        "forbidden_tool_calls": forbidden,
+        "forbidden_hit": forbidden_hit,
         "degraded": degraded,
         "success": success,
         "failure": failure,
@@ -1117,6 +1142,31 @@ def _selftest() -> int:
                            "tool_calls_missing": False, "latency_ms": 10.0}}
     if not judge_record(_rec_sev, schemas)["success"]:
         failures.append("generate_report 非判决键（severity 不一致）不应判失败（v2 D5）")
+
+    # 6a3) 2026-10-20 重释义：**禁调用例**（v1-019）语义
+    _case_forb = {"case_id": "v1-019", "type": "多轮", "difficulty": "难",
+                  "expect_reject": False, "expected_tool_calls": [],
+                  "forbidden_tool_calls": ["generate_report"]}
+
+    def _forb_record(calls, content=""):
+        return {"model": "mock", "attempt": 1, "repeat": 1, "cold_start": True,
+                "expected": _case_forb,
+                "result": {"tool_calls": calls, "tool_calls_missing": not calls,
+                           "content_clean": content, "latency_ms": 10.0}}
+
+    _read_only = [{"name": "search_knowledge",
+                   "arguments": {"query": "轴承 振动 标准限值"}}]
+    if not judge_record(_forb_record(_read_only), schemas)["success"]:
+        failures.append("禁调用例：只读工具调用不应判失败")
+    _j_forb = judge_record(_forb_record([{"name": "generate_report",
+                                          "arguments": _report_args}]), schemas)
+    if _j_forb["success"] or _j_forb["failure"] != FAIL_FORBIDDEN_CALL:
+        failures.append(f"禁调用例：调用 generate_report 应判失败并归类"
+                        f"（实际 success={_j_forb['success']} failure={_j_forb['failure']}）")
+    if not judge_record(_forb_record([], "报告须经审核后由系统生成。"), schemas)["success"]:
+        failures.append("禁调用例：零调用但有答复应判通过")
+    if judge_record(_forb_record([], ""), schemas)["success"]:
+        failures.append("禁调用例：零调用且零答复不应判通过（空答复）")
 
     # 6a2) v2 回归：window 量纲归一等价（15m=15min=900s），裸数字"15"仍判错
     if not duration_equivalent("15m", "15min"):

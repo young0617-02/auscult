@@ -1,0 +1,64 @@
+{
+  "experiment_id": "EXP-P7-GATE2-R3",
+  "date": "2026-10-20",
+  "phase_item": "V1/H20",
+  "pipeline": "gate_rules -> cloud tools",
+  "gate": "gate_rules_v1",
+  "model": "Qwen/Qwen3.8-27B",
+  "prompt": "prompts\\tool_call_prompt_v4.md",
+  "schema_version": "tools_v4",
+  "cases": [
+    "evals\\v1_cases.jsonl",
+    "evals\\v1_refusal_transfer_v1.jsonl"
+  ],
+  "repeat": 1,
+  "records": 25,
+  "gate_short_circuits": 8,
+  "cloud_calls": 17,
+  "elapsed_s": 118.1,
+  "summary": {
+    "tiers": {
+      "单工具": 1.0,
+      "参数校验": 1.0,
+      "多工具": 0.5,
+      "多轮": 0.6666666666666666,
+      "拒止": 1.0,
+      "澄清": 1.0
+    },
+    "verdict": {
+      "单工具": "Pass",
+      "参数校验": "Pass",
+      "多轮": "No-Go（<70%）",
+      "拒止": "Pass",
+      "澄清": "Pass",
+      "多工具": "中间区间（50–70%）：须处置并记录代价",
+      "整体": "No-Go：多轮 No-Go（<70%） → 云端工具调用转正"
+    },
+    "first_pass_rate": 0.88,
+    "samples": 25,
+    "passed": 22,
+    "counts": {
+      "cloud_calls": 17,
+      "gate_short_circuits": 8
+    }
+  },
+  "adversarial": {
+    "cases": [],
+    "n": 0,
+    "gate_missed": [],
+    "gate_false_block": [],
+    "e2e_violations": [],
+    "cloud_failed": []
+  },
+  "input_sha256": {
+    "prompt": "9c8294f759be35318c426e95e2f2804a5ef349d372daa230db9f98ca5d894a5f",
+    "schema": "3070113baf3f8494f2218bfc33cc75d4a3b3b5e6d74d47797972bafdb229aed1",
+    "gate_rules": "11c100efa3ac9afb44e7d674fc1c8752841297be834aa491f09cc2bc5d5199ea",
+    "cases": {
+      "evals\\v1_cases.jsonl": "0e8057af3c55a1382df40d147b482e0954a60dadc4ee1875b39dbfd4b8296800",
+      "evals\\v1_refusal_transfer_v1.jsonl": "f0a548fc294f52b45f03fbe9a9d7e54747f70d9efda1553c1459aae351e54fe8"
+    }
+  },
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0"
+}
