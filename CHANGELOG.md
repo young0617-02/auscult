@@ -22,6 +22,20 @@
 
 ---
 
+### 2026-10-20（收口后维护期 · **所有者指示「开工 D」**）— P7：路径 D harness 落地 + 产品 Agent 本体首版实测（62/75，**不作切默认凭据**）
+
+> 触发：所有者 2026-10-20 指示「开工 D」。实验登记：`experiments/v1/EXP-P7-GATE-D.md`（预登记先行）；立项回填：`docs/p7-design-gate-product-agent-2026-10-20.md` §七之二。
+
+- **代码 · 新增路径 D harness（`scripts/run_agent_gate.py`）**：用**产品 Agent 本体**跑 V1 判据集 —— 产品提示词 `app/agent/prompt.py` + 产品工具面 `tool_registry.load_agent_tools()` + `agent_diagnose` 循环语义（工具回灌 → 再规划 → 收口 / 达上限强制收口 / 每轮过 `BudgetGuard`），**唯一替换** = 告警上下文 → 用例 `input` + `context`；工具执行打桩（白名单/写操作护栏/审计保持真实，审计重定向到 `experiments/`，**不污染** `reports/security_audit.jsonl`）；判分复用 `judge_tools`、聚合复用 `aggregate_runs`。新增派生指标（**不进六档**）：`forced_final` / `json_parse_ok` / `llm_calls` / `agent_steps` / `guard_violations`。
+- **实测 · `EXP-P7-GATE-D`（3 轮 × 25 = 75 样本，17 用例/轮，实际 150 次 LLM 调用）**：单工具 77.8% / 参数校验 75.0% / 多工具 66.7% / 多轮 77.8%（**四档中间区间**）/ 拒止 100% / 澄清 100% → **整体中间区间、无一档 No-Go**，首成 **62/75 = 82.67%**。13 个失败**全部为参数值错**（`v1-010` time_range 3/3、`v1-014` top_k 3/3、`v1-004` depth、`v1-001` window、`v1-018` aggregation、`v1-009` direction）；**工具名错 0、空转 0、越权 0**。
+- **三项口径偏离（如实登记）**：① **打桩漏装**（`main()` 未调 `install_stubs()`）→ 首跑实际走真实工具（`query_sensor` 因无告警 4 次报错）——**已修**（默认装桩 + `--no-stub` 开关）；② **`max_steps=2`**（产品默认 4，预算纪律下的显式偏离）；③ **预算超支**：实际 150 次（预估 108）→ 当日累计 **345/340**，超 5 次，**当日封盘、不调锁**。
+- **结构性发现（新登记 `ISS-053`）**：① **收口契约 × 用例形态错配** —— `v1-014` 三轮以 markdown 表格「回答」而非诊断 JSON 收口（`json_parse_ok=False` 3/3）；② **工具测点依赖告警** —— 产品 `query_sensor` 需 `sensor_ids` 或从告警推断，而 V1 用例无 `AlarmEvent`；③ **循环几乎不自行收口** —— `max_steps=2` 下 **48/51（94%）** 被强制收口（与 U2「异步诊断」判决互相印证）。
+- **测试**：新增 `tests/test_agent_gate.py` **6 例**（打桩必装 ×2 / 消息口径 / 离线自检 / 审计不落 reports / raw 可聚合）→ 全量 **251 passed**。
+- **处置**：**不作切默认凭据**（`deterministic` 不变）。下一版 D = 修 harness（告警前置 + 收口放行并单列 `answer_mode`）+ `max_steps=4`（预算另排日 ≈230 次）→ 重跑，才可裁决。
+- **文档**：README §4.5 增补 D 首版结论与「不作凭据」声明；`reports/README.md` 回归 251 例；`EXP-P7-GATE-D` 全量回填（含 §3.4 偏离声明）。
+
+---
+
 ### 2026-10-20（收口后维护期 · **所有者指示「先 C 拿到一版可信分数，同时立项 D」+ U2 判决**）— P7：判据闸门路径 C 实测 + 路径 D 立项 + U2 判决「异步诊断」
 
 > 触发：所有者 2026-10-20 指示。实验登记：`experiments/v1/EXP-P7-GATE3.md`（预登记先行）；立项：`docs/p7-design-gate-product-agent-2026-10-20.md`；判决：`docs/p7-decision-async-diagnosis-2026-10-20.md`。**纪律：GATE/GATE2 分数自此不再对外引用**（被测工具面含写操作，测非所测）。

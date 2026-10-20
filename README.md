@@ -210,8 +210,11 @@ docker compose -f docker/compose.ingest.yml up -d
 > **`EXP-P7-GATE3`（路径 C：只读 4 工具面 = 产品口径）**：首成 **67/75 = 89.33%**，参数校验 100% /
 > 多轮 100% / 拒止 100% / 澄清 100% 四档 Pass，单工具 83.3%、多工具 58.3% 为中间区间，
 > **无一档 No-Go → 整体中间区间，按纪律仍不切默认**（`AUSCULT_DIAGNOSIS_MODE` 默认 `deterministic`）。
-> 三版**不可横向比较**（被测工具面不同）；下一步 = 路径 D（用产品 Agent 本体跑判据，已立项
-> `docs/p7-design-gate-product-agent-2026-10-20.md`）+ U2 已判决「异步诊断 + 实时进度」
+> 三版**不可横向比较**（被测工具面不同）；**路径 D 首版已跑**（`EXP-P7-GATE-D`：产品 Agent 本体 +
+> 多轮循环）：首成 **62/75 = 82.67%**，四档工具类中间区间、无一档 No-Go，13 个失败全是参数值错 ——
+> 但该版含三项口径偏离（打桩漏装 / `max_steps=2` / 预算超 5 次）且暴露**收口契约与问答型用例错配**，
+> **故仍不作切默认凭据**（详见该实验 §3.4/§3.5）。下一步 = 修 harness + `max_steps=4` 重跑
+> （`docs/p7-design-gate-product-agent-2026-10-20.md` §七之二）；U2 已判决「异步诊断 + 实时进度」
 > （`docs/p7-decision-async-diagnosis-2026-10-20.md`）。
 
 ### 4.6 启动前端

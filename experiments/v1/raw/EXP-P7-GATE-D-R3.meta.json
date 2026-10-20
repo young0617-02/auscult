@@ -1,0 +1,33 @@
+{
+ "harness": "agent_gate_v1",
+ "tag": "p7-gate-d-r3",
+ "ts": "2026-10-20T09:17:12+00:00",
+ "backend": "cloud",
+ "model": "Qwen/Qwen3.8-27B",
+ "prompt": "app/agent/prompt.py（产品提示词）",
+ "prompt_sha256": "8545e298aaa9c984",
+ "schema": "tools_v4_agent.json",
+ "schema_sha256": "96b452185e1f97fe",
+ "tool_face": [
+  "search_knowledge"
+ ],
+ "max_steps": 2,
+ "timeout_s": 90.0,
+ "records": 25,
+ "cloud_calls": 50,
+ "gate_short_circuits": 8,
+ "tools_stubbed": [
+  "get_maintenance_history",
+  "query_graph",
+  "query_sensor",
+  "search_knowledge"
+ ],
+ "meta_correction": {
+  "date": "2026-10-20",
+  "by": "执行方（实验后核查）",
+  "issue": "原 meta 的 tools_stubbed 声称打桩已装，但本次运行 main() 漏调 install_stubs()，实际执行体为真实工具（本地 Milvus/PG/TDengine）。原字段保留不改写，以便审计对照。",
+  "actual": "工具执行体 = 真实实现（未打桩）",
+  "evidence": "本条 raw 中 v1-011 R1 等 4 条 query_sensor 报「缺少参数 sensor_ids 且无法从告警推断测点」，该错误文案来自 app/agent/tool_registry._exec_query_sensor（真实实现），打桩不会产生。",
+  "fixed": "scripts/run_agent_gate.py 默认安装打桩；tests/test_agent_gate.py 6 例锁死。"
+ }
+}
