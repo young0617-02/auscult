@@ -80,7 +80,28 @@ export interface ThreadStatusData {
   /** epoch 秒 */
   started_at: number | null;
   finished_at: number | null;
+  /** P7 Agent 循环工具调用轨迹（可选：旧缓存 payload 无此字段） */
+  agent_steps?: AgentSteps;
 }
+
+/** P7 Agent 循环单步轨迹（state.agent_steps 元素；app/graph/nodes/agent_diagnose.py）。
+ *  可选：Redis 只读缓存可能留存本字段上线前的旧 payload（缺省视为无轨迹）。 */
+export interface AgentStep {
+  /** 第几轮工具调用（1 起） */
+  step: number;
+  /** 工具名；null = 步数上限后的无工具强制收口轮 */
+  tool: string | null;
+  ok: boolean;
+  /** 模型所给参数键名（不含值，避免敏感数据入前端） */
+  args_keys: string[];
+  /** 该轮 LLM 调用耗时 ms */
+  latency_ms: number | null;
+  /** 强制收口轮标记 */
+  forced_final?: boolean;
+}
+
+/** thread_status 上的 Agent 轨迹字段（registry/回退双路径均返回；旧缓存缺省 []） */
+export type AgentSteps = AgentStep[];
 
 /** GET /api/reports/{id} 返回（报告详情：M4.2 仅取 confidence/risk_level 做徽章） */
 export interface ReportDetail {

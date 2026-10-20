@@ -65,6 +65,12 @@
 > **口径裁定（2026-10-10，用户确认）**：本文件推理层一律**以现状代码口径为准** —— **自研 LLM 适配层**（本地 Ollama 直调 + 云端 OpenAI 兼容端点直调；`app/router/cloud.py`、`app/router/budget.py`）。上游 `plan/工业设备诊断 Agent.md` §4.1 中的「LiteLLM 网关」为**早期设计表述、未落地**（`docs/prj-ledger-version-lock.md` 无该依赖、代码无该引用）。
 > **不采用 LiteLLM 的完整原因**由 Phase 6 D5 在 `docs/prj-decision-adr-002-hybrid-deployment.md`（ADR-002）中**详细说明**（本文件不重复，以免两处口径再次分叉）。
 
+> **P7 增补（2026-10-19，诊断 Agent 化；默认关闭 = 上图确定性形态不变）**：
+> ① 推理层 LLM 调用收敛为统一客户端出口 `app/llm/`（`AUSCULT_LLM_BACKEND=local|cloud`，OpenAI 兼容 tools 通道，本地 Ollama 与云端共用）；
+> ② 编排层 diagnose 槽位支持双实现（`AUSCULT_DIAGNOSIS_MODE=deterministic|agent`）：**agent 模式**下 LLM 在循环中自主调用**只读工具面**（`schemas/tools_v4.json` 程序化加载的 4 工具；`generate_report` 按 ADR-007 仍在图外）取证后输出诊断，证据经 `_Collector` 归集为同一套 state 契约 → 条件路由/审核/幂等/降级全链不变；
+> ③ 测试开发期云端承载（`backend=cloud`），换硬件 + qwen3:32b 后配置翻转回本地、云端仅存 escalate 兜底。
+> 设计与切换 Runbook、判据闸门、未决项 U1–U4：`docs/p7-design-agent-diagnosis-2026-10-19.md`（维护期所有者显式指示实施，非自发扩范围）。
+
 ---
 
 ## 三、七大功能模块

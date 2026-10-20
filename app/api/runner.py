@@ -49,6 +49,13 @@ from app.security.sanitizer import (
     sanitize_input,
     sanitize_state_inputs,
 )
+from app.cache import (
+    cache_get_state,
+    cache_get_values,
+    cache_invalidate_thread,
+    cache_set_state,
+    cache_set_values,
+)
 
 # 进程级指标单例（P3 遗留接入：路由/置信度/审核事件 → MetricsCollector）
 METRICS = MetricsCollector()
@@ -77,6 +84,19 @@ def _emit(event: dict) -> None:
             traceback.print_exc()
 
 
+def _absorb_agent_steps(rec: ThreadRecord | None, node: str, update: Any) -> None:
+    """P7：把 diagnose 节点增量中的 agent_steps 归集到线程记录。
+
+    Agent 循环的工具调用轨迹随 diagnose 节点一次返回（state 追加语义），
+    在此捕获供 thread_status 实时读出（前端 InspectorDrawer「工具出入参」消费）。
+    """
+    if rec is None or node != "diagnose" or not isinstance(update, dict):
+        return
+    steps = update.get("agent_steps")
+    if isinstance(steps, list):
+        rec.agent_steps.extend(s for s in steps if isinstance(s, dict))
+
+
 # ---------------------------------------------------------------- 线程注册表（内存态）
 
 class ThreadRecord:
@@ -93,6 +113,7 @@ class ThreadRecord:
         self.review_payload: dict | None = None
         self.degrade_reason: str | None = None
         self.qa_log: list[dict] = []     # chat:ask 追问留痕
+        self.agent_steps: list[dict] = []  # P7：Agent 循环工具调用轨迹（diagnose 增量归集）
         self.error: str | None = None
         self.notified_4h: bool = False   # 4h 备用审核人通知已触发
         self.started_at = time.time()
@@ -147,6 +168,7 @@ def _execute_graph(thread_id: str, alarm: AlarmEvent) -> None:
                 for node in chunk:
                     if not node.startswith("__"):
                         _progress(node)
+                        _absorb_agent_steps(rec, node, chunk[node])
 
             snap = graph.get_state(config)
             next_nodes = tuple(snap.next or ())
@@ -260,6 +282,9 @@ def resume_review(thread_id: str, decision: dict, reviewer_id: str) -> dict:
             rec.report_id = report_id
             rec.degrade_reason = values.get("degrade_reason")
             rec.finished_at = time.time()
+            # P7：resume 后 values 变更（report_id/human_review/degrade_reason）
+            # → 失效两层只读缓存（TTL 为最终兜底）
+            cache_invalidate_thread(thread_id)
             METRICS.record_review(
                 (rec.finished_at - rec.started_at) * 1000,
                 (values.get("human_review") or {}).get("status", "unknown")
@@ -370,14 +395,24 @@ _ASK_SYSTEM = """你是工业设备故障诊断助手。基于该诊断线程的
 
 
 def _load_thread_values(thread_id: str) -> dict | None:
-    """从 checkpointer 读取线程最终 state（供追问注入真实证据）。"""
+    """从 checkpointer 读取线程最终 state（供追问注入真实证据）。
+
+    P7：先查 Redis values 缓存（ask 路径每次构建 graph + PG 连接，
+    代价高；证据在诊断终态后冻结，缓存安全）。变更点（resume_review）
+    会显式失效，TTL 为最终兜底。
+    """
+    cached = cache_get_values(thread_id)
+    if cached is not None:
+        return cached
     config = {"configurable": {"thread_id": thread_id}}
     with build_checkpointer() as saver:
         graph = build_graph(saver)
         snap = graph.get_state(config)
     if snap is None or not snap.values:
         return None
-    return dict(snap.values)
+    values = dict(snap.values)
+    cache_set_values(thread_id, values)
+    return values
 
 
 def _ask_user_prompt(rec: ThreadRecord, values: dict | None, question: str) -> str:
@@ -446,6 +481,8 @@ def ask_question(thread_id: str, question: str, user: str) -> dict:
              "citations": answer["citations"], "user": user,
              "model": OLLAMA_MODEL, "ts": time.time()}
     rec.qa_log.append(entry)
+    # P7：qa_log 是 thread_status payload 的组成部分 → 失效两层缓存
+    cache_invalidate_thread(thread_id)
     return answer
 
 
@@ -461,6 +498,7 @@ def thread_status(thread_id: str) -> dict:
             "submitter": rec.submitter,
             "alarm": rec.alarm.model_dump() if rec.alarm else None,
             "nodes_done": list(rec.nodes_done),
+            "agent_steps": list(rec.agent_steps),
             "report_id": rec.report_id,
             "review_payload": rec.review_payload,
             "degrade_reason": rec.degrade_reason,
@@ -469,6 +507,12 @@ def thread_status(thread_id: str) -> dict:
             "started_at": rec.started_at,
             "finished_at": rec.finished_at,
         }
+
+    # P7：注册表未命中（进程重启场景）→ 先查 Redis 只读缓存
+    # （PG 前 read-through；非权威，未命中/不可达回落 checkpointer）
+    cached = cache_get_state(thread_id)
+    if cached is not None:
+        return cached
 
     # 回退：从 checkpointer 推断（进程重启场景）
     config = {"configurable": {"thread_id": thread_id}}
@@ -484,6 +528,8 @@ def thread_status(thread_id: str) -> dict:
 
     values = dict(snap.values)
     next_nodes = tuple(snap.next or ())
+    # P7：Agent 循环工具调用轨迹（确定性模式为[]；dict 载荷对 Redis 缓存友好）
+    agent_steps = [s for s in (values.get("agent_steps") or []) if isinstance(s, dict)]
     if "human_review" in next_nodes:
         status = "waiting_review"
         payload = None
@@ -493,16 +539,22 @@ def thread_status(thread_id: str) -> dict:
                 if isinstance(v, dict):
                     payload = v
                     break
-        return {"thread_id": thread_id, "status": status,
-                "review_payload": payload, "qa_log": [],
-                "nodes_done": [], "report_id": None,
-                "degrade_reason": values.get("degrade_reason"),
-                "submitter": None, "alarm": None, "error": None,
-                "started_at": None, "finished_at": None}
+        result = {"thread_id": thread_id, "status": status,
+                  "review_payload": payload, "qa_log": [],
+                  "nodes_done": [], "agent_steps": agent_steps,
+                  "report_id": None,
+                  "degrade_reason": values.get("degrade_reason"),
+                  "submitter": None, "alarm": None, "error": None,
+                  "started_at": None, "finished_at": None}
+        cache_set_state(thread_id, result)
+        return result
 
-    return {"thread_id": thread_id, "status": "done",
-            "report_id": values.get("report_id"),
-            "degrade_reason": values.get("degrade_reason"),
-            "review_payload": None, "qa_log": [], "nodes_done": [],
-            "submitter": None, "alarm": None, "error": None,
-            "started_at": None, "finished_at": None}
+    result = {"thread_id": thread_id, "status": "done",
+              "report_id": values.get("report_id"),
+              "degrade_reason": values.get("degrade_reason"),
+              "review_payload": None, "qa_log": [], "nodes_done": [],
+              "agent_steps": agent_steps,
+              "submitter": None, "alarm": None, "error": None,
+              "started_at": None, "finished_at": None}
+    cache_set_state(thread_id, result)
+    return result

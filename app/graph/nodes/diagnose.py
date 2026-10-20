@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import json
 import re
-import urllib.error
-import urllib.request
 from typing import Any
+
+from ...cache import cache_get_llm, cache_set_llm
 
 from ..state import DiagnosisState, RootCause, Suggestion
 
@@ -30,7 +30,9 @@ def _normalize_cite(cite: str) -> str:
     c = (cite or "").strip()
     return c[len("chunk_id="):].strip() if c.startswith("chunk_id=") else c
 
-# ---------------------------------------------------------------- Ollama 配置
+# ---------------------------------------------------------------- 本地 Ollama 配置
+# P7 起实际端点/模型由 app/llm 客户端统一管理（AUSCULT_LLM_BACKEND 可切云端）；
+# 以下常量保留为既有调用方 import 兼容与本地默认值说明。
 
 OLLAMA_URL = "http://127.0.0.1:11434/v1/chat/completions"
 OLLAMA_MODEL = "deepseek-r1:7b"
@@ -147,33 +149,45 @@ def _build_user_prompt(state: DiagnosisState) -> str:
 # ---------------------------------------------------------------- Ollama 调用
 
 def _call_ollama(messages: list[dict], timeout: float = TIMEOUT_SEC) -> str:
-    """调用 Ollama /v1/chat/completions，返回 content 文本。
+    """调用 LLM 后端 /v1/chat/completions，返回 content 文本。
+
+    P7 起统一走 app/llm 客户端出口（本地 Ollama / 云端按 AUSCULT_LLM_BACKEND
+    切换，模型按角色取；函数名保留是兼容既有调用方 import）。
 
     异常: TimeoutError / ConnectionError / RuntimeError
+
+    P7：LLM 响应缓存（temperature=0 确定性路径）。key = model + 完整 messages
+    （docs/p7-design-redis-cache-layer-2026-10-16.md §五）——模型/prompt/上下文
+    任一变化即换 key；命中落审计（llm_cache_hit）保证「可复现」口径可追溯。
+    缓存只存 content 原文（含 think），think 剥离/JSON 解析/置信度计算照常走，
+    即缓存不改变任何下游语义。
     """
-    payload = json.dumps({
-        "model": OLLAMA_MODEL,
-        "messages": messages,
-        "temperature": 0.0,
-        "max_tokens": 2048,
-        "stream": False,
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        OLLAMA_URL, data=payload,
-        headers={"Content-Type": "application/json"}, method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-            return body["choices"][0]["message"]["content"]
-    except TimeoutError:
-        raise
-    except urllib.error.URLError as e:
-        if "timed out" in str(e).lower():
-            raise TimeoutError(f"Ollama 超时: {e}")
-        raise ConnectionError(f"Ollama 不可达: {e}")
-    except (KeyError, IndexError) as e:
-        raise RuntimeError(f"Ollama 响应异常: {e}")
+    from ..llm import config as llm_config                    # noqa: PLC0415
+    from ..llm.client import get_client                       # noqa: PLC0415
+
+    client = get_client(role=llm_config.ROLE_DIAGNOSE)
+    model = client.model
+
+    cached = cache_get_llm(model, messages)
+    if cached is not None:
+        try:
+            from ...observability import prom_metrics as pm      # noqa: PLC0415
+            pm.inc_cache("llm", "hit")
+            from ...security.sanitizer import log_security_event  # noqa: PLC0415
+            log_security_event("llm_cache_hit", severity="info",
+                               detail={"model": model,
+                                       "messages": len(messages)})
+        except Exception:                                        # noqa: BLE001 - 审计失败不阻断
+            pass
+        return cached
+
+    result = client.chat(messages, timeout=timeout)
+    content = result.content
+
+    # 仅缓存非空 content（空响应无缓存价值；错误路径已抛异常，不会到这）
+    if content:
+        cache_set_llm(model, messages, content)
+    return content
 
 
 # ---------------------------------------------------------------- D7: 置信度复合公式

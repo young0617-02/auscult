@@ -102,6 +102,10 @@ class DiagnosisState(BaseModel):
     degrade_reason: str | None = None
     human_review: dict | None = None
 
+    # Agent 轨迹（P7 · AUSCULT_DIAGNOSIS_MODE=agent 时逐轮记录工具调用；
+    # 追加语义，dict 载荷对 PostgresSaver msgpack 友好，见 p7 设计文档 §五）
+    agent_steps: Annotated[list[dict], add] = Field(default_factory=list)
+
     # 产出
     report_id: str | None = None
     errors: Annotated[list[dict], add] = Field(default_factory=list)

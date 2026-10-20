@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import os
 from datetime import date
 from typing import Any
 
@@ -35,12 +36,20 @@ def _get_client():
 
 
 def _get_limit() -> int:
-    """从 env/cloud.json 读取 per_day_calls（惰性缓存）。"""
+    """日预算上限：env AUSCULT_CLOUD_BUDGET_LIMIT 优先，其次 env/cloud.json。
+
+    P7 起 Agent 模式一次诊断含多轮调用（≤max_steps+1），上限需按
+    「日均诊断容量 × 单次调用数」重定，故开放 env 覆盖（见设计文档 §六）。
+    """
     global _limit_cache
     if _limit_cache is None:
-        from .cloud import load_cloud_config   # noqa: PLC0415
-        cfg = load_cloud_config()
-        _limit_cache = int(cfg.get("budget_lock", {}).get("per_day_calls", 20))
+        env_limit = os.environ.get("AUSCULT_CLOUD_BUDGET_LIMIT")
+        if env_limit:
+            _limit_cache = int(env_limit)
+        else:
+            from .cloud import load_cloud_config   # noqa: PLC0415
+            cfg = load_cloud_config()
+            _limit_cache = int(cfg.get("budget_lock", {}).get("per_day_calls", 20))
     return _limit_cache
 
 

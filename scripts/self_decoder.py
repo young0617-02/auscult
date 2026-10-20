@@ -373,7 +373,12 @@ class SelfDecoder:
     # ---- MQTT 回调 ----
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         logger.info("MQTT 已连接 reason_code=%s，订阅 %s", reason_code, self._sub_topic)
-        client.subscribe(self._sub_topic, qos=0)
+        # ISS-050（2026-10-20 实跑发现）：订阅必须用 QoS 1。原 qos=0 下 broker
+        # 对 QoS 0 报文**不排队**——解码器落库速率（TDengine REST 逐行写 ≈95 行/s）
+        # 低于灌数发布速率时，**静默丢弃**（实测单轮 10804 报文仅落 1909 条，
+        # PUMP-A 异常段整体丢失）。qos=1 后 broker 按 max_queued_messages
+        # （已随 ISS-050 提至 20000）排队，TCP 背压替代丢消息。
+        client.subscribe(self._sub_topic, qos=1)
 
     def _on_message(self, client, userdata, msg):
         try:

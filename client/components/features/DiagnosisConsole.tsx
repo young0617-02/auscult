@@ -25,6 +25,7 @@ import { getSocket } from "@/lib/socket";
 import { useAuth } from "@/lib/auth";
 import { useThreads } from "@/lib/store/threads";
 import { THREAD_STATUS_LABEL, type QaEntry, type ThreadStatus } from "@/lib/types/thread";
+import { useInspector } from "@/lib/store/inspector";
 import { cn } from "cn";
 
 const STATUS_PILL: Record<ThreadStatus, string> = {
@@ -80,6 +81,10 @@ export function DiagnosisConsole() {
     const set = new Set<string>([...(storeThread?.nodes_done ?? []), ...(data?.nodes_done ?? [])]);
     return [...set];
   }, [storeThread, data]);
+
+  // P7：Agent 循环工具调用轨迹（仅 REST 富数据带；socket 实时态只有节点级进度）
+  const agentSteps = useMemo(() => data?.agent_steps ?? [], [data]);
+  const showInspector = useInspector((s) => s.show);
 
   const role = useAuth((s) => s.user?.role);
   const canAsk = role === "engineer" || role === "reviewer" || role === "sys_admin";
@@ -183,6 +188,31 @@ export function DiagnosisConsole() {
                 {/* 内联进度（窄屏时替代右栏） */}
                 <div className="rounded-lg border border-edge-subtle bg-surface-base p-2 lg:hidden">
                   <ProgressSteps nodesDone={nodesDone} nodeTs={storeThread?.node_ts} status={status} />
+                  {agentSteps.length > 0 && (
+                    <div className="border-t border-edge-subtle pt-2">
+                      <p className="pb-1 text-xs text-fg-tertiary">
+                        Agent 工具调用（{agentSteps.length}）
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {agentSteps.map((s, i) => (
+                          <button
+                            key={`m-${s.step}-${i}`}
+                            type="button"
+                            onClick={() =>
+                              showInspector({
+                                tab: "tool",
+                                title: s.tool ?? "无工具强制收口",
+                                payload: s,
+                              })
+                            }
+                            className="rounded bg-surface-raised px-1.5 py-0.5 text-xs text-fg-secondary"
+                          >
+                            {s.step}. {s.tool ?? "强制收口"} {s.ok ? "✓" : "✗"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* 终态消息 */}
@@ -241,6 +271,41 @@ export function DiagnosisConsole() {
             <ProgressSteps nodesDone={nodesDone} nodeTs={storeThread?.node_ts} status={status} />
           ) : (
             <p className="px-2 text-xs text-fg-tertiary">选择会话后展示节点流。</p>
+          )}
+          {agentSteps.length > 0 && (
+            <div className="px-2 pt-3">
+              <h3 className="pb-1 text-xs text-fg-tertiary">
+                Agent 工具调用（{agentSteps.length}）
+              </h3>
+              <div className="flex flex-col gap-1">
+                {agentSteps.map((s, i) => (
+                  <button
+                    key={`${s.step}-${i}`}
+                    type="button"
+                    onClick={() =>
+                      showInspector({
+                        tab: "tool",
+                        title: s.tool ?? "无工具强制收口",
+                        payload: s,
+                      })
+                    }
+                    className="flex items-center justify-between gap-2 rounded px-2 py-1 text-left text-xs hover:bg-surface-raised"
+                  >
+                    <span className="truncate text-fg-secondary">
+                      {s.step}. {s.tool ?? "强制收口"}
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0",
+                        s.ok ? "text-risk-low-text" : "text-risk-high-text",
+                      )}
+                    >
+                      {s.ok ? "✓" : "✗"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </aside>
       </div>

@@ -58,16 +58,19 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
                             "msg": "缺少告警事件"}]}
 
     question = _build_question(alarm)
+    # P7 检索缓存 key：归一化为「设备 + 指标」语义——告警数值/threshold 逐次
+    # 不同但检索目标（故障原因文档）不变；含数值会使命中率趋零
+    cache_key = f"{alarm.device_id}|{alarm.metric}"
 
     evidence_items: list[EvidenceItem] = []
     graph_paths: list[GraphPath] = []
     errors: list[dict] = []
 
-    # 1) retrieve_knowledge（W1→W5 全链路）
+    # 1) retrieve_knowledge（W1→W5 全链路；P7 起可命中 Redis 缓存）
     try:
         svc = _get_service()
         t0 = time.perf_counter()
-        result = svc.retrieve(question)
+        result = svc.retrieve(question, cache_key=cache_key)
         pm.observe_retrieval("total", (time.perf_counter() - t0) * 1000)
         items = result.get("items", [])
         pm.inc_tool_call("retrieve_knowledge", "ok" if items else "empty")

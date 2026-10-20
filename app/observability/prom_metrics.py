@@ -81,6 +81,14 @@ RECONCILE_DIFF = Gauge(
 CHECKPOINT_KEYS = Gauge(
     "auscult_checkpoint_keys", "LangGraph checkpoint key 数（checkpointer 清理策略观测）",
 )
+CACHE_OPS = Counter(
+    "auscult_cache_ops_total", "Redis 缓存层操作计数（P7）",
+    ["op", "result"],   # op: get/set/del/set_nx；result: hit/miss/ok/error/skip/blocked
+)
+AUTO_TRIGGER = Counter(
+    "auscult_auto_trigger_total", "告警自动触发计数（P7）",
+    ["result"],   # started / skipped / error / disabled
+)
 
 # ---------------------------------------------------------------- 打点辅助
 
@@ -115,6 +123,14 @@ def observe_retrieval(channel: str, duration_ms: float) -> None:
 
 def inc_tool_call(tool: str, status: str = "ok") -> None:
     TOOL_CALLS.labels(tool=tool, status=status).inc()
+
+
+def inc_cache(op: str, result: str) -> None:
+    CACHE_OPS.labels(op=op, result=result).inc()
+
+
+def inc_auto_trigger(result: str) -> None:
+    AUTO_TRIGGER.labels(result=result).inc()
 
 
 def refresh_budget_ratio() -> None:

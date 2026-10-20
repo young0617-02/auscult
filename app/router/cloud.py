@@ -20,8 +20,6 @@ from __future__ import annotations
 import hashlib
 import json
 import time
-import urllib.error
-import urllib.request
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -35,6 +33,8 @@ from ..graph.nodes.diagnose import (
     compute_confidence,
 )
 from ..graph.state import DiagnosisState, RootCause, Suggestion
+from ..llm import config as llm_config
+from ..llm.client import get_cloud_client
 
 # ---------------------------------------------------------------- 路径与常量
 
@@ -196,34 +196,13 @@ def write_audit(record: dict[str, Any]) -> None:
 def call_cloud(messages: list[dict], *, timeout: float = CLOUD_TIMEOUT_SEC) -> str:
     """调用云端 OpenAI 兼容端点，返回 content 文本。
 
+    P7 起经统一客户端出口（app/llm.client.get_cloud_client）——本函数保留是
+    兼容既有调用方 import 与审计语义；脱敏/预算/审计逻辑不变。
+
     异常: TimeoutError / ConnectionError / RuntimeError
     """
-    cfg = load_cloud_config()
-    payload = json.dumps({
-        "model": cfg["model"],
-        "messages": messages,
-        "temperature": 0.0,
-        "max_tokens": 2048,
-        "stream": False,
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        cfg["endpoint"], data=payload,
-        headers={"Content-Type": "application/json",
-                 "Authorization": f"Bearer {cfg['api_key']}"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
-            return body["choices"][0]["message"]["content"]
-    except TimeoutError:
-        raise
-    except urllib.error.URLError as e:
-        if "timed out" in str(e).lower():
-            raise TimeoutError(f"云端超时: {e}")
-        raise ConnectionError(f"云端不可达: {e}")
-    except (KeyError, IndexError) as e:
-        raise RuntimeError(f"云端响应异常: {e}")
+    client = get_cloud_client()
+    return client.chat(messages, timeout=timeout).content
 
 
 # ---------------------------------------------------------------- 路由编排
@@ -241,6 +220,20 @@ class CloudRouter:
     def escalate(self, state: DiagnosisState) -> dict[str, Any]:
         ts_start = time.perf_counter()
         ts_iso = datetime.now().isoformat()
+
+        # P7：后端即云端时（AUSCULT_LLM_BACKEND=cloud，测试开发期形态）——
+        # 诊断主通道已在云端，无「升级」语义，直接保留本地结论跳过，
+        # 避免二次计费与重复调用（云端降为兜底路径的逆场景，见设计文档 §六）。
+        if llm_config.llm_backend() == "cloud":
+            write_audit({"ts": ts_iso, "thread_id": state.thread_id,
+                         "model": "N/A", "success": True,
+                         "latency_ms": 0.0, "error": None,
+                         "budget_ok": True, "skipped": "backend_already_cloud"})
+            return {"escalate_cloud": True,
+                    "errors": [{"node": "escalate_cloud",
+                                "code": "W_BACKEND_ALREADY_CLOUD",
+                                "msg": "当前 LLM 后端即云端（诊断主通道），跳过升级"}]}
+
         _budget = BudgetGuard()
 
         # 预算熔断（D15）
