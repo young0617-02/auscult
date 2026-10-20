@@ -1,0 +1,32 @@
+{
+ "harness": "agent_gate_v1",
+ "tag": "p7-gate-d2-r3",
+ "ts": "2026-10-20T12:00:12+00:00",
+ "backend": "cloud",
+ "model": "Qwen/Qwen3.8-27B",
+ "prompt": "app/agent/prompt.py（产品提示词）",
+ "prompt_sha256": "8545e298aaa9c984",
+ "schema": "tools_v4_agent.json",
+ "schema_sha256": "96b452185e1f97fe",
+ "tool_face": [
+  "search_knowledge"
+ ],
+ "max_steps": 4,
+ "timeout_s": 90.0,
+ "records": 25,
+ "cloud_calls": 54,
+ "gate_short_circuits": 8,
+ "tools_stubbed": [
+  "get_maintenance_history",
+  "query_graph",
+  "query_sensor",
+  "search_knowledge"
+ ],
+ "alarm_injection": true,
+ "alarms_injected": 16,
+ "answer_modes": {
+  "json": 9,
+  "natural_language": 4,
+  "none": 4
+ }
+}
