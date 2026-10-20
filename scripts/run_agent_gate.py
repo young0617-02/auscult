@@ -18,6 +18,14 @@
 直接取 `case["input"]`，历史取 `case["context"]`；其余（系统提示词、工具面、消息回灌、
 收口解析、预算与步数护栏）**逐字复用产品实现**。
 
+v2 修订（2026-10-20，按 `EXP-P7-GATE-D` §3.4/§3.5 的三项摩擦）：
+  1. **告警前置**：`infer_alarm()` 从用例文本抽设备编号，注入最小 `AlarmEvent` 并传给
+     `execute_tool`（产品同款调用形态）→ 修掉「`query_sensor` 缺 `sensor_ids` 且无告警可推断」
+     的工具级错误。`--no-alarm` 可回到 v1 行为；
+  2. **收口形态单列**：`answer_mode ∈ {json, natural_language, none}` 只记录、不进六档
+     （问答型用例以自然语言收口不算错误，但必须可见）；
+  3. **步数默认取产品值**（`AUSCULT_AGENT_MAX_STEPS`，默认 4），不再为预算压到 2。
+
 工具执行：`tool_registry._EXECUTORS` 被替换为**中性打桩**（不泄漏期望值、与
 `run_v1.STEP_CHAIN` 同款口径），白名单校验、写操作护栏、审计落盘**保持真实**。
 
@@ -34,6 +42,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -57,7 +66,7 @@ from app.graph.nodes.agent_diagnose import (                           # noqa: E
     _Collector,
     _finalize_answer,
 )
-from app.graph.state import DiagnosisState                             # noqa: E402
+from app.graph.state import AlarmEvent, DiagnosisState                  # noqa: E402
 from app.llm import config as llm_config                               # noqa: E402
 from app.llm.client import get_client                                  # noqa: E402
 from app.security import sanitizer                                     # noqa: E402
@@ -137,11 +146,51 @@ def messages_for(case: dict[str, Any], system_prompt: str) -> list[dict[str, Any
     return msgs
 
 
+#: 设备编号形如 `PUMP-A-01` / `MOTOR-B-12`（与产品告警/图谱同构）
+_DEVICE_RE = re.compile(r"\b[A-Z][A-Z0-9]+-[A-Z]-\d+\b")
+
+
+def infer_alarm(case: dict[str, Any]) -> Any:
+    """给用例注入**最小 AlarmEvent**（告警前置）。
+
+    产品入口永远是告警：`query_sensor` 缺 `sensor_ids` 时靠告警推断测点
+    （`EXP-P7-GATE-D` §3.4-a 的 4 次工具级错误即由此产生）。V1 用例是问答形态，
+    故按「设备编号 + 振动类告警」补一条最小告警，使工具链路与产品一致；
+    **只补事实、不补期望值**（不含用例的 expected 内容）。
+
+    设备编号从 `context` 优先、其次 `input` 中抽取；抽不到则返回 None（保持原行为）。
+    """
+    hay = " ".join(str(t.get("content") or "") for t in (case.get("context") or []))
+    hay += " " + str(case.get("input") or "")
+    m = _DEVICE_RE.search(hay)
+    if not m:
+        return None
+    return AlarmEvent(alarm_id=f"ALM-GATE-{case['case_id']}",
+                      device_id=m.group(0),
+                      metric="vib_rms", value=6.8, baseline=4.5,
+                      severity="high", ts=int(time.time() * 1000),
+                      rule_id="GATE-D-PREFILL")
+
+
+def answer_mode_of(json_ok: bool, content: str) -> str:
+    """收口形态（**不进六档**，仅报告）：`json` / `natural_language` / `none`。
+
+    D 首版发现 `v1-014` 这类**问答型用例**会以表格/段落收口而非诊断 JSON
+    （`EXP-P7-GATE-D` §3.5-1）—— 这是判据与产品形态的错配，不是模型错误，
+    故单列指标而不判失败。
+    """
+    if json_ok:
+        return "json"
+    return "natural_language" if (content or "").strip() else "none"
+
+
 def run_case(case: dict[str, Any], *, client: Any, tag: str, repeat: int,
              system_prompt: str, tools: list[dict[str, Any]], max_steps: int,
-             timeout: float, budget: Any = None, model: str = "") -> dict[str, Any]:
+             timeout: float, budget: Any = None, model: str = "",
+             alarm: Any = None) -> dict[str, Any]:
     """驱动一次 Agent 循环（语义对齐 `agent_diagnose`），返回判分可用的 raw 记录。"""
-    state = DiagnosisState(alarm=None, thread_id=f"gate-d-{case['case_id']}-{tag}-r{repeat}")
+    state = DiagnosisState(alarm=alarm,
+                           thread_id=f"gate-d-{case['case_id']}-{tag}-r{repeat}")
     messages = messages_for(case, system_prompt)
     collector = _Collector()
     steps: list[dict[str, Any]] = []
@@ -179,7 +228,7 @@ def run_case(case: dict[str, Any], *, client: Any, tag: str, repeat: int,
             for call in result.tool_calls:
                 args = dict(call.arguments or {})
                 calls.append({"name": call.name, "arguments": args})
-                out = tr.execute_tool(call.name, args, alarm=None, thread_id=state.thread_id)
+                out = tr.execute_tool(call.name, args, alarm=alarm, thread_id=state.thread_id)
                 collector.absorb(call.name, out)
                 if not out.get("ok"):
                     violations.append({"tool": call.name, "step": step,
@@ -230,6 +279,12 @@ def run_case(case: dict[str, Any], *, client: Any, tag: str, repeat: int,
             "llm_calls": llm_calls,
             "forced_final": forced,
             "json_parse_ok": json_ok,
+            # 收口形态（2026-10-20 路径 D v2）：问答型用例允许自然语言收口，单列不进六档
+            "answer_mode": answer_mode_of(json_ok, content),
+            # 告警前置（v2）：注入的最小 AlarmEvent，供审计追溯（None = 未注入）
+            "alarm": ({"device_id": alarm.device_id, "metric": alarm.metric,
+                       "value": alarm.value, "baseline": alarm.baseline,
+                       "severity": alarm.severity} if alarm is not None else None),
             "confidence": final.get("confidence"),
             "risk_level": final.get("risk_level"),
             "guard_violations": violations,
@@ -261,6 +316,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--quiet", action="store_true", help="不打印逐例结果")
     ap.add_argument("--no-stub", action="store_true",
                     help="不替换工具执行体（默认打桩；仅用于对照真实工具链路）")
+    ap.add_argument("--no-alarm", action="store_true",
+                    help="不注入最小 AlarmEvent（v1 行为；默认注入，使工具链路与产品一致）")
     ap.add_argument("--selftest", action="store_true", help="离线自检（假客户端，零网络）")
     args = ap.parse_args(argv)
 
@@ -294,24 +351,34 @@ def main(argv: list[str] | None = None) -> int:
         out_path.unlink()
 
     records: list[dict[str, Any]] = []
-    cloud_calls = bypassed = 0
+    cloud_calls = bypassed = alarm_injected = 0
+    modes: dict[str, int] = {}
     for case in cases:
         decision, reason = gr.decide(case)
         if decision != "allow":
             rec = e2e.gate_record(case, decision, reason, 1, args.tag)
             bypassed += 1
         else:
+            alarm = None if args.no_alarm else infer_alarm(case)
+            if alarm is not None:
+                alarm_injected += 1
             rec = run_case(case, client=client, tag=args.tag, repeat=1,
                            system_prompt=system_prompt, tools=tools,
-                           max_steps=max_steps, timeout=timeout, budget=budget, model=model)
+                           max_steps=max_steps, timeout=timeout, budget=budget,
+                           model=model, alarm=alarm)
             cloud_calls += int(rec["result"].get("llm_calls") or 0)
+            mode = str(rec["result"].get("answer_mode") or "")
+            modes[mode] = modes.get(mode, 0) + 1
         rv.append_record(out_path, rec)
         records.append(rec)
         if not args.quiet:
+            ok = jt.judge_record(rec, schemas)["success"]
+            tail = "" if rec.get("gate") else \
+                f" mode={rec['result'].get('answer_mode')} forced={rec['result'].get('forced_final')}"
             print(f"{case['case_id']:8s} {case['type']:5s} "
                   f"{'gate:' + str(decision) if rec.get('gate') else 'agent'} "
                   f"steps={rec['result'].get('agent_steps')} calls={rec['result'].get('llm_calls')} "
-                  f"ok={jt.judge_record(rec, schemas)['success']}")
+                  f"ok={ok}{tail}")
 
     meta = {
         "harness": HARNESS,
@@ -330,6 +397,10 @@ def main(argv: list[str] | None = None) -> int:
         "cloud_calls": cloud_calls,
         "gate_short_circuits": bypassed,
         "tools_stubbed": [] if args.no_stub else sorted(STUBS),
+        # v2（2026-10-20）：告警前置 + 收口形态单列（均不进六档）
+        "alarm_injection": not args.no_alarm,
+        "alarms_injected": alarm_injected,
+        "answer_modes": modes,
     }
     meta_path = out_path.with_suffix(".meta.json")
     meta_path.write_text(json.dumps(meta, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
@@ -435,11 +506,40 @@ def _selftest() -> int:
     else:
         failures.append("审计未写入实验路径（文件不存在）")
 
+    # 5) v2-① 告警前置：从文本抽设备编号 → 注入最小 AlarmEvent；抽不到则为 None
+    al = infer_alarm(case)
+    if al is None or al.device_id != "PUMP-A-01" or al.metric != "vib_rms":
+        failures.append(f"告警前置应从上下文抽出 PUMP-A-01，实际 {getattr(al, 'device_id', None)!r}")
+    if infer_alarm({"case_id": "t-002", "input": "这个标准怎么规定的？", "context": []}) is not None:
+        failures.append("无设备编号的用例不应注入告警")
+    rec_al = run_case(case, client=_FakeClient([_FakeResult(content=final_json)]),
+                      tag="selftest", repeat=1, system_prompt=system_prompt, tools=tools,
+                      max_steps=2, timeout=5.0, budget=None, model="fake", alarm=al)
+    if (rec_al["result"].get("alarm") or {}).get("device_id") != "PUMP-A-01":
+        failures.append("记录里应留下注入的告警事实（可审计）")
+
+    # 6) v2-② 收口形态：自然语言收口不判失败，但必须单列为 natural_language
+    table = "| 振动烈度 | 状态 |\n| --- | --- |\n| 4.5 ~ 11.2 | 注意 |"
+    fake_nl = _FakeClient([_FakeResult(tool_calls=[_FakeCall(
+        "query_graph", {"start_node": "PUMP-A-01", "depth": 2})]),
+        _FakeResult(content=table)])
+    rec_nl = run_case(case, client=fake_nl, tag="selftest", repeat=1, system_prompt=system_prompt,
+                      tools=tools, max_steps=3, timeout=5.0, budget=None, model="fake", alarm=al)
+    if rec_nl["result"]["answer_mode"] != "natural_language":
+        failures.append(f"表格收口应记 natural_language，实际 {rec_nl['result']['answer_mode']}")
+    if rec_nl["result"]["json_parse_ok"]:
+        failures.append("表格收口不应被记为 JSON 收口")
+    if not jt.judge_record(rec_nl, schemas)["success"]:
+        failures.append("自然语言收口不得因此判失败（收口形态不进六档）")
+    if answer_mode_of(True, "") != "json" or answer_mode_of(False, "") != "none":
+        failures.append("answer_mode_of 边界错误（json/none）")
+
     if failures:
         for f in failures:
             print("[SELFTEST-FAIL]", f)
         return 1
-    print("[SELFTEST-OK] run_agent_gate：工具面/循环/护栏/强制收口/审计重定向 全部通过")
+    print("[SELFTEST-OK] run_agent_gate v2：工具面/循环/护栏/强制收口/审计重定向/"
+          "告警前置/收口形态 全部通过")
     return 0
 
 

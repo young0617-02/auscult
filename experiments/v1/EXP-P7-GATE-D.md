@@ -101,10 +101,37 @@
    - ④ 修完后重跑本实验，才是「可裁决切默认」的那一版。
 5. **预算**：见 §3.4-c（345/340，超 5 次；当日封盘）。
 
-## 五、修订记录
+## 五、v2 harness 修复（2026-10-20，**离线完成 · 云端复跑待排日**）
+
+按 §3.5 的三处摩擦修 harness，**未消耗云端调用**（仅 `--selftest` + 单测 + 覆盖核对）：
+
+| # | 修复 | 落点 | 验证 |
+|---|---|---|---|
+| ① | **告警前置**：`infer_alarm()` 从用例文本抽设备编号（`context` 优先、其次 `input`），注入最小 `AlarmEvent`（`metric=vib_rms/value=6.8/baseline=4.5/severity=high`，脚本标 `GATE-D-PREFILL`）并传给 `execute_tool(...)` | `run_agent_gate.infer_alarm` + `run_case(alarm=...)` | 覆盖核对：25 条用例注入 **19** 条；**被判据驱动**的 17 条中 **16 条**有告警（唯一例外 `v1-014` 只查知识库，不需要测点）；6 条无告警者全部是「不驱动工具」的拒绝/澄清用例。**注入内容不含用例 expected**（单测断言） |
+| ② | **收口形态单列**：`answer_mode ∈ {json, natural_language, none}`，只记录、**不进六档**（判分仍只看 tool_calls） | `answer_mode_of()` + `result.answer_mode` + `meta.answer_modes` | 单测：表格收口 → `natural_language` 且 `judge_record.success=True` |
+| ③ | **步数回到产品默认 4**：`--max-steps` 不传即 `AUSCULT_AGENT_MAX_STEPS`（默认 4），预算偏离取消 | `main()`（原有逻辑，v1 是命令行显式压到 2） | `--selftest` 覆盖强制收口路径（`llm_calls = max_steps + 1`） |
+
+**新增开关（可回溯对照）**：`--no-alarm`（回到 v1 无告警行为）、`--no-stub`（真实工具链路）。元数据新增 `alarm_injection` / `alarms_injected` / `answer_modes`，raw 每条新增 `result.alarm` 与 `result.answer_mode`。
+**回归锁**：`tests/test_agent_gate.py` 6 → **8 例**（新增「告警覆盖且不泄漏 expected」「收口形态不进六档」），全量 **253 passed**。
+
+### 5.1 云端复跑的前置（**尚未执行**）
+
+- **预算**：当日已用 345/340（§3.4-c 已封盘）。`max_steps=4` 下每用例最坏 5 次调用，实测预期 3–4 次 → **预计 17×3.5×3 ≈ 180 次**（比 §3.4 的 230 更乐观，但仍需单独排日 + 预算余量 ≥ 200）。
+- **必须先解决 §3.4-d**（预算计数器漏计 31%）：否则复跑的真实消耗无法从 Redis 核对，只能靠 `llm_calls` 人工台账。
+- 复跑命令（次日直接可用）：
+  ```powershell
+  $env:AUSCULT_LLM_BACKEND="cloud"; $env:AUSCULT_DIAGNOSIS_MODE="agent"
+  python scripts/run_agent_gate.py --cases evals/v1_cases.jsonl `
+      --cases evals/v1_refusal_transfer_v1.jsonl `
+      --out experiments/v1/raw/EXP-P7-GATE-D2-R1.jsonl --tag p7-gate-d2-r1
+  ```
+  （**不传** `--max-steps`、**不传** `--no-alarm`；R2/R3 同形，轮数仍须先写 §一 预登记再跑）
+
+## 六、修订记录
 
 | 日期 | 修订人 | 原因 | 影响范围 |
 |---|---|---|---|
 | 2026-10-20 | 执行方（按所有者指示「开工 D」） | 初版：预登记（开跑前） | 本文档 |
 | 2026-10-20 | 执行方（同上） | 回填实测（62/75 = 82.67%）+ 失败归因 + **3 项口径偏离声明** + 结构性发现（收口契约/测点依赖告警/不自行收口） | 本文档 §三/§四；`experiments/v1/raw/EXP-P7-GATE-D-R{1,2,3}.jsonl`、`.agg.json`、`EXP-P7-GATE-D.security_audit.jsonl`；`scripts/run_agent_gate.py`；`tests/test_agent_gate.py`；CHANGELOG；known-issues（ISS-053） |
 | 2026-10-20 | 执行方（收口核查） | 补 §3.4-d：预算计数器漏计（Redis 126 vs 实跑 150+22 → 仅计 104/150）；建议登记 ISS-054，未擅自登记 | 本文档 §3.4 |
+| 2026-10-20 | 执行方（按所有者指示「执行」） | 新增 §五：v2 harness 修复 ①告警前置 ②收口形态单列 ③步数回产品默认 4（**离线完成**，零云端）；附云端复跑前置（预算已封盘 + 先修 §3.4-d）与命令 | 本文档 §五；`scripts/run_agent_gate.py`；`tests/test_agent_gate.py` |

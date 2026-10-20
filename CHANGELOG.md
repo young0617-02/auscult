@@ -22,6 +22,17 @@
 
 ---
 
+### 2026-10-20（收口后维护期 · **所有者指示「执行」下一版 D 的三项修复**）— P7：D harness v2（告警前置 / 收口形态单列 / 步数回产品默认）**离线完成，云端复跑待排日**
+
+- **① 告警前置（`scripts/run_agent_gate.py::infer_alarm`）**：从用例文本（`context` 优先、其次 `input`）抽设备编号，注入最小 `AlarmEvent`（`vib_rms / 6.8 / baseline 4.5 / high`，脚本标 `GATE-D-PREFILL`）并传给 `execute_tool` —— 修掉首版 4 次「`query_sensor` 缺 `sensor_ids` 且无告警可推断」的工具级错误。覆盖：25 条用例注入 **19** 条；**被判据驱动的 17 条中 16 条**有告警（唯一例外 `v1-014` 只查知识库）。**注入内容不含用例 expected**（单测断言）。
+- **② 收口形态单列（`answer_mode_of`）**：`result.answer_mode ∈ {json, natural_language, none}` + `meta.answer_modes`，**只记录、不进六档**（判分仍只看 tool_calls）→ 问答型用例以表格/段落收口不再被隐性判负，但差异可见。
+- **③ 步数回产品默认 4**：不传 `--max-steps` 即取 `AUSCULT_AGENT_MAX_STEPS`（默认 4），取消首版的预算偏离；保留 `--max-steps` 供对照。
+- **回溯开关**：`--no-alarm`（回 v1 无告警行为）、`--no-stub`（真实工具链路）；raw 每条新增 `result.alarm` / `result.answer_mode`，meta 新增 `alarm_injection` / `alarms_injected` / `answer_modes`。
+- **测试**：`tests/test_agent_gate.py` 6 → **8 例**（告警覆盖且不泄漏 expected、收口形态不进六档）→ 全量 **253 passed**。
+- **未做（明确边界）**：**云端复跑未执行** —— 当日预算已封盘（345/340），且复跑前须先解决预算计数器漏计 31%（`EXP-P7-GATE-D` §3.4-d，建议 `ISS-054`）。复跑命令与前置见该实验 §5.1（预计 ≈180 次，需单独排日）。
+
+---
+
 ### 2026-10-20（收口后维护期 · **所有者指示「开工 D」**）— P7：路径 D harness 落地 + 产品 Agent 本体首版实测（62/75，**不作切默认凭据**）
 
 > 触发：所有者 2026-10-20 指示「开工 D」。实验登记：`experiments/v1/EXP-P7-GATE-D.md`（预登记先行）；立项回填：`docs/p7-design-gate-product-agent-2026-10-20.md` §七之二。
