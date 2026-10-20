@@ -127,7 +127,7 @@ def validation_issues(case: dict[str, Any], result: AdapterResult,
     for call in result.tool_calls:
         tool_schema = schemas.get(call.name)
         if tool_schema is None:
-            issues.append(f"工具名 {call.name!r} 不在允许的 5 个工具内")
+            issues.append(f"工具名 {call.name!r} 不在允许的 {len(schemas)} 个工具内")
             continue
         if call.arguments is None:
             issues.append(f"{call.name} 的 arguments 不是合法 JSON 对象"

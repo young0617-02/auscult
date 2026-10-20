@@ -204,11 +204,15 @@ docker compose -f docker/compose.ingest.yml up -d
 > 测试开发期云端承载：`$env:AUSCULT_DIAGNOSIS_MODE="agent"; $env:AUSCULT_LLM_BACKEND="cloud"`；
 > 后期回本地（换硬件 + qwen3:32b）：`AUSCULT_LLM_BACKEND=local` + `AUSCULT_LOCAL_MODEL_AGENT/DIAGNOSE=qwen3:32b`。
 > 设计与切换 Runbook、判据闸门、未决项 U1–U4：`docs/p7-design-agent-diagnosis-2026-10-19.md`。
-> **判据闸门结论（2026-10-20 实测，请勿误读为"Agent 已上线"）**：云端 Agent 形态**未过 V1 分档闸门** ——
-> `EXP-P7-GATE`（3 轮 75 样本）多轮 77.8% 中间区间；`v1-019` 重释义为「不得调用写操作」后，`EXP-P7-GATE2`
-> 仍 **No-Go**（多轮 66.7%、整体 63/75 = 84.0%），根因登记 **`ISS-052`**（判据工具面含 `generate_report`，
-> 与产品 4 只读工具面不一致 → 判据测非所测）。**故 `AUSCULT_DIAGNOSIS_MODE` 默认保持 `deterministic`**，
-> Agent 形态仅为可选开关；下一步（路径 C/D 与产品形态口径）见 `experiments/v1/EXP-P7-GATE2.md` §四。
+> **判据闸门结论（2026-10-20 实测，请勿误读为"Agent 已上线"）**：三版实测，**当前对外只引用路径 C 版** ——
+> `EXP-P7-GATE`（5 工具面）：多轮 77.8% 中间区间；`EXP-P7-GATE2`（同面 + 禁调口径）：多轮 66.7% **No-Go**
+> （根因 = 判据工具面含写操作，登记 **`ISS-052`**，两版均**不得**再对外引用）；
+> **`EXP-P7-GATE3`（路径 C：只读 4 工具面 = 产品口径）**：首成 **67/75 = 89.33%**，参数校验 100% /
+> 多轮 100% / 拒止 100% / 澄清 100% 四档 Pass，单工具 83.3%、多工具 58.3% 为中间区间，
+> **无一档 No-Go → 整体中间区间，按纪律仍不切默认**（`AUSCULT_DIAGNOSIS_MODE` 默认 `deterministic`）。
+> 三版**不可横向比较**（被测工具面不同）；下一步 = 路径 D（用产品 Agent 本体跑判据，已立项
+> `docs/p7-design-gate-product-agent-2026-10-20.md`）+ U2 已判决「异步诊断 + 实时进度」
+> （`docs/p7-decision-async-diagnosis-2026-10-20.md`）。
 
 ### 4.6 启动前端
 

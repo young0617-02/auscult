@@ -68,20 +68,23 @@ def test_every_expected_tool_exists_in_schema():
 
 
 def test_forbidden_tool_cases_declared_consistently():
-    """禁调声明只允许出现在**非拒绝**用例上，且当前仅 `v1-019`（防扩散/防双轨）。"""
+    """路径 C 后：**不得**再有 `forbidden_tool_calls` 声明（写操作已不在被测工具面）。
+
+    禁调判分语义保留在 `judge_tools`（自检锁定），但用例集不再需要它 —— 否则等于
+    「给一个不存在的工具设禁令」，属空转判据（ISS-052 的处置）。
+    """
     for c in CASES:
-        if c.get("forbidden_tool_calls"):
-            assert c["expect_reject"] is False, \
-                f"{c['case_id']} 既声明拒绝又声明禁调 —— 判分语义双轨"
-            assert "refusal_kind" not in c, \
-                f"{c['case_id']} 非拒绝用例不应带 refusal_kind"
-    assert BY_ID["v1-019"].get("forbidden_tool_calls") == ["generate_report"], \
-        "v1-019 的禁调目标应为 generate_report（写操作，ADR-007 移出图内）"
+        assert not c.get("forbidden_tool_calls"), \
+            f"{c['case_id']} 仍声明禁调工具；路径 C 后写操作不在工具面，该声明无意义"
+        if c.get("forbidden_tool_calls") is not None:
+            assert c["expect_reject"] is False, f"{c['case_id']} 既声明拒绝又声明禁调"
 
 
-def test_forbidden_semantics_v1_019():
-    """重释义后的判分语义：只读调用通过 / 调用写操作失败 / 空答复失败。"""
-    case = BY_ID["v1-019"]
+def test_forbidden_semantics_retained_in_judge():
+    """禁调判分语义仍生效（合成用例，与用例集解耦）：只读通过 / 写操作失败 / 空答复失败。"""
+    case = {"case_id": "synthetic-forbidden", "type": "单工具", "difficulty": "中",
+            "expect_reject": False, "expected_tool_calls": [],
+            "forbidden_tool_calls": ["generate_report"]}
 
     def _rec(calls, content=""):
         return {"model": "mock", "attempt": 1, "repeat": 1, "cold_start": True,
@@ -102,8 +105,34 @@ def test_forbidden_semantics_v1_019():
     assert judged["forbidden_hit"] == ["generate_report"]
 
     assert jt.judge_record(_rec([], "报告须经审核后由系统生成。"), SCHEMAS)["success"], \
-        "零调用但有答复应通过（A 版判据：仅约束写操作调用）"
+        "零调用但有答复应通过"
     assert not jt.judge_record(_rec([], ""), SCHEMAS)["success"], "零调用且零答复应判失败"
+
+
+def test_expected_tools_exist_in_agent_tool_face():
+    """路径 C：用例期望的工具必须都在**只读工具面**（`tools_v4_agent.json`）内。
+
+    否则判据会要求模型调用一个产品里不存在的工具 → 又变成「测非所测」（ISS-052 复发）。
+    """
+    agent_schemas = jt.load_tool_schemas(ROOT / "schemas" / "tools_v4_agent.json")
+    assert "generate_report" not in agent_schemas, "只读工具面不得含写操作"
+    for c in CASES:
+        for call in c["expected_tool_calls"]:
+            assert call["name"] in agent_schemas, \
+                f"{c['case_id']} 期望的工具 {call['name']} 不在产品只读工具面内（ISS-052 复发）"
+
+
+def test_v1_019_is_genuine_context_inheritance():
+    """路径 C 后的 `v1-019`：设备编号只能来自历史上下文（输入文本里没有）。"""
+    case = BY_ID["v1-019"]
+    assert case["type"] == "多轮" and case["difficulty"] == "难"
+    assert "PUMP-A-01" not in case["input"], "输入文本不得直接给出设备编号（否则考不成上下文继承）"
+    ctx = json.dumps(case["context"], ensure_ascii=False)
+    assert "PUMP-A-01" in ctx, "设备编号应来自历史上下文"
+    call = case["expected_tool_calls"][0]
+    assert call["name"] == "query_graph"
+    assert call["arguments"]["start_node"] == "PUMP-A-01", "start_node 应由上下文补全"
+    assert call["arguments"]["depth"] == 2, "depth 应由本轮「查两层」补全"
 
 
 def test_type_coverage():
@@ -259,25 +288,25 @@ def test_iss036_split_revision_scope():
 
 
 def test_redefinition_1020_revision_scope():
-    """2026-10-20 重释义：相对 `-pre-2026-10-20` **只允许** `v1-019` 变动。
+    """2026-10-20 修订（判决 A 重释义 + 路径 C 换用例）：相对 `-pre-2026-10-20` 只改 `v1-019`。
 
-    允许变动字段 = `expected_tool_calls` / `notes`，以及新增 `forbidden_tool_calls`；
-    身份字段（`input` / `type` / `difficulty` / `expect_reject`）不得改，其余 19 条须逐字一致。
+    允许变动字段 = `input` / `context` / `expected_tool_calls` / `notes` / `forbidden_tool_calls`；
+    `type` / `difficulty` / `expect_reject` 不得改，其余 19 条须逐字一致。
     """
     before = _load(ARCHIVE_1020)
     assert set(before) == set(BY_ID)
     changed = [cid for cid in BY_ID if before[cid] != BY_ID[cid]]
-    assert changed == ["v1-019"], f"本次修订只应改 v1-019，实际 {changed}"
+    assert changed == ["v1-019"], f"2026-10-20 修订只应改 v1-019，实际 {changed}"
 
     x, y = before["v1-019"], BY_ID["v1-019"]
-    assert set(y) - set(x) == {"forbidden_tool_calls"}, "只应新增 forbidden_tool_calls"
-    for k in ("input", "type", "difficulty", "expect_reject"):
-        assert x[k] == y[k], f"v1-019.{k} 不得在重释义中被改动"
-    assert y["expected_tool_calls"] == [], "重释义后正向期望应为空"
-    assert "【重释义 2026-10-20" in y["notes"], "重释义须在 notes 留痕（审计可追溯）"
-    # 非本用例的其余字段零改动（逐字比对，防顺手改参数）
+    allowed = {"input", "context", "expected_tool_calls", "notes", "forbidden_tool_calls"}
+    assert set(y) - set(x) <= allowed, f"v1-019 只允许新增 {sorted(allowed)} 内字段"
+    assert set(x) - set(y) <= allowed, "v1-019 只允许删除上述允许集合内字段"
+    for k in ("type", "difficulty", "expect_reject"):
+        assert x[k] == y[k], f"v1-019.{k} 不得在 2026-10-20 修订中被改动"
+    assert "【修订 2026-10-20 · 路径 C】" in y["notes"], "路径 C 修订须在 notes 留痕"
     for cid in BY_ID:
         if cid == "v1-019":
             continue
-        assert before[cid] == BY_ID[cid], f"{cid} 不得在重释义修订中被改动"
+        assert before[cid] == BY_ID[cid], f"{cid} 不得在 2026-10-20 修订中被改动"
 
