@@ -28,7 +28,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from ..security.sanitizer import audit_tool_call, validate_tool_call
+from ..security.sanitizer import audit_tool_call, validate_tool_args, validate_tool_call
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = PROJECT_ROOT / "schemas" / "tools_v4.json"
@@ -307,6 +307,17 @@ def execute_tool(name: str, arguments: dict[str, Any], *,
         audit_tool_call(thread_id, product_name, {"args_keys": sorted(args)},
                         allowed=False)
         return {"ok": False, "error": f"工具 '{name}' 不在白名单中，已拒绝执行"}
+
+    # 参数级前置校验（2026-10-21 接线）：此前 validate_tool_args 从未被调用，
+    # 缺参只能靠各执行体手工兜底 —— 统一在这里拦，模型可据 error 自我纠正。
+    arg_check = validate_tool_args(product_name, args)
+    if not arg_check["valid"]:
+        audit_tool_call(thread_id, product_name,
+                        {"args_keys": sorted(args), "invalid": arg_check["errors"]},
+                        allowed=False)
+        return {"ok": False,
+                "error": "参数校验失败：" + "；".join(arg_check["errors"])
+                         + "。请补齐参数后重试。"}
 
     executor = _EXECUTORS.get(name)
     if executor is None:

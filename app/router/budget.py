@@ -62,11 +62,13 @@ def _today_key() -> str:
 class BudgetGuard:
     """预算熔断守卫（D15）。
 
-    check() → (ok, count, limit, reason)
-      - ok=True: 未超限，可调用
-      - ok=False: 已超限，熔断
-      - Redis 不可达: ok=True（不阻塞），reason="redis_unreachable"
-    increment() → count（调用成功后 +1）
+    reserve() → (ok, count, limit, reason)   ← **推荐路径（ISS-054 先增后调）**
+      - 调用**之前**先占 1 次额度：超时/异常/进程崩溃路径也计费
+        （客户端断连 ≠ 服务端停止计费，实测 20s 断连的调用照样计入账单）；
+      - 超限时不占额度（即时回滚）→ ok=False 熔断；
+      - Redis 不可达: ok=True（不阻塞），reason="redis_unreachable"。
+    check() → (ok, count, limit, reason)     ← 只读预览（health/审计用，不计费）
+    increment() → count（"调用成功后 +1"，旧口径，保留兼容）
     """
 
     def check(self) -> tuple[bool, int, int, str]:
@@ -82,8 +84,35 @@ class BudgetGuard:
             # Redis 不可达：不阻塞主流程，审计记录
             return True, -1, limit, f"redis_unreachable:{type(exc).__name__}"
 
+    def reserve(self) -> tuple[bool, int, int, str]:
+        """**调用前**占位计数（先增后调，ISS-054）。
+
+        与 check()+increment() 的差别：把「计数」挪到真正发起调用之前——
+        旧口径只在成功路径 `increment()`，导致超时/异常/进程崩溃的调用
+        **零记账**（实测漏计 10–31%，Agent 形态单次诊断多轮调用漏得更多）。
+
+        语义：
+          - 正常：`INCR` 后返回 (True, 含本次的计数, limit, "ok")；
+          - 超限：`INCR` 后立刻 `DECR` 回滚（熔断不占额度），返回 (False, 回滚后计数, limit, reason)；
+          - Redis 不可达：不阻塞，返回 (True, -1, limit, "redis_unreachable:...")。
+        """
+        limit = _get_limit()
+        try:
+            client = _get_client()
+            key = _today_key()
+            count = int(client.incr(key))
+            if count == 1:
+                client.expire(key, EXPIRY_SECONDS)
+            if count > limit:
+                client.decr(key)                      # 熔断不占额度
+                return False, count - 1, limit, f"budget_exceeded({count - 1}/{limit})"
+            return True, count, limit, "ok"
+        except Exception as exc:   # noqa: BLE001
+            # Redis 不可达：不阻塞主流程，审计记录（与 check 同口径）
+            return True, -1, limit, f"redis_unreachable:{type(exc).__name__}"
+
     def increment(self) -> int:
-        """调用成功后计数 +1。返回当前计数（-1 = Redis 不可达）。"""
+        """调用成功后计数 +1（**旧口径，仅保留兼容**；新代码用 reserve()）。"""
         try:
             client = _get_client()
             key = _today_key()

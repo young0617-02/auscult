@@ -76,6 +76,49 @@ function Invoke-DockerQuiet {
     }
 }
 
+# ---------------------------------------------------------------- 端口占用预检（ISS-057）
+# 2026-10-21 实测：宿主 mosquitto.exe 占用 1883 时，compose 的 MQTT 端口映射会**静默失败**
+# （`docker port` 仅见 9001），灌数链路实际连到宿主 broker（默认 max_queued_messages=1000）
+# → 单轮 10804 报文仅落 ~1250 行（约 12%），而 `up -d` 全程零报错。
+# compose 本身不上报该冲突（冲突只体现在容器内 broker 层），故在此 fail-fast。
+function Get-ListeningPids {
+    param([int]$Port)
+    try {
+        $conns = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction Stop
+        return @($conns | Select-Object -ExpandProperty OwningProcess -Unique)
+    } catch {
+        # 回退 netstat（Get-NetTCPConnection 不可用或权限受限），取 LISTENING 行的 PID 列
+        $rows = netstat -ano | Select-String -Pattern ":$Port\s" | Select-String -Pattern "LISTENING"
+        return @($rows | ForEach-Object { ($_.ToString().Trim() -split '\s+')[-1] } |
+                 Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ } |
+                 Select-Object -Unique)
+    }
+}
+
+$MqttPort = 1883
+$holderPids = Get-ListeningPids -Port $MqttPort
+if ($holderPids.Count -gt 0) {
+    # 本栈已起时 1883 由 docker 代理进程持有（com.docker.backend / vpnkit / wslrelay），
+    # 属正常映射 → 放行；宿主其它进程（典型：mosquitto.exe）一律拒绝起栈。
+    $foreign = @()
+    foreach ($hp in $holderPids) {
+        $proc = Get-Process -Id $hp -ErrorAction SilentlyContinue
+        $procName = if ($proc) { $proc.ProcessName } else { "<pid $hp>" }
+        if ($procName -notmatch '^(com\.docker|docker|vpnkit|wslrelay|dockerd)') {
+            $foreign += "$procName($hp)"
+        }
+    }
+    if ($foreign.Count -gt 0) {
+        Write-Host "[FAIL] 端口 1883 已被非 docker 进程占用：$($foreign -join ', ')" -ForegroundColor Red
+        Write-Host "       compose 的 MQTT 端口映射会**静默失败**（ISS-057）→ 灌数走宿主 broker，数据只落 ~12%。" -ForegroundColor Red
+        Write-Host "       处置：停止占用进程后重试（例：Stop-Process -Id <PID> -Force），或改用其它端口。" -ForegroundColor Yellow
+        exit 1
+    }
+    Write-Host "[INFO] 1883 由本栈 docker 映射持有，跳过占用预检" -ForegroundColor DarkGray
+} else {
+    Write-Host "[OK] 端口 1883 空闲（MQTT 映射可正常建立）" -ForegroundColor Green
+}
+
 Write-Host "[STEP 1/2] Pulling images (if missing)..." -ForegroundColor Cyan
 $pullExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "pull")
 if ($pullExit -ne 0) {

@@ -49,6 +49,9 @@ class ChatResult:
     tool_calls: list[ToolCall] = field(default_factory=list)
     latency_ms: float = 0.0
     error: str | None = None
+    #: 原始 usage 字段（prompt_tokens / completion_tokens / total_tokens）。
+    #: 2026-10-21 起保留：token 成本此前**完全不可观测**，只能按字符估算。
+    usage: dict[str, Any] = field(default_factory=dict)
 
     @property
     def tool_calls_missing(self) -> bool:
@@ -153,7 +156,11 @@ class OpenAICompatClient:
         # 由上层 diagnose._strip_think 统一剥离，此处不处理）
         calls = [_normalize_call(c) for c in (message.get("tool_calls") or [])]
         calls = [c for c in calls if c is not None]
-        return ChatResult(model=self.model, content=content, tool_calls=calls)
+        usage = data.get("usage") or {}
+        if not isinstance(usage, dict):
+            usage = {}
+        return ChatResult(model=self.model, content=content, tool_calls=calls,
+                          usage=usage)
 
 
 def _normalize_call(item: Any) -> ToolCall | None:

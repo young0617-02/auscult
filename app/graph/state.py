@@ -102,6 +102,11 @@ class DiagnosisState(BaseModel):
     degrade_reason: str | None = None
     human_review: dict | None = None
 
+    # 合规拒答/澄清（P7 · 2026-10-21）：Agent 按规则 6a/6b 只回文字时置位。
+    # 语义：这是**正确行为**（不是解析失败），路由应直达 finalize，不重试、不降级。
+    # 形如 {"kind": "clarification"|"refusal", "reason": "..."}
+    refusal: dict | None = None
+
     # Agent 轨迹（P7 · AUSCULT_DIAGNOSIS_MODE=agent 时逐轮记录工具调用；
     # 追加语义，dict 载荷对 PostgresSaver msgpack 友好，见 p7 设计文档 §五）
     agent_steps: Annotated[list[dict], add] = Field(default_factory=list)

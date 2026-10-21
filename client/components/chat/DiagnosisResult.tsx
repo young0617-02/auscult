@@ -11,18 +11,48 @@ import Link from "next/link";
 import { AlertTriangle, CircleAlert, FileText, ShieldCheck } from "lucide-react";
 import { ConfidenceBadge, RiskTag } from "@/components/common/ConfidenceBadge";
 import { useReportDetail } from "@/hooks/useReports";
-import type { ReviewPayload } from "@/lib/types/thread";
+import { refusalTitle } from "@/lib/refusal";
+import type { RefusalInfo, ReviewPayload } from "@/lib/types/thread";
 
 export function DoneMessage({
   reportId,
   degradeReason,
+  refusal = null,
 }: {
   reportId: string | null;
   degradeReason: string | null;
+  refusal?: RefusalInfo | null;
 }) {
   const { data: report } = useReportDetail(reportId);
   const confidence = report ? Number(report.confidence) : null;
   const risk = report?.risk_level ?? "";
+
+  // 拒答/澄清：无取证无结论 → 不展示置信度/风险徽章，也不套用"降级"横幅
+  if (refusal) {
+    return (
+      <section
+        className="rounded-lg border border-edge-subtle bg-surface-raised p-4"
+        data-testid="diagnosis-refusal"
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <CircleAlert className="size-4 text-risk-medium-text" />
+          <span className="text-sm font-medium text-fg-primary">
+            {refusalTitle(refusal.kind)}
+          </span>
+        </div>
+        <p className="mt-2 text-xs leading-5 text-fg-secondary">{refusal.reason}</p>
+        {reportId && (
+          <Link
+            href={`/reports/${reportId}`}
+            className="mt-3 inline-flex items-center gap-1 rounded-md border border-edge-subtle px-2.5 py-1 text-xs text-fg-secondary transition-colors hover:bg-surface-base hover:text-fg-primary"
+          >
+            <FileText className="size-3.5" />
+            查看记录
+          </Link>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section

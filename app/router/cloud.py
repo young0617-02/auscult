@@ -7,7 +7,10 @@
 关键设计（plan §六.4）：
   - **脱敏前置**：送云端前剥离 device_id / 厂区 / 工艺参数标识，只保留
     "故障现象 + 通用知识 + 统计摘要"（V5.0 §七 防线①）；
-  - **超时 20s**：失败 → degrade_reason="cloud_unavailable"，保留本地诊断；
+  - **超时角色化**（ISS-058，2026-10-21）：取 `llm_config.cloud_timeout()`
+    （默认 = agent 角色 90s；env `AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖）——
+    原写死 20s 与云端实测 5.5–37s 不匹配，兜底必然超时降级；
+    失败 → degrade_reason="cloud_unavailable"，保留本地诊断；
   - **审计**：每次升级写 `reports/cloud_audit.jsonl`（含脱敏前后 hash + 预算计数）；
   - **预算熔断**（D15）：`budget:cloud:{day}` Redis 按天计数，超 `per_day_calls` 熔断 →
     `degrade_reason="budget_exceeded"`；Redis 不可达 → 不阻塞（审计记录）。
@@ -42,7 +45,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CLOUD_CONFIG_PATH = PROJECT_ROOT / "env" / "cloud.json"
 AUDIT_LOG_PATH = PROJECT_ROOT / "reports" / "cloud_audit.jsonl"
 
-CLOUD_TIMEOUT_SEC = 20.0   # plan §六.4：超时 20s
+#: 云端升级单次调用超时**不再写死**（ISS-058，2026-10-21）。
+#: 原值 20.0（plan §六.4）与云端实测单轮 5.5–37s 不匹配 → 兜底必然超时降级，
+#: 且断连不停止服务端计费。现统一取 `llm_config.cloud_timeout()`
+#: （角色化：默认 = agent 角色 90s；env `AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖）。
 
 
 # ---------------------------------------------------------------- 配置加载
@@ -82,6 +88,12 @@ def _hash_device_id(device_id: str) -> str:
     """device_id → 设备#<sha256[:6]>（可追溯不可逆）。"""
     digest = hashlib.sha256(device_id.encode("utf-8")).hexdigest()[:6]
     return f"设备#{digest}"
+
+
+#: 公开别名（P7 · U1-D1，2026-10-21）：Agent 主路出网脱敏复用**同一算法**，
+#: 避免「兜底路径 hash、Agent 主路明文」两套口径（见
+#: `docs/p7-review-u1-sanitization-scope-2026-10-21.md`）。
+hash_device_id = _hash_device_id
 
 
 def sanitize_state(state: DiagnosisState) -> dict[str, Any]:
@@ -193,15 +205,20 @@ def write_audit(record: dict[str, Any]) -> None:
 
 # ---------------------------------------------------------------- 云端调用
 
-def call_cloud(messages: list[dict], *, timeout: float = CLOUD_TIMEOUT_SEC) -> str:
+def call_cloud(messages: list[dict], *, timeout: float | None = None) -> str:
     """调用云端 OpenAI 兼容端点，返回 content 文本。
 
     P7 起经统一客户端出口（app/llm.client.get_cloud_client）——本函数保留是
     兼容既有调用方 import 与审计语义；脱敏/预算/审计逻辑不变。
 
+    超时：`timeout=None` 时取 `llm_config.cloud_timeout()`（ISS-058 角色化，
+    默认 90s，env `AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖）。**不得**回退为常量。
+
     异常: TimeoutError / ConnectionError / RuntimeError
     """
     client = get_cloud_client()
+    if timeout is None:
+        timeout = llm_config.cloud_timeout()
     return client.chat(messages, timeout=timeout).content
 
 
@@ -236,8 +253,9 @@ class CloudRouter:
 
         _budget = BudgetGuard()
 
-        # 预算熔断（D15）
-        b_ok, b_count, b_limit, b_reason = _budget.check()
+        # 预算熔断（D15）——**先增后调**（ISS-054，2026-10-21）：调用前占位计数，
+        # 超时/异常路径同样计入（客户端断连不等于服务端未计费）；超限即回滚不占额度。
+        b_ok, b_count, b_limit, b_reason = _budget.reserve()
         if not b_ok:
             write_audit({"ts": ts_iso, "thread_id": state.thread_id,
                          "model": "N/A", "success": False,
@@ -265,15 +283,32 @@ class CloudRouter:
             {"role": "system", "content": _SYSTEM_PROMPT},
             {"role": "user", "content": user_prompt},
         ]
-        cfg = load_cloud_config()
+        # 2026-10-21：兜底路径现在也可能由「本地 LLM 失败」触发，而纯本地开发
+        # 环境未必配了 env/cloud.json —— 配置缺失必须**降级**而非抛异常
+        # （原实现 cfg 在 try 之外，缺配置会让整次诊断 status=error）。
         try:
-            raw_content = call_cloud(messages, timeout=CLOUD_TIMEOUT_SEC)
+            cfg = load_cloud_config()
+            timeout_sec = llm_config.cloud_timeout()      # ISS-058：角色化，非写死
+        except RuntimeError as exc:
+            write_audit({"ts": ts_iso, "thread_id": state.thread_id,
+                         "model": "N/A", "success": False,
+                         "latency_ms": round((time.perf_counter() - ts_start) * 1000, 1),
+                         "error": f"config: {exc}", "budget_ok": True,
+                         "budget_count": b_count, "budget_limit": b_limit})
+            return {"degrade_reason": "cloud_unavailable",
+                    "escalate_cloud": True,
+                    "errors": [{"node": "escalate_cloud",
+                                "code": "E_LLM_CONFIG",
+                                "msg": f"云端兜底配置不可用：{exc}"}]}
+
+        try:
+            raw_content = call_cloud(messages, timeout=timeout_sec)
         except (TimeoutError, ConnectionError, RuntimeError) as exc:
             latency_ms = round((time.perf_counter() - ts_start) * 1000, 1)
             write_audit({"ts": ts_iso, "thread_id": state.thread_id,
                          "hash_pre": hash_pre, "hash_post": hash_post,
                          "model": cfg["model"], "success": False,
-                         "latency_ms": latency_ms,
+                         "latency_ms": latency_ms, "timeout_sec": timeout_sec,
                          "error": f"{type(exc).__name__}: {exc}",
                          "budget_ok": True,
                          "budget_count": b_count, "budget_limit": b_limit})
@@ -293,7 +328,7 @@ class CloudRouter:
             write_audit({"ts": ts_iso, "thread_id": state.thread_id,
                          "hash_pre": hash_pre, "hash_post": hash_post,
                          "model": cfg["model"], "success": False,
-                         "latency_ms": latency_ms,
+                         "latency_ms": latency_ms, "timeout_sec": timeout_sec,
                          "error": "JSON parse failed",
                          "budget_ok": True,
                          "budget_count": b_count, "budget_limit": b_limit})
@@ -329,16 +364,13 @@ class CloudRouter:
         alarm_severity = state.alarm.severity if state.alarm else "medium"
         risk = _determine_risk_level(alarm_severity, confidence)
 
-        # 预算计数 +1（D15）
-        new_count = _budget.increment()
-
-        # 审计
+        # 审计（b_count 已是 reserve 后的计数，含本次；ISS-054 起不再事后 +1）
         write_audit({"ts": ts_iso, "thread_id": state.thread_id,
                      "hash_pre": hash_pre, "hash_post": hash_post,
                      "model": cfg["model"], "success": True,
-                     "latency_ms": latency_ms,
+                     "latency_ms": latency_ms, "timeout_sec": timeout_sec,
                      "confidence": confidence, "risk_level": risk,
-                     "budget_ok": True, "budget_count": new_count,
+                     "budget_ok": True, "budget_count": b_count,
                      "budget_limit": b_limit})
 
         return {

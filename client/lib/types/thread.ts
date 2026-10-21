@@ -82,6 +82,17 @@ export interface ThreadStatusData {
   finished_at: number | null;
   /** P7 Agent 循环工具调用轨迹（可选：旧缓存 payload 无此字段） */
   agent_steps?: AgentSteps;
+  /** P7 合规拒答/澄清（可选：旧缓存 payload 无此字段；null = 正常诊断） */
+  refusal?: RefusalInfo | null;
+}
+
+/** 合规拒答/澄清（app/graph/state.py::refusal，规则 6a/6b）。
+ *  - clarification：告警缺具体设备编号，需补充信息后重发；
+ *  - refusal：请求超出系统职责（改数据/现场操作/寿命预测）。
+ *  两者都是**正确行为**（不重试、不降级），故不按"失败"展示。 */
+export interface RefusalInfo {
+  kind: "clarification" | "refusal";
+  reason: string;
 }
 
 /** P7 Agent 循环单步轨迹（state.agent_steps 元素；app/graph/nodes/agent_diagnose.py）。

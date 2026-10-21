@@ -34,6 +34,18 @@ backups/
 # 运行日志（可再生，不入库）
 logs/
 
+# 本地实跑日志：API / 前端进程重定向产物（2026-10-21 收尾轮补，此前裸放工作区）
+/.api*.log
+/.api*.err
+/.client.log
+/.client.err
+
+# 云端配置备份：与 env/cloud.json 同含 API key，同口径禁止入库
+env/cloud.json.bak*
+
+# 个人交付素材（需求/简历等，非项目资产，不入库）
+Material/
+
 # 运行期 LangGraph trace（每次 E2E / 演示运行自动生成，属可再生运行产物，不入库）
 # 注：P1–P5 期间已入库的 thr-*.jsonl 不受影响（gitignore 不追溯已跟踪文件）
 reports/traces/thr-*.jsonl

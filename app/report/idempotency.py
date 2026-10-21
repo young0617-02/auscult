@@ -71,6 +71,10 @@ def state_to_payload(state_dict: dict[str, Any]) -> dict[str, Any]:
         "human_review": _serialize_review(state_dict.get("human_review")),
         "degrade_reason": state_dict.get("degrade_reason"),
         "errors": state_dict.get("errors", []),
+        # P7 · 2026-10-21：Agent 轨迹入库（此前只存在于线程内存态，进程重启即丢，
+        # 且 token 成本完全不可对账）。确定性形态为空列表。
+        "agent_steps": [s for s in (state_dict.get("agent_steps") or [])
+                        if isinstance(s, dict)],
     }
 
 

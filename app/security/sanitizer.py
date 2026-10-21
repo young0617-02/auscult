@@ -173,13 +173,16 @@ def validate_tool_args(tool_name: str, args: dict[str, Any]) -> dict[str, Any]:
         errors.append(f"工具 '{tool_name}' 不在白名单中")
         return {"valid": False, "errors": errors}
 
-    # 各工具的必填字段
+    # 各工具的必填字段（2026-10-21 校正：与 tools_v4.json / Agent 工具面逐项对齐）
+    # 原表有两处错：query_graph 要求 "query"（实际参数是 start_node）→ 会把合法图谱调用
+    # 全判非法；search_knowledge（Agent 面主名）缺失、retrieve_knowledge 保留兼容。
     required: dict[str, list[str]] = {
         "query_sensor": ["device_id"],
         "get_maintenance_history": ["device_id"],
-        "query_graph": ["query"],
+        "query_graph": ["start_node"],
+        "search_knowledge": ["query"],
         "retrieve_knowledge": ["query"],
-        "generate_report": ["thread_id"],
+        "generate_report": ["device_id", "diagnosis_summary", "evidence_refs"],
     }
 
     req_fields = required.get(tool_name, [])

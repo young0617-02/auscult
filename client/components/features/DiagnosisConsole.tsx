@@ -217,7 +217,11 @@ export function DiagnosisConsole() {
 
                 {/* 终态消息 */}
                 {status === "done" && (
-                  <DoneMessage reportId={data.report_id} degradeReason={data.degrade_reason} />
+                  <DoneMessage
+            reportId={data.report_id}
+            degradeReason={data.degrade_reason}
+            refusal={data.refusal ?? null}
+          />
                 )}
                 {status === "error" && <ErrorMessage error={data.error ?? storeThread?.error ?? null} />}
                 {status === "waiting_review" && <WaitingReviewMessage payload={data.review_payload} />}

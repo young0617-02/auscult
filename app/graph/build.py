@@ -9,13 +9,17 @@ D1 产出：骨架可编译 + Checkpointer 可连接 PG
   D5: get_history（接入 get_maintenance_history）
   D6–D8: diagnose（接入 deepseek-r1:7b + 根因/建议抽取）
   P7: diagnose 槽位可按 AUSCULT_DIAGNOSIS_MODE 切换两种实现——
-       deterministic（默认，固定编排+单次 LLM 诊断，证据由 gather 节点采集）
-       agent（Agent 循环，LLM 自主调工具取证，证据由循环内工具结果归集）；
+       agent（**默认**，2026-10-21 所有者裁决；Agent 循环，LLM 自主调工具取证，
+              证据由循环内工具结果归集）
+       deterministic（固定编排+单次 LLM 诊断，证据由 gather 节点采集；现为**回退通道**）；
        两种实现下游契约完全一致（ diagnosis/root_causes/suggestions/confidence/
        risk_level + 条件路由），切换不影响审核/幂等/降级链路。
        详见 docs/p7-design-agent-diagnosis-2026-10-19.md。
 
 条件路由（plan §3.3，严格优先级，首个命中生效）：
+  -1. 合规拒答/澄清（state.refusal 非空）→ finalize
+      （P7 · 2026-10-21：提示词规则 6a/6b 要求「只回文字」，这不是失败；
+       置 confidence=0.0 会误命中下面的 degrade，故必须优先短路）
   0. diagnose 失败（diagnosis=None）且 0 < retry_count < 3 → 自循环重试 diagnose
      （2026-10-14 修复：否则首次 LLM 失败即被「confidence<0.50」命中 degrade，
        retry_count≥3 护栏对该路径不生效）
@@ -48,8 +52,32 @@ from .nodes.finalize import finalize
 
 # ---------------------------------------------------------------- 条件路由
 
+def _should_fallback_to_cloud(state: DiagnosisState) -> bool:
+    """本地主通道失败（重试耗尽且无结论）→ 是否升级云端兜底。
+
+    2026-10-21 核查发现的架构缺口：`retry_count >= 3` 原直接把状态送 `degrade`，
+    而本地 Ollama 不可达/超时时诊断**永远**不会尝试云端 —— 即「云端降为兜底」
+    只在「置信度不足」维度成立，在「本地模型故障」维度不成立。
+    四个前置条件（任一不满足即维持既有 degrade 语义）：
+      1. `AUSCULT_CLOUD_FALLBACK` 未关闭（纯离线开发可关）；
+      2. 当前后端是 `local`（后端即云端时 escalate 会空转跳过，走了也无意义）；
+      3. 本次流程尚未升级过（`escalate_cloud` 为假，避免二次计费/环回）；
+      4. `diagnosis is None`（确认是 LLM 失败；`E_JSON_PARSE` 路径 diagnosis 非空）。
+    """
+    return (llm_config.cloud_fallback_enabled()
+            and llm_config.llm_backend() == "local"
+            and not state.escalate_cloud
+            and state.diagnosis is None)
+
+
 def _route_condition(state: DiagnosisState) -> str:
     """严格优先级，首个命中生效（plan §3.3）。返回下一节点名。"""
+    # P7 · 2026-10-21：合规拒答/澄清（提示词规则 6a 缺 device_id、6b 越界请求）
+    # 是**正确行为**而非失败 —— agent_diagnose 已在零工具调用 + 非 JSON 时置
+    # state.refusal 且不自增 retry_count。此处必须最先短路，否则 confidence=0.0
+    # 会被下面「confidence < 0.50」命中 degrade，白走降级链并污染指标。
+    if state.refusal:
+        return "finalize"
     # diagnose 因 LLM 不可达/错误失败（diagnosis 仍为 None）且未达重试上限
     # → 自循环重试 diagnose。背景（2026-10-14 修复）：confidence 初始为 0.0，
     # 若无此分支，首次 LLM 失败即被下面「confidence < 0.50」命中 degrade，
@@ -58,6 +86,9 @@ def _route_condition(state: DiagnosisState) -> str:
     if 0 < state.retry_count < 3 and state.diagnosis is None:
         return "diagnose"
     if state.retry_count >= 3:
+        # 本地重试耗尽仍无结论 → 云端兜底一次（2026-10-21，架构完整性）
+        if _should_fallback_to_cloud(state):
+            return "escalate_cloud"
         return "degrade"
     if state.confidence < 0.50:
         return "degrade"

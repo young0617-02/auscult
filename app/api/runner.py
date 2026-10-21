@@ -97,6 +97,19 @@ def _absorb_agent_steps(rec: ThreadRecord | None, node: str, update: Any) -> Non
         rec.agent_steps.extend(s for s in steps if isinstance(s, dict))
 
 
+def _absorb_refusal(rec: ThreadRecord | None, node: str, update: Any) -> None:
+    """P7：归集 diagnose 增量里的合规拒答/澄清标记（规则 6a/6b）。
+
+    拒答是**正确行为**（路由直达 finalize、不重试），但对调用方而言"没有报告"
+    必须可解释 —— 故单独暴露给 thread_status，避免只能从 errors 的 W_ 码反推。
+    """
+    if rec is None or node != "diagnose" or not isinstance(update, dict):
+        return
+    refusal = update.get("refusal")
+    if isinstance(refusal, dict) and refusal.get("kind"):
+        rec.refusal = refusal
+
+
 # ---------------------------------------------------------------- 线程注册表（内存态）
 
 class ThreadRecord:
@@ -114,6 +127,8 @@ class ThreadRecord:
         self.degrade_reason: str | None = None
         self.qa_log: list[dict] = []     # chat:ask 追问留痕
         self.agent_steps: list[dict] = []  # P7：Agent 循环工具调用轨迹（diagnose 增量归集）
+        # P7：合规拒答/澄清标记（规则 6a/6b）——{"kind": clarification|refusal, "reason": ...}
+        self.refusal: dict | None = None
         self.error: str | None = None
         self.notified_4h: bool = False   # 4h 备用审核人通知已触发
         self.started_at = time.time()
@@ -169,6 +184,7 @@ def _execute_graph(thread_id: str, alarm: AlarmEvent) -> None:
                     if not node.startswith("__"):
                         _progress(node)
                         _absorb_agent_steps(rec, node, chunk[node])
+                        _absorb_refusal(rec, node, chunk[node])
 
             snap = graph.get_state(config)
             next_nodes = tuple(snap.next or ())
@@ -499,6 +515,7 @@ def thread_status(thread_id: str) -> dict:
             "alarm": rec.alarm.model_dump() if rec.alarm else None,
             "nodes_done": list(rec.nodes_done),
             "agent_steps": list(rec.agent_steps),
+            "refusal": rec.refusal,
             "report_id": rec.report_id,
             "review_payload": rec.review_payload,
             "degrade_reason": rec.degrade_reason,
@@ -542,6 +559,7 @@ def thread_status(thread_id: str) -> dict:
         result = {"thread_id": thread_id, "status": status,
                   "review_payload": payload, "qa_log": [],
                   "nodes_done": [], "agent_steps": agent_steps,
+                  "refusal": values.get("refusal"),
                   "report_id": None,
                   "degrade_reason": values.get("degrade_reason"),
                   "submitter": None, "alarm": None, "error": None,
@@ -554,6 +572,7 @@ def thread_status(thread_id: str) -> dict:
               "degrade_reason": values.get("degrade_reason"),
               "review_payload": None, "qa_log": [], "nodes_done": [],
               "agent_steps": agent_steps,
+              "refusal": values.get("refusal"),
               "submitter": None, "alarm": None, "error": None,
               "started_at": None, "finished_at": None}
     cache_set_state(thread_id, result)
