@@ -1,6 +1,6 @@
 # ADR-002：混合部署形态（本地优先 + 云端脱敏兜底）与不采用 LiteLLM 网关
 
-> **层级**：项目级长期有效（ADR）｜ **对应里程碑**：`M6.1`（Phase 6 文档收口 · D5 产出）｜ **状态**：🟢 **活动**｜ **最近更新**：2026-10-10
+> **层级**：项目级长期有效（ADR）｜ **对应里程碑**：`M6.1`（Phase 6 文档收口 · D5 产出）｜ **状态**：🟢 **活动**｜ **最近更新**：2026-10-21（§3.1 超时口径随 ISS-058 处置修订为角色化）
 
 ---
 
@@ -26,7 +26,7 @@
 | 升级触发 | 置信度 ∈ [0.50, 0.75) → `escalate_cloud`；云端失败 → 降级保留本地诊断 | `plan/工业设备诊断 Agent.md` §5.4；`app/graph/build.py` `_route_condition` |
 | 脱敏前置 | 送云端前 `device_id` → `设备#<sha256[:6]>`（可追溯不可逆），剥离厂区/工艺参数标识，仅传"故障现象 + 通用知识 + 统计摘要"，**不传证据原文** | `plan/工业设备诊断 Agent.md` §3.8、§七 防线①；`app/router/cloud.py` `sanitize_state`/`_hash_device_id` |
 | 预算熔断 | 每日上限 340 次（`budget:cloud:{YYYY-MM-DD}` Redis 按天计数），超限 → `degrade_reason="budget_exceeded"`；Redis 不可达不阻塞（审计记录） | `plan/工业设备诊断 Agent.md` §5.7、§7.1（R-M4）；`app/router/budget.py`；`app/api/config.py` `CLOUD_BUDGET_LIMIT` |
-| 超时与降级 | 云端 20s 超时；失败 → `cloud_unavailable`，保留本地诊断并显式标注 `degrade_reason` | `plan/工业设备诊断 Agent.md` §5.4；`app/router/cloud.py` `CLOUD_TIMEOUT_SEC=20.0` |
+| 超时与降级 | 云端超时**角色化**（ISS-058 处置，2026-10-21）：默认取 `llm_timeout(ROLE_AGENT)` = **90s**，`AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖；原写死 20s 与云端实测 5.5–37s（ISS-058 复验单次 45.1s）不匹配 → 兜底必然降级。失败 → `cloud_unavailable`，保留本地诊断并显式标注 `degrade_reason` | `plan/工业设备诊断 Agent.md` §5.4（超时值已被 ISS-058 修订）；`app/llm/config.py` `cloud_timeout()`；`app/router/cloud.py` |
 | 审计 | 每次升级写 `reports/cloud_audit.jsonl`（脱敏前后 hash + 预算计数 + 延迟） | `app/router/cloud.py` `write_audit` |
 | 术语澄清 | 项目名"云侧"指相对设备侧的"平台侧"层级，**不等于必须部署公有云** | `plan/工业设备诊断 Agent.md` §3.8 术语澄清 |
 
@@ -40,7 +40,7 @@
 |---|---|---|
 | F1 | **依赖清单无 litellm** | `requirements.txt` 全文核查：无 `litellm` 声明；全部依赖 `==` 精确锁定且注释要求与 `docs/prj-ledger-version-lock.md` 同步 |
 | F2 | **全仓零代码引用** | Grep（不区分大小写）`litellm`：仅命中 4 个文件——`plan/工业设备诊断 Agent.md`（§3.1/§4.1 早期设计表述）、`plan/Phase 3 详细开发计划（Agent 工作流实现）.md`（节点表/模块表早期表述）、`app/router/__init__.py`（模块注释历史命名"D14: cloud.py — LiteLLM 云端路由"，**注释性旧称、非依赖引用**）、`docs/prj-design-architecture.md`（§二 口径裁定 + §八 偏离登记）。`app/` 与 `scripts/` 代码零 import |
-| F3 | **云端调用为自研直调** | `app/router/cloud.py`：标准库 `urllib.request` POST OpenAI 兼容端点（配置读 `env/cloud.json`：provider/model/endpoint/api_key/budget_lock），`temperature=0.0`、`max_tokens=2048`，20s 超时，失败映射 `degrade_reason ∈ {budget_exceeded, cloud_unavailable}`（错误码 `E_BUDGET_EXCEEDED`/`E_CLOUD_UNAVAILABLE`/`E_CLOUD_JSON_PARSE`） |
+| F3 | **云端调用为自研直调** | `app/router/cloud.py`：标准库 `urllib.request` POST OpenAI 兼容端点（配置读 `env/cloud.json`：provider/model/endpoint/api_key/budget_lock），`temperature=0.0`、`max_tokens=2048`，超时角色化（原写死 20s，ISS-058 处置后默认 90s，`AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖），失败映射 `degrade_reason ∈ {budget_exceeded, cloud_unavailable}`（错误码 `E_BUDGET_EXCEEDED`/`E_CLOUD_UNAVAILABLE`/`E_CLOUD_JSON_PARSE`） |
 | F4 | **预算熔断为自研** | `app/router/budget.py` `BudgetGuard`：Redis `INCR` 按天计数 + `EXPIRE` 7 天审计窗口，超 `per_day_calls` 熔断；Redis 不可达 → 不阻塞（`ok=True` + `reason="redis_unreachable"` + 审计）。预算上限 340 由 `app/api/config.py` `CLOUD_BUDGET_LIMIT`（`env/cloud.json` `budget_daily_limit` 可覆盖）暴露至 `/api/health` |
 | F5 | **约束解码为自研路径** | `scripts/gbnf_grammar.py`：文件名沿用早期「GBNF」口径，**实际产出 JSON Schema dict**（顶层 `{type:array, items:{oneOf:[5 工具]}}`，`name` 用 `const` 锁定、全局 `additionalProperties:false`），供 Ollama 原生 `/api/chat` 的 `format` 字段——因 Ollama 0.34.2 **拒绝原始 GBNF 字符串**（报 `expected "json" or a valid JSON Schema object`）；`--selftest` 通过；由 `scripts/llm_adapter.py`/`run_v1.py`/`run_cloud_baseline.py` 消费（此链路**仅用标准库**，见 `requirements.txt` 头注） |
 | F6 | **自研链路已实测闭环** | 约束解码全量实测（EXP-V1-003）：双模型参数 JSON 可解析率 **1.00**，格式退化（JSON 不可解析/参数缺失/`ToolCallsMissing`）**根除**；P5 安全回归预算熔断 340 通过、八项安全回归全过 | 

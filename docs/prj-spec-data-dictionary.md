@@ -323,7 +323,7 @@
 
 ### 4.7 降级原因 degrade_reason 取值（代码实测）
 
-`review_rejected`（审核驳回）｜`review_timeout`（24h 超时）｜`budget_exceeded`（云端预算熔断）｜`cloud_unavailable`（云端 20s 超时/不可用）。（`app/graph/nodes/review.py`、架构文档 §5.6、`app/api/config.py` 注释）
+`review_rejected`（审核驳回）｜`review_timeout`（24h 超时）｜`budget_exceeded`（云端预算熔断）｜`cloud_unavailable`（云端超时——角色化，默认 90s，`AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖，ISS-058 / 或不可用）。（`app/graph/nodes/review.py`、架构文档 §5.6、`app/llm/config.py` `cloud_timeout()`、`app/api/config.py` 注释）
 
 ### 4.8 审计严重度
 

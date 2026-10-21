@@ -269,8 +269,10 @@
 |---|---|
 | 权限 | 已登录（任意角色） |
 | 语义 | 内存注册表优先；服务重启后从 checkpointer 推断（回退分支返回部分字段为 null，`app/api/runner.py` `thread_status` 实测） |
-| 成功响应 `data` | `{"thread_id", "status", "submitter", "alarm", "nodes_done": [], "report_id", "review_payload", "degrade_reason", "qa_log": [], "error", "started_at", "finished_at"}` |
+| 成功响应 `data` | `{"thread_id", "status", "submitter", "alarm", "nodes_done": [], "agent_steps": [], "refusal": null, "report_id", "review_payload", "degrade_reason", "qa_log": [], "error", "started_at", "finished_at"}` |
 | `status` 枚举 | `running` / `waiting_review` / `done` / `error`（`ThreadRecord` 实测） |
+| `agent_steps[]` 行（P7） | `{"step": int, "tool": str/null, "ok": bool, "args_keys": [str], "latency_ms": number/null, "forced_final"?: true, "tokens_in"?: int/null, "tokens_out"?: int/null, "usage"?: object/null}` —— Agent 循环工具轨迹（只记参数键名不记值）；`tool=null` = 步数上限后的无工具强制收口轮 |
+| `refusal`（P7 · 2026-10-21） | `null` = 正常诊断；非空 = **合规拒答/澄清**（提示词规则 6a/6b 的正确行为，非失败）：`{"kind": "clarification" \| "refusal", "reason": str}`。为 `clarification` 时表示告警缺具体设备编号需补充；为 `refusal` 时表示请求超出只读诊断职责。此时 `confidence=0`、不重试、不降级 |
 | `qa_log[]` 行 | `{"question", "answer", "citations", "user", "model", "ts"}`（chat:ask 追问留痕） |
 | `review_payload` | interrupt 载荷（结构见 §三.3.4） |
 | 失败状态码 | 401、404（线程不存在，含重启后 checkpointer 亦无线程）、422、502（状态存储不可用） |

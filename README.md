@@ -198,18 +198,28 @@ docker compose -f docker/compose.ingest.yml up -d
 #   · 需经 Nginx 容器回源时将 --host 改为 0.0.0.0
 ```
 
-> **P7 诊断 Agent 化（2026-10-19，可选开关，默认关闭=既有确定性形态）**：
+> **P7 诊断 Agent 化（2026-10-19；2026-10-21 所有者裁决 → 诊断形态转默认 = `agent`）**：
 > 统一 LLM 客户端 `app/llm/`（本地 Ollama / 云端双传输）+ Agent 循环 `app/graph/nodes/agent_diagnose.py`
 > （LLM 自主调只读工具取证，`max_steps` 封顶，写操作护栏，失败走既有重试/降级路由）。
-> 测试开发期云端承载：`$env:AUSCULT_DIAGNOSIS_MODE="agent"; $env:AUSCULT_LLM_BACKEND="cloud"`；
-> 后期回本地（换硬件 + qwen3:32b）：`AUSCULT_LLM_BACKEND=local` + `AUSCULT_LOCAL_MODEL_AGENT/DIAGNOSE=qwen3:32b`。
+> **默认形态 = `AUSCULT_DIAGNOSIS_MODE=agent`**；回退通道 = `$env:AUSCULT_DIAGNOSIS_MODE="deterministic"`。
+> ⚠️ **本地 7B 的定位（2026-10-21 复测修正）**：`qwen2.5:7b` 的**连通性与工具通道可用**
+> （`scripts/smoke_agent_local.py` 连跑 3 次 PASS，各 4–5 次工具调用、confidence 0.625–0.825），
+> 但协议稳定性与结论质量不达标（`ISS-060` 仍记录过零工具调用 + `E_JSON_PARSE`）→
+> **测试开发期仍以 cloud 为主通道**；换硬件 + `qwen3:32b` 后回 `local`
+> （硬件前置：32B Q4 约 19–20GB，本机 8GB 显存不满足，需 ≥24GB 卡）。
+> **出网脱敏口径（2026-10-21 所有者裁决：以本地部署方案为准）**：`AUSCULT_SANITIZE_OUTBOUND=auto`
+> （默认）—— 仅 `cloud` 后端脱敏（设备号 hash + 工单 `result` 不出网），本地后端明文；
+> 报告出口会把模型复述的脱敏代号还原为真实设备号（防 `设备#xxxxxx` 写进结论）。
+> **云端兜底**：`AUSCULT_CLOUD_FALLBACK=1`（默认）—— 本地重试耗尽（`E_LLM_UNREACHABLE`）
+> **也会升级云端**，不再直接 degrade；云端主通道下 `escalate_cloud` 仍空转
+> （`W_BACKEND_ALREADY_CLOUD`，不重复计费）。
 > 设计与切换 Runbook、判据闸门、未决项 U1–U4：`docs/p7-design-agent-diagnosis-2026-10-19.md`。
 > **判据闸门结论（2026-10-20 实测，请勿误读为"Agent 已上线"）**：三版实测，**当前对外只引用路径 C 版** ——
 > `EXP-P7-GATE`（5 工具面）：多轮 77.8% 中间区间；`EXP-P7-GATE2`（同面 + 禁调口径）：多轮 66.7% **No-Go**
 > （根因 = 判据工具面含写操作，登记 **`ISS-052`**，两版均**不得**再对外引用）；
 > **`EXP-P7-GATE3`（路径 C：只读 4 工具面 = 产品口径）**：首成 **67/75 = 89.33%**，参数校验 100% /
 > 多轮 100% / 拒止 100% / 澄清 100% 四档 Pass，单工具 83.3%、多工具 58.3% 为中间区间，
-> **无一档 No-Go → 整体中间区间，按纪律仍不切默认**（`AUSCULT_DIAGNOSIS_MODE` 默认 `deterministic`）。
+> **无一档 No-Go → 整体中间区间，按纪律当时不切默认**（该口径已于 2026-10-21 由 `EXP-P7-P1` 74/75 与所有者裁决更新为默认 `agent`）。
 > 三版**不可横向比较**（被测工具面不同）；**路径 D 两版均不可引用**：
 > `EXP-P7-GATE-D`（首版 62/75）含三项口径偏离（打桩漏装 / `max_steps=2` / 预算超 5 次）；
 > `EXP-P7-GATE-D2`（v2：打桩 + 告警前置 + 产品默认 4 步）**R3 因账号余额耗尽中断**（4 样本 429）
@@ -223,8 +233,9 @@ docker compose -f docker/compose.ingest.yml up -d
 > 且成本下降（调用 178→168、强制收口 35%→16%）、零错误零护栏违规。
 > **结论边界**：单模型（Qwen3.8-27B）+ 工具打桩 + 25 条判据 + 单日 3 轮，**真机链路未验**；
 > 唯一剩余失败 `v1-007` R1（`aggregation=raw`，1/75）登记 **P1.1 候选**。
-> 「是否切默认」**仍由所有者判决**（本次只提供「首次六档全绿」这一资格凭据，`AUSCULT_DIAGNOSIS_MODE`
-> 默认仍为 `deterministic`）；U2 已判决「异步诊断 + 实时进度」（`docs/p7-decision-async-diagnosis-2026-10-20.md`）。
+> 「是否切默认」**已由所有者判决（2026-10-21）：转默认 `agent`** —— 依据 = P1 六档全绿 + `PUMP-A` 真机 smoke PASS
+> + U1-D1/D2 脱敏落地 + ISS-059 轮内重试；**回退** = `$env:AUSCULT_DIAGNOSIS_MODE="deterministic"`。
+> U2 已判决「异步诊断 + 实时进度」（`docs/p7-decision-async-diagnosis-2026-10-20.md`）。
 
 ### 4.6 启动前端
 

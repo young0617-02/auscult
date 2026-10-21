@@ -8,6 +8,107 @@
 
 ---
 
+### 2026-10-21（收口后维护期 · **Agent 化收尾：本地架构补齐 + 合规口径按本地定稿**）
+
+> 依据所有者三项裁决：① **保留本地部署架构**（云端仅兜底，先用 7B 验连通性，32B 硬件先不管）；
+> ② **合规/脱敏以本地部署方案为准**（测试期不追合规）；③ 除 32B 硬件外其余可收尾。
+
+- **架构补齐（本地失败 → 云端兜底）**：`_route_condition` 在 `retry_count >= 3` 分支新增兜底判定
+  （`_should_fallback_to_cloud`：开关开 + 后端为 local + 未升级过 + `diagnosis is None`）。
+  此前本地 LLM 不可达只会 degrade，即「云端降为兜底」**只在置信度维度成立**；新增 `AUSCULT_CLOUD_FALLBACK`（默认 1）。
+  同时 `escalate_cloud` 的云端配置加载移入 try —— 纯本地开发未配 `env/cloud.json` 时降级而非抛异常（原实现会让整次诊断 `status=error`）。
+- **脱敏口径翻转（随后端）**：新增 `AUSCULT_SANITIZE_OUTBOUND=auto|on|off`（默认 `auto`：cloud 开、local 关）。
+  本地主路不再掩码设备号、不再剥工单 `result`（数据不出厂，掩码只损耗诊断质量）。
+- **修复实证缺陷（`设备#xxxxxx` 泄漏）**：D1 掩码代号被模型复述进结论 —— 线上报告实际出现
+  `设备#f6de90`（= `hash('PUMP-A')`）。`_finalize_answer` 出口新增 `_restore_device`，落库前还原真实编号
+  （报告是本地产物，不出网）。回归锁：`test_masked_token_restored_in_report` / `test_local_backend_does_not_mask_device_id`。
+- **拒答/澄清可见**：`state.refusal` 打通 `thread_status`（注册表 + 重启回退双路径）与前端诊断台
+  （`client/lib/refusal.ts` + `DoneMessage` 分支），不再只能从 `errors` 的 `W_` 码反推"为什么没有报告"。
+- **本地连通性转正**：新增 `scripts/smoke_agent_local.py`（零云端、零落库、秒级）；`qwen2.5:7b` 连跑 **3/3 PASS**、
+  各 **4–5 次真实工具调用**、confidence 0.625–0.825 → 修正 `ISS-060` 表述为「连通可用、稳定性/质量不足」。
+- **文档同步**：`docs/p6-gate-closure-2026-10-10.md` 补 P7 收尾状态；`docs/p7-review-u1...md` 增 §八 定稿口径；
+  `docs/p7-design-agent-diagnosis-2026-10-19.md` §四配置表（+2 开关）· §六 U1 · §八修订；README §4.5；`deploy/.env.example`。
+- 回归：`pytest tests/ -q` = **285 passed**（+5：脱敏 2 / refusal 1 / E6d·E6e 2）；前端 vitest refusal 4 例全绿。
+
+---
+
+### 2026-10-21（收口后维护期 · **Agent 化收尾：参数级校验接线**）— 关闭「`validate_tool_args` 零调用」缺口
+
+- **缺口**：`app/security/sanitizer.py::validate_tool_args` 此前**从未被调用**，缺参只能靠各执行体手工兜底；更麻烦的是必填表本身有两处错（`query_graph` 写成 `query`、`search_knowledge` 缺失）→ 若直接接线，会**把全部合法图谱调用判为非法**。
+- **修正**：必填表与 `tools_v4.json` / Agent 工具面逐项对齐（`query_graph: start_node`、新增 `search_knowledge: query`、`generate_report` 三元组）；`execute_tool` 在**白名单之后、执行之前**统一校验，失败写 `security_audit`（`allowed=false`）并回灌可纠错的 error（不中断循环，模型可自我补参）。
+- **回归锁 3 例**：缺 `device_id` / `query_graph` 缺 `start_node` / `search_knowledge` 缺 `query`。
+- **真机验证**：`RPT-f5db10b79fa0ca36` —— 4 轮 8 次工具调用**全部 `ok=true`**（无一条误拦），confidence 0.64 / `degrade=null`。
+- **缓存命中实测（同批）**：step1 `cached 4736/5099`（92.9%）、step2 `4736/6099`（77.6%）、step4 `6400/6720`（95.2%）；step3 `cached=0` —— 工具结果一变就打断前缀匹配，说明**命中率取决于「稳定前缀长度」**，把易变内容放在消息尾部是当前循环形态的天然优势。
+- 回归：**275 passed**。
+
+---
+
+### 2026-10-21（收口后维护期 · **换云商接入 DashScope + token 成本首次可观测**）— ISS-061 解除
+
+- **ISS-061 处置（接入坑）**：所有者换 key 时把 `DASHSCOPE_API_KEY/BASE_URL/MODE` 三行**直接追加到 `env/cloud.json` 尾部** → JSON 非法（`Extra data: line 23 column 1 (char 1865)`），表现为 `parse_alarm` 后立即 `status=error`、无任何云端调用。已收敛为规范字段：`provider=openai` / `model=qwen3.7-flash-2026-07-15` / `endpoint=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`；原件备份 `env/cloud.json.bak-20261021`（gitignored）。
+- **真机复验（默认形态）**：`cloud + agent` → **PASS**：`RPT-8ce8c7d80eb9e2f0`，confidence 0.535 / `degrade=null` / 3 轮 6 次工具调用（step1 四工具并行 → step2 → step3 收口），结论引用 `设备#f6de90`（U1-D1 脱敏生效）。
+- **token 成本首次可观测**：① `ChatResult.usage` 保留响应 `usage`（此前被丢弃，成本只能按字符估）；② `agent_steps` 每轮记 `tokens_in/tokens_out`（**同轮多工具只记首条**，否则 N 个工具把同一轮 token 重复计 N 次）；③ `state_to_payload` 把 `agent_steps` 一并**落库**（此前只存在于线程内存态，进程重启即丢）。
+- **成本实测（Qwen3.7-flash，`PUMP-A` 单次诊断）**：3 次调用 = 输入 **18,280** + 输出 **1,756** ≈ **2.0 万 tokens**；6 轮最坏 ≈ 5 万。其中 **system prompt 8,182 字符（≈4.5k tokens）每次调用都重发**，占输入端 **75–88%**。
+- **上下文缓存实测（2026-10-21，2 次连跑，不改 client）**：DashScope 对 `qwen3.7-flash` **自动前缀缓存已生效，无需显式参数** ——
+  - run1 step1（冷启动）：`prompt=5099 / cached=0`；run1 step2：`prompt=6196 / cached=4736`（76%）；
+  - run2 step1（跨诊断）：`prompt=5099 / cached=**4736**`（**92.9% 命中**）。
+  - 折算：run2 等效计费输入 ≈ `5099 − 0.8×4736 = 1,310`；单次 3 轮诊断等效 ≈ **0.7–0.8 万**，100 万额度 ≈ **130 次以上**（原估 30 次）→ **A 方案（注入层压缩）降为低优先，C 方案（改 schema）确定不做**。
+  - 附带发现：`completion_tokens_details.reasoning_tokens` 占输出 **60–70%**（535/895、547/918）——qwen3.7-flash 带思考链，输出侧还有一刀可省（`enable_thinking=false`），但会影响诊断质量，需 A/B 实测后再定。
+- 回归：**272 passed**。
+
+---
+
+### 2026-10-21（收口后维护期 · **所有者裁决「转默认」**）— 诊断形态默认切为 agent；ISS-057 闭环；登记 ISS-060/ISS-061
+
+- **形态转默认**：`app/llm/config.py:66` 默认值 `deterministic` → **`agent`**（回退 `AUSCULT_DIAGNOSIS_MODE=deterministic`，无需改代码）。`app/graph/build.py` 注释、README §4.5、`docs/p7-design-agent-diagnosis-2026-10-19.md` §四·§五 同步，新增「紧急回退」Runbook。
+- **测试适配（关键）**：`tests/e2e/test_e2e_scenarios.py` 增 autouse fixture 锁定 `deterministic` —— E1–E6 针对固定编排，agent 直连会绕过 gather 节点打桩并**触发真实 LLM**（实测把全量从 26s 拖到 **657s**）；`test_build_graph_deterministic_default` 拆为「默认=agent」+「deterministic 回退通道」两例；health 探针断言改 `agent`。**271 passed / 25.7s**（离线纪律恢复）。
+- **ISS-057 闭环**：所有者提权停 `mosquitto` 服务 → 1883 释放；`up -d --force-recreate mosquitto` 后 `docker port` 见 `0.0.0.0:1883->1883`，容器 healthy、TCP 1883 可连 → `up.ps1` 预检转为「[OK] 空闲」。
+- **新登记 ISS-060（形态边界）**：新默认组合 `local + agent`（`qwen2.5:7b`）真机跑一次 → 第 1 轮**零工具调用** + `E_JSON_PARSE` + `confidence=null`（`RPT-0ea6deb49a028929`）；对照 27B 云端同提示词/同工具面 PASS。结论：**Agent 形态生产须 `AUSCULT_LLM_BACKEND=cloud`**，本地回迁待 `qwen3:32b`。
+- **新登记 ISS-061（外部资源，阻断验证）**：云端账号 **`HTTP 429 insufficient balance`**（ModelScope 余额耗尽）→ `cloud + agent` 真机验证失败（3 次 429 + `W_NO_DIAGNOSIS`，`RPT-d5bf93aec9d3bee5`）；接口层无需改动，**充值后以 `AUSCULT_LLM_BACKEND=cloud` 重启即恢复默认形态验证**。
+- **运行态（临时）**：因「余额耗尽 + 本地 7B 不达标」双阻，交付栈暂以 `AUSCULT_DIAGNOSIS_MODE=deterministic` + `local` 运行以保证可用性（`RPT-b830069d97237338`：confidence 0.625 / medium / evidence 10 / `degrade=cloud_unavailable`）；**代码默认仍为 `agent`**，去掉该 env 即回默认形态。
+
+---
+
+### 2026-10-21（收口后维护期 · **所有者判决：U1-D1/D2 落地 + ISS-059 轮内重试**）— Agent 出网脱敏对齐 + 超时重试 1 次
+
+> 触发：所有者「D1/D2（合规）落地，以及 ISS-059 的判决，轮内重试 1 次。执行」
+
+- **D1 · Agent 出网设备标识符 hash（U1）**：`agent_diagnose.py` 新增 `_outbound_payload` / `_inbound_arguments` **双向映射** —— 上下文与工具结果回灌只出 `设备#<sha256[:6]>`（复用 `cloud.hash_device_id`，与兜底路径**同一函数**），工具执行端还原真号；覆盖任意字符串位置（`result.device_id` / `series[].sensor_id` / `entities_hit`），首条消息附「标识已脱敏、请原样使用」说明。
+- **D2 · 工单 `result` 不出网**：48 条真实工单抽检 —— `result` 全为空、`fault`/`action` 为受限短语；按最严口径回灌副本剥离 `result`，与 `sanitize_state` 只保留 `fault`/`action` 对齐。
+- **ISS-059 · 轮内超时重试 1 次**：`_call_llm` 对 `TimeoutError`/`ConnectionError` 重试 1 次（不改 `max_steps`、不占路由 `retry_count`），`RuntimeError` 不重试保持原语义；每次真实调用仍先 `reserve()` 计费。
+- **真机实测（一举三证）**：`PUMP-A` × `smoke_agent_cloud.py --no-resume` → **PASS**：① **D1 生效** —— 模型只见代号，仍产出引用真实录波的结论（「全天最大 4.68 mm/s」「16:00 前后数据断流窗口」），`evidence_n=10` / confidence 0.78；② **ISS-059 生效** —— 轮次 5（step1–4 + 强制收口）而预算 **+6**，即恰好触发 1 次轮内重试并成功，改动前同类运行 2/2 判 `CHECK`；③ **ISS-056 仍不复现** —— 工具调用正常。
+- **回归**：`pytest tests -q` → **270 passed**（新增 D1/D2 3 例 + 重试 2 例）。
+- **未完成（环境，需提权）**：宿主 `mosquitto` 是 **Windows 服务**（`StartType=Automatic`），`Stop-Process -Force` 与 `Stop-Service` 在非管理员会话均 `Access denied` → 1883 仍被占、`docker port auscult-mosquitto` 仅见 `9001`。管理员执行：`Stop-Service mosquitto -Force` → `Set-Service mosquitto -StartupType Manual` → `docker compose -f deploy/docker-compose.yml --profile tdengine up -d --force-recreate mosquitto`。
+
+---
+
+### 2026-10-21（收口后维护期 · **所有者「按顺序执行四项」**）— ISS-056 关单 / ISS-057 fail-fast / ISS-054 先增后调 / U1 脱敏复核；新登记 ISS-059
+
+> 触发：所有者指示「按顺序执行」四项前置（ISS-056 复现 → ISS-057 fail-fast → ISS-054 记账 → U1 脱敏重审）。另所有者已清理端口占用（1883 无宿主 mosquitto）。
+
+- **① ISS-056 复现（`PUMP-A` 真机 Agent smoke ×3）→ 表现 3/3 未复现，关单**：17:05 一次全链 PASS（6 次工具调用、`errors=[]`）；17:2x 两次均正常取证（`query_sensor`×N / `search_knowledge` / `get_maintenance_history` / `query_graph`），**不再出现「零工具调用 + 澄清 + 降级」**。根因（数据层 `PUMP-A` vs 规范 `PUMP-A-01`、`query_sensor(PUMP-A-01)` 静默 `count=0`）仍在 → **设备号口径漂移单列遗留**，关闭的是"行为阻断"。
+- **新登记 `ISS-059`（Agent 轮级超时即整次失败）**：上述两次 smoke 终态均为 `verdict=CHECK`，错误 `E_LLM_UNREACHABLE「LLM 调用超时（>90.0s）」`——某**一轮**云端响应超 90s 即整次诊断失败，无轮内重试；同期 escalate 单次实测 40.7 / 45.1 / 58.97s，长尾已贴近 90s 预算。与 ISS-058 同源但发生在多轮循环内。候选：轮内超时重试 1 次 / `AUSCULT_LLM_TIMEOUT_AGENT_SEC` 上调 120–150s / 有证据时容忍超时直接收口。
+- **② `ISS-057` fail-fast（`deploy/up.ps1`）**：起栈前探测 1883 —— 非 docker 进程（典型 `mosquitto.exe`）持有即 `exit 1` 并打印 PID/进程名/处置命令；docker 代理（`com.docker.backend`/`vpnkit`/`wslrelay`）持有视为本栈映射放行（重复 `up` 不受影响）；`Get-NetTCPConnection` 不可用时回退 `netstat -ano`。
+- **③ `ISS-054` 先增后调（`BudgetGuard.reserve()`）**：额度在**调用前**占位（旧口径只在成功路径 `increment()`，超时/异常零记账）；超限即时 `DECR` 回滚不占额度；Redis 不可达仍不阻塞。`escalate_cloud` 与 `agent_diagnose`（**含此前完全漏计的强制收口轮**）全部切到 `reserve()`；审计 `budget_count` 语义改为「含本次」。
+- **③ 对账工具**：新增 `scripts/reconcile_cloud_budget.py` —— 三方对账（Redis 计数 / `cloud_audit.jsonl` 条数 / PG `agent_steps`），第四方云端账单无 API、需人工。当日实跑：`Redis 18 = escalate 7 + Agent 循环差额 11`（差额即两次 smoke 的多轮调用），判定 WARN 但方向自洽（Agent 挂起线程未落 reports）。
+- **④ U1 脱敏复核（书面）**：产出 `docs/p7-review-u1-sanitization-scope-2026-10-21.md` —— 关键事实：**Agent 主路首条消息里 `device_id` 是明文**（`agent_diagnose.py:156`），工具结果（含工单 `result` 全文、知识库原文）原样入 `messages`；而兜底路径 `sanitize_state` 会把设备号 hash 成 `设备#<sha256[:6]>` → **两条出网路径口径不一致**。结论：U1 不关闭、维持测试期暂挂；**切默认前必须完成 D1（设备标识符 hash，与 `cloud._hash_device_id` 同源）+ D2（工单 `result` 字段级抽检）**。
+- **回归**：`pytest tests -q` → **265 passed**（新增 2 例预算锁：先增后调+回滚 / Redis 不可达不阻塞）。
+- **实测（改造后）**：重启 API 后两次默认形态诊断 —— 云端 40.7s / 58.97s 均成功，`budget_count 17→18` 单调递增且与 Redis 一致，报告 `RPT-5e104486a16943bd`（`degrade_reason=null`）等。
+
+---
+
+### 2026-10-21（收口后维护期 · **所有者判决「超时角色化」：处置 ISS-058**）— 云端兜底超时改角色化（默认 90s，env 可调）
+
+> 触发：所有者判决「ISS-058 的修法 —— 超时角色化」。动作 = `app/llm/config.py` 新增 `cloud_timeout()` + `app/router/cloud.py` 移除写死常量并改取该函数 + 回归锁 + 默认形态实跑复验。
+
+- **代码 · `app/llm/config.py` 新增 `cloud_timeout()`**：`AUSCULT_CLOUD_TIMEOUT_SEC` 显式给出时优先（非数字 / 非正数抛 `RuntimeError`），否则取 `llm_timeout(ROLE_AGENT)`（默认 **90s**）——升级与 Agent 循环打的是同一个云端端点、同一量级延迟，不应有两套超时预算；`describe()` 新增 `cloud_timeout_sec`（`/api/health` 的 `llm` 探针可直接观测）。
+- **代码 · `app/router/cloud.py` 移除 `CLOUD_TIMEOUT_SEC = 20.0`**：`call_cloud(timeout=None)` 缺省取 `cloud_timeout()`，`CloudRouter.escalate` 显式下发同一值；云端审计新增 `timeout_sec`（成功 / 超时 / JSON 解析失败三类记录），便于事后对账「超时是否又被写死」。
+- **回归锁 · `tests/test_agent_diagnosis.py`（33 → 35 例）**：① `test_cloud_timeout_is_role_scoped_and_env_overridable`（默认 = agent 角色 90s 且 `> 20`；跟随 `AUSCULT_LLM_TIMEOUT_AGENT_SEC`；`AUSCULT_CLOUD_TIMEOUT_SEC` 覆盖优先；`abc` / `-1` 抛错）；② `test_escalate_passes_role_timeout_to_cloud`（打桩 `call_cloud` 捕获实际 timeout 与审计 `timeout_sec`，**回退为常量即失败**）；③ 原 `call_cloud` 委托用例改为断言「等于角色化值」而非 `20.0`。
+- **实测 · 默认形态（local + deterministic）复验通过**：重启 API（health `cloud_timeout_sec=90.0`）后按 `alarm_id` 发起 → 7 节点全走完 → **RPT-fa1b64066214ba3f**，`degrade_reason=null` / `errors=[]` / confidence 0.595 / medium / `escalate_cloud=True`（云端结论已覆盖本地）。云端审计：`latency_ms=45100.3`、`timeout_sec=90.0`、`budget_count=3` —— **这 45.1s 的调用在原 20s 口径下必然超时**，正是 ISS-058 的现场证据；本次首度不再降级。
+- **文档 · 口径同步**：`docs/prj-decision-adr-002-hybrid-deployment.md` §3.1「超时与降级」及 F3 事实面由「20s」改角色化口径（注明 ISS-058 处置）；`docs/prj-ledger-known-issues.md` 的 ISS-058 行 / 头部「最近更新」/ §八 同步。
+
+---
+
 ### 2026-10-21（收口后维护期 · **所有者「跑」：API + 前端起服务，全链路实跑**）— 登记 ISS-058：`escalate_cloud` 超时 20s 与云端实测延迟不匹配
 
 > 触发：所有者「跑」。动作 = API（uvicorn，`app.api.main:socket_app`）+ 前端（Next.js dev :3000）+ nginx :9763 起服务，按两种形态各跑 API 级全链路。**零代码改动**，新登记 1 条 ISS。

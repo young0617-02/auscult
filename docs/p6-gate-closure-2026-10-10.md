@@ -7,6 +7,21 @@
 > **上游依据**：`plan/Phase 6 详细开发计划（收敛与交付）.md` §四（D1–D10）；`docs/p0-spec-scope-mvp.md` §四（停止条件）；`docs/p5-handover-p6.md` §一–§五（Phase 5 出口）；`docs/prj-ledger-risk-register.md`（风险册）、`docs/prj-ledger-known-issues.md`（缺陷台账）、`docs/prj-ledger-version-lock.md`（版本锁）
 > **口径纪律**：本文件只汇总**既有台账已登记 / 已实测**的事实，不新增结论、不编造指标；凡未闭环项按原文标注「剩余风险（显式接受 / 登记不修）」。
 > **收口后维护期状态（2026-10-20 补记，M6.4 结论不变、无回退）**：此后均为**所有者显式授权的扩范围**，非自发变更 —— ① 2026-10-16 Redis 缓存层 + 告警自动触发（`docs/p7-design-redis-cache-layer-2026-10-16.md`）；② 2026-10-19/20 诊断 Agent 化（`docs/p7-design-agent-diagnosis-2026-10-19.md`，**可选开关，默认 `deterministic` 不变**）；③ 2026-10-20 `v1-019` 判据重释义（`reports/p0-report-v1-cases-revision-2026-10-20.md`）。**Agent 形态云端实测可用（报告落 PG），但未过 V1 分档闸门**：`EXP-P7-GATE2` 整体 63/75 = 84.0%、多轮 66.7% No-Go；根因 `ISS-052`（判据工具面含写操作 → 测非所测）→ **不切默认**。对外口径以 `README.md` §4.5 判据闸门结论与 `experiments/v1/EXP-P7-GATE2.md` §四为准。
+>
+> **P7 收尾状态（2026-10-21，所有者裁决「32B 硬件先不管、其余收尾」）**：Agent 化进入可交付收尾 ——
+> ① **架构补齐**：「本地重试耗尽（`E_LLM_UNREACHABLE`）→ 云端兜底」（`AUSCULT_CLOUD_FALLBACK`，默认开）；
+> 此前该路径直接 degrade，即「云端降为兜底」只在置信度维度成立、在本地模型故障维度不成立（E6d/E6e 锁定）；
+> ② **合规口径按本地部署形态定稿**（`docs/p7-review-u1-sanitization-scope-2026-10-21.md` §八）：
+> `AUSCULT_SANITIZE_OUTBOUND=auto` —— 仅 cloud 后端脱敏，本地主路明文；报告出口还原脱敏代号
+> （修 `设备#xxxxxx` 写进结论的实证缺陷）；
+> ③ **拒答/澄清可见**（规则 6a/6b）：`state.refusal` 打通 `thread_status` 与前端诊断台，
+> 不再只能从 `errors` 的 `W_` 码反推；
+> ④ **本地连通性转正**：`scripts/smoke_agent_local.py`（7B 连跑 3 次 PASS、各 4–5 次工具调用、
+> confidence 0.625–0.825）→ 修正 `ISS-060` 的「7B 完全不可用」表述为「连通可用、稳定性/质量不足」；
+> ⑤ **回归**：`pytest tests/ -q` = **285 passed**；前端 vitest 新增 refusal 口径 4 例全绿。
+> **显式接受的外部前置**：`qwen3:32b` 本地部署需 ≥24GB 显存（本机 8GB 不满足）——按所有者裁决**不阻塞收尾**，
+> 架构与配置已保留（`AUSCULT_LLM_BACKEND=local` + 双角色模型 env 即完成回迁）。
+> MVP 判据（M6.1–M6.3 / S1–S3 / Must 13 项）**不受本轮影响、无回退**。
 
 ---
 

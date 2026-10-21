@@ -177,7 +177,7 @@ confidence = 0.35 * retrieval_score      # Top-K 检索得分归一化均值
 
 - **脱敏**：送云端前将 `device_id` 替换为 **`设备#<sha256[:6]>`**（可追溯不可逆），剥离厂区/工艺参数标识，仅保留「故障现象 + 通用知识 + 统计摘要」，**不传证据原文** —— `app/router/cloud.py` `_hash_device_id` / `sanitize_state`；
 - **每日预算上限**：**340 次/天**，`budget:cloud:{YYYY-MM-DD}` Redis 按天计数，超限熔断 → `degrade_reason="budget_exceeded"`（`app/router/budget.py`、`app/api/config.py` `CLOUD_BUDGET_LIMIT`，口径 `plan/工业设备诊断 Agent.md` §5.7 / §7.1）；
-- **超时**：云端调用 20s 超时，失败 → `degrade_reason="cloud_unavailable"`，保留本地诊断；
+- **超时**：云端调用超时**角色化**（ISS-058 处置，2026-10-21）——默认取 `llm_timeout(ROLE_AGENT)` = 90s，`AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖（原写死 20s，与云端实测 5.5–37s 不匹配，兜底必然降级）；失败 → `degrade_reason="cloud_unavailable"`，保留本地诊断（`app/llm/config.py` `cloud_timeout()`、`app/router/cloud.py`）；
 - **审计**：每次升级写 `reports/cloud_audit.jsonl`（含脱敏前后 hash + 预算计数）。
 
 ### 5.7 降级显式化

@@ -87,8 +87,10 @@ parse_alarm → diagnose[agent_diagnose] → [条件路由，与确定性形态�
 
 | 变量 | 默认 | 说明 |
 |---|---|---|
-| `AUSCULT_DIAGNOSIS_MODE` | `deterministic` | `agent` = Agent 循环 |
-| `AUSCULT_LLM_BACKEND` | `local` | `cloud` = 走 `env/cloud.json`（测试开发期） |
+| `AUSCULT_DIAGNOSIS_MODE` | **`agent`**（2026-10-21 转默认） | `deterministic` = 回退到固定编排（紧急回退通道） |
+| `AUSCULT_LLM_BACKEND` | `local` | `cloud` = 走 `env/cloud.json`（测试开发期）。⚠️ **`local` + `agent` 的 7B 能力不足**（`ISS-060`：曾观测零工具调用 + `E_JSON_PARSE`）；**2026-10-21 复测修正**：`scripts/smoke_agent_local.py` 连跑 3 次均可达、各 4–5 次工具调用（confidence 0.625–0.825）→ **连通性可用，稳定性/质量不足**；测试期仍以 `cloud` 为主通道，等 `qwen3:32b` |
+| `AUSCULT_SANITIZE_OUTBOUND` | `auto` | 出网脱敏开关（**2026-10-21 口径：合规以本地部署为准**）。`auto` = 仅 `cloud` 后端脱敏（设备号 hash + 工单 `result` 不出网），本地后端明文；`on`/`off` 强制。报告出口会把模型复述的代号还原为真实设备号 |
+| `AUSCULT_CLOUD_FALLBACK` | `1` | 本地主通道**重试耗尽仍无结论**（`E_LLM_UNREACHABLE`）时是否升级云端兜底。此前直接 degrade → 「云端降为兜底」只在置信度维度成立（2026-10-21 补齐）；纯离线开发设 `0` |
 | `AUSCULT_LOCAL_MODEL_AGENT` | `qwen2.5:7b` | Agent 角色本地模型（后期 `qwen3:32b`） |
 | `AUSCULT_LOCAL_MODEL_DIAGNOSE` | `deepseek-r1:7b` | 确定性诊断本地模型（后期 `qwen3:32b`） |
 | `AUSCULT_LOCAL_OLLAMA_URL` | `http://127.0.0.1:11434/v1/chat/completions` | 本地端点 |
@@ -99,12 +101,18 @@ parse_alarm → diagnose[agent_diagnose] → [条件路由，与确定性形态�
 
 ## 五、切换 Runbook（现在云端 → 后期本地）
 
-**现在（测试开发，云端承载）**
+**现在（测试开发，云端承载）—— 2026-10-21 起 `AUSCULT_DIAGNOSIS_MODE` 默认已是 `agent`**
 
 ```powershell
-$env:AUSCULT_LLM_BACKEND="cloud"
-$env:AUSCULT_DIAGNOSIS_MODE="agent"
+$env:AUSCULT_LLM_BACKEND="cloud"      # 必设：本地 7B 承担不了 Agent 协议
+# AUSCULT_DIAGNOSIS_MODE 无需设置（默认 agent）
 .venv\Scripts\python.exe -m uvicorn app.api.main:socket_app --host 127.0.0.1 --port 8000
+```
+
+**紧急回退（无需改代码 / 重装）**
+
+```powershell
+$env:AUSCULT_DIAGNOSIS_MODE="deterministic"   # 立即回到固定编排；下游契约/审核/降级链路不变
 ```
 
 **判据闸门（切默认前必过）**：云端 + prompt v4 形（本提示词即 v4 拒止规则的产品化）+ `schemas/tools_v4` 只读面，按 V1 分档判据重跑 `run_e2e`（单工具/参数校验/多轮 ≥85%、多工具 ≥70%、**无效拒绝 ≥90%**——prompt v1 在该档仅 67%，v4 实测 100%）；同日多轮聚合口径（EXP-M02-040 同款）。
@@ -132,7 +140,7 @@ $env:AUSCULT_LOCAL_MODEL_DIAGNOSE="qwen3:32b"
 
 | # | 项 | 性质 | 处置 |
 |---|---|---|---|
-| U1 | **主路上云的脱敏范围重审**：现行 `sanitize_state` 按「兜底路径」设计（仅 confidence∈[0.50,0.75) 触发）；Agent 化后所有工具结果过模型眼前。用户判决：测试期不阻塞 | 合规（判决①暂挂） | 上线生产前必须书面重审并显式立项；本文档即暂挂凭据 |
+| U1 | **主路上云的脱敏范围重审**：现行 `sanitize_state` 按「兜底路径」设计（仅 confidence∈[0.50,0.75) 触发）；Agent 化后所有工具结果过模型眼前。用户判决：测试期不阻塞 | 合规（**已定稿**） | 2026-10-21 书面复核并处置 `docs/p7-review-u1-sanitization-scope-2026-10-21.md`（D1 hash 双向映射 + D2 工单 `result` 不出网，真机 PASS）；**同日所有者二次裁决：合规以「本地部署方案」为准** → 出网脱敏随后端翻转（`AUSCULT_SANITIZE_OUTBOUND=auto`），本地主路不脱敏，仅 `escalate_cloud` 出网受约束；**遗留**：D3 运营清单 / D4 逐点明细评估（仅对上云兜底路径有意义） |
 | U2 | **P95 端到端重定**：Agent 多轮往返 × 云端/32B 单轮延迟；现基线 9.25s 已未达标 | 性能 | **✅ 已判决（2026-10-20）：产品形态改为「异步诊断 + 实时进度」** —— 云端实测端到端 156–226s，与「同步 P95<3s」不可兼得；取消该口径作为 Agent 形态验收线，改为「受理响应 P95 + 完成时间分位数」，审核流/降级/超时角色化均不变。判决记录：`docs/p7-decision-async-diagnosis-2026-10-20.md`；**不因此切默认**（默认仍 `deterministic`） |
 | U3 | **ADR-001 §五「单模型全角色」备选重评**：32B 条件下原否决理由消失，但须分档实测后正式重评（不得直接改 ADR） | 决策流程 | 本地 32B 就位后按 V1 判据重测再走 ADR 修订 |
 | U4 | **多实例并发**：与 V5 同款口径限制（单进程 SETNX/单实例）；Agent 循环放大调用频次后锁竞争面变大 | 范围外 | 维持单实例部署声明；多 worker 需求出现时另立实验编号 |
@@ -167,3 +175,5 @@ $env:AUSCULT_LOCAL_MODEL_DIAGNOSE="qwen3:32b"
 | 2026-10-19 | 执行方（按用户三项判决） | 初版：Agent 化设计 + 三项判决记录 + 切换 Runbook + U1–U4 登记 | 本文档；`app/llm/`、`app/agent/`、`app/graph/`、`app/router/`、`tests/test_agent_diagnosis.py`、CHANGELOG、known-issues（ISS-049）、README |
 | 2026-10-20 | 执行方（按所有者判决 A） | §五 判据闸门回填：`v1-019` 重释义后复测仍 No-Go（多轮 66.7%）；根因修正为新登记 `ISS-052`（harness 工具面含写操作 → 测非所测）；默认维持 `deterministic`，路径 C 待授权 | 本文档 §五/§八；`experiments/v1/EXP-P7-GATE2.md`；`reports/p0-report-v1-cases-revision-2026-10-20.md` |
 | 2026-10-20 | 执行方（按所有者指示「先 C / 立项 D」+ U2 判决） | ① §五 回填路径 C 结果（`EXP-P7-GATE3`：首成 89.33%、多轮 100%、单工具/多工具中间区间）；② §六 U2 判决「异步诊断 + 实时进度」；③ 新增路径 D 立项文档引用 | 本文档 §五/§六/§八；`experiments/v1/EXP-P7-GATE3.md`；`docs/p7-decision-async-diagnosis-2026-10-20.md`；`docs/p7-design-gate-product-agent-2026-10-20.md` |
+| 2026-10-21 | 执行方（按所有者裁决「转默认」） | 诊断形态默认值 `deterministic` → **`agent`**（`app/llm/config.py:66`）；§四 配置表 / §五 Runbook 同步（新增紧急回退命令）；**登记实测边界**：`local` + `agent` 不可用（`qwen2.5:7b` 零工具调用 + `E_JSON_PARSE`）→ Agent 形态生产须 `AUSCULT_LLM_BACKEND=cloud` | 本文档 §四/§五/§八；`app/llm/config.py`；`app/graph/build.py`；README §4.5；`tests/test_agent_diagnosis.py`；`tests/e2e/test_e2e_scenarios.py` |
+| 2026-10-21（收尾轮） | 执行方（按所有者三项裁决：本地架构保留 / 合规以本地为准 / 其余可收尾） | ① **架构补齐**：本地重试耗尽 → 云端兜底（`AUSCULT_CLOUD_FALLBACK`），`escalate_cloud` 对云端配置缺失稳健降级；② **脱敏口径翻转**：`AUSCULT_SANITIZE_OUTBOUND=auto`（仅 cloud 脱敏）+ 报告出口还原设备号（修 `设备#xxxxxx` 泄漏）；③ **拒答可见**：`state.refusal` 打通 `thread_status` 与前端；④ 本地冒烟转正 `scripts/smoke_agent_local.py`（3/3 PASS）；⑤ §四 配置表增两开关、§六 U1 定稿 | 本文档 §四/§六/§八；`app/llm/config.py`；`app/graph/build.py`；`app/graph/nodes/agent_diagnose.py`；`app/router/cloud.py`；`app/api/runner.py`；`client/lib/refusal.ts`；`client/components/chat/DiagnosisResult.tsx`；`scripts/smoke_agent_local.py`；README §4.5；`deploy/.env.example`；`tests/`（285 passed） |
