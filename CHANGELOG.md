@@ -8,6 +8,18 @@
 
 ---
 
+### 2026-10-21（收口后维护期 · **所有者「跑」：API + 前端起服务，全链路实跑**）— 登记 ISS-058：`escalate_cloud` 超时 20s 与云端实测延迟不匹配
+
+> 触发：所有者「跑」。动作 = API（uvicorn，`app.api.main:socket_app`）+ 前端（Next.js dev :3000）+ nginx :9763 起服务，按两种形态各跑 API 级全链路。**零代码改动**，新登记 1 条 ISS。
+
+- **已验证通过（API 级，agent + cloud 形态）**：`POST /api/auth/login`（eng_dev）→ Socket.IO 以 `auth={"token": JWT}` 连登成功 → `POST /api/diagnose` **0.09s 异步受理**（返回 thread_id + running）→ `diagnosis:progress` 节点级实时推送 4 条（parse_alarm → diagnose → degrade → finalize）→ `diagnosis:done` → 24.4s 终态 → **RPT-1edbe3885e2bc01e 落 PG**（risk low / degrade_reason=低置信度或重试超限）。`/api/health` 五依赖全 up、`llm` 探针正确回显 cloud/agent/max_steps=4。
+- **已验证通过（默认形态 local + deterministic）**：三次诊断均走 parse_alarm → analyze_sensor → retrieve_evidence → get_history → diagnose → escalate_cloud → finalize，33–46s 出报告落 PG（RPT-4b801bb50325a942 / RPT-fb74482d419408e7 / RPT-930f4e83bdce68fc，confidence 0.625 / medium）；`agent_steps` 为空符合确定性形态预期。
+- **新登记 `ISS-058`（兜底链路超时口径）**：`app/router/cloud.py:45` `CLOUD_TIMEOUT_SEC = 20.0`（plan §六.4），而云端实测单轮 **5.5–37s**、P7 已把 agent 角色超时角色化到 90s —— **兜底路径没同步**。三次实测全部 `escalate_cloud → E_CLOUD_UNAVAILABLE「LLM 调用超时（>20.0s）」→ degrade`（2026-10-16 两份历史报告同因）。**客户端 20s 断连 ≠ 服务端停止计费**，每次超时仍消耗一次云端调用。候选修法（待判决）：超时改角色化 / env `AUSCULT_CLOUD_TIMEOUT_SEC` 可调并上调默认；或维持 20s 但把「云端慢时兜底不可用」写入降级口径。
+- **前端 / 入口**：Next.js dev Ready 4.9s，`/login` HTTP 200（title「工业设备诊断 Agent」）；nginx :9763 代理前后端均 200（`/api/health` 经 nginx 正常）。
+- **未覆盖（本次）**：① **API 级审核分支未触发** —— 三次运行都走降级分支（置信度 0.625 < 审核阈值），审核链路此前已在图级真机验证（RPT-b5f6217f4439e87b：human_review → resume(approved) → report）；② **浏览器 UI 未点击走查**（只验证 HTTP 200；前端 hydration 依赖的 dev 跨源问题已于 ISS-043 修复）；③ agent 形态下 `agent_steps` 为 0 是 ISS-056（设备号口径漂移）的已知表现，非新问题。
+
+---
+
 ### 2026-10-21（收口后维护期 · **所有者「起」：交付栈起栈 + 真机复跑**）— 修 P0：默认形态 `_call_ollama` 导入错误；登记 ISS-054/055/056/057
 
 > 触发：所有者「起」。动作 = `deploy/up.ps1` + `init.ps1` 起栈（8 容器 healthy、PG 18 表 / Milvus 36 行 / Neo4j 105 节点 184 关系 / TDengine 17436→21316 行 / 三写对账零差异）→ 真机复跑。**发现并修复一个 P0**，另登记 3 条 ISS。
