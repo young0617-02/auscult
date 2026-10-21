@@ -1,0 +1,47 @@
+{
+  "experiment_id": "EXP-P7-P1-smoke.agg",
+  "caliber": "aggregate_runs_v1",
+  "date": "2026-10-21",
+  "runs": [
+    "experiments\\v1\\raw\\EXP-P7-P1-smoke-R1.jsonl",
+    "experiments\\v1\\raw\\EXP-P7-P1-smoke-R2.jsonl",
+    "experiments\\v1\\raw\\EXP-P7-P1-smoke-R3.jsonl"
+  ],
+  "schema_version": "tools_v4_agent",
+  "summary": {
+    "tiers": {
+      "单工具": 1.0,
+      "参数校验": 1.0,
+      "多工具": 1.0
+    },
+    "tier_samples": {
+      "单工具": 6,
+      "参数校验": 3,
+      "多工具": 6
+    },
+    "tier_passed": {
+      "单工具": 6,
+      "参数校验": 3,
+      "多工具": 6
+    },
+    "verdict": {
+      "单工具": "Pass",
+      "参数校验": "Pass",
+      "多轮": "无数据",
+      "拒止": "无数据",
+      "澄清": "无数据",
+      "多工具": "Pass",
+      "整体": "Pass（全部类型过闸）"
+    },
+    "first_pass_rate": 1.0,
+    "samples": 15,
+    "passed": 15,
+    "counts": {
+      "cloud_calls": 15,
+      "gate_short_circuits": 0,
+      "runs": 3
+    }
+  },
+  "python": "3.12.8",
+  "platform": "Windows-11-10.0.26200-SP0"
+}
