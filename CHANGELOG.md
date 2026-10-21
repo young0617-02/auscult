@@ -8,6 +8,19 @@
 
 ---
 
+### 2026-10-21（收口后维护期 · **所有者「起」：交付栈起栈 + 真机复跑**）— 修 P0：默认形态 `_call_ollama` 导入错误；登记 ISS-054/055/056/057
+
+> 触发：所有者「起」。动作 = `deploy/up.ps1` + `init.ps1` 起栈（8 容器 healthy、PG 18 表 / Milvus 36 行 / Neo4j 105 节点 184 关系 / TDengine 17436→21316 行 / 三写对账零差异）→ 真机复跑。**发现并修复一个 P0**，另登记 3 条 ISS。
+
+- **代码 · 修 P0 `ISS-055`（默认形态必崩）**：`app/graph/nodes/diagnose.py::_call_ollama` 的函数级导入写成 `from ..llm import ...`，在 `app.graph.nodes` 命名空间下解析成**不存在的 `app.graph.llm`** → `ModuleNotFoundError`。由 `c80f2b4`（P7 统一客户端改造）引入；**测试全打桩 `get_client`、从未真实走过该函数级导入，故 260 例回归全绿也未发现**。改为 `...llm`，新增回归锁 `tests/test_agent_diagnosis.py::test_call_ollama_relative_imports_resolve`（**直接调用 `_call_ollama`**，任何相对层级写错即暴露）→ 全量 **261 passed**。
+- **实测 · 默认形态（local + deterministic）修复后全链路通**：21.5s，evidence 10 / sensor_report 2470 行 / graph_paths 1 → `human_review` 挂起 → resume(approved) → **RPT-b5f6217f4439e87b**，`degrade_reason=null`、`errors=[]`。修复前同一条链路必崩。
+- **实测 · Agent 形态（cloud + agent）链路通但暴露 `ISS-056`（设备号口径漂移）**：`smoke_agent_cloud`（告警 `PUMP-A` + `vib_rms`）70.7s → **Agent 按「设备编号必须完整（PUMP-A-01）」规则澄清且零工具调用** → `E_JSON_PARSE` → 降级出报告 **RPT-9ffeedb6f9bbce71**。根因：数据/告警层设备号是短编号 `PUMP-A`（TDengine 仅 3 子表 PUMP-A/B/C），产品提示词/判据要求 `PUMP-A-01`；工具层直连实证 `query_sensor(PUMP-A)` → 2686 行、`vib_x→vib_rms` 映射生效、max 4.534 越 4.5；`query_sensor(PUMP-A-01)` → **ok=True 但 count=0（静默空结果）**。**Agent 行为符合提示词（不猜），但生产告警将永远触发澄清 → 待判决**（告警侧补规范编号 / 工具层加别名映射 / 提示词放开短编号〔不推荐〕）。
+- **环境 · 新登记 `ISS-057`（宿主 broker 端口劫持）**：宿主 `mosquitto.exe` 占用 1883 → `auscult-mosquitto` 的 1883 映射**静默失败**（`docker port` 仅见 9001）→ 灌数/解码链路实际连宿主 broker（默认 `max_queued_messages=1000`）→ 单轮 10804 报文仅落 ~1250 行（连续 3 轮复现）。**ISS-050 的「已修复」只对容器 broker 成立**；处置候选：起栈前探测 1883 占用并显式失败 / 灌数链路固定走容器 broker / 宿主 mosquitto 停用或改端口。
+- **台账 · 补录 `ISS-054`**：`BudgetGuard` Redis 计数系统性偏低 10–31%（D1 −31% / D2 −9.5%），且 Redis 未启动时降级为「不阻塞」→ 熔断静默失效（本次 P1 两跳已按 `Σ llm_calls` 记账并登记偏离）。
+- **明确未做**：不切默认（`deterministic` 不变，仍待所有者判决）；ISS-056/057 的修法待判决；客户端（Next.js）未启动（nginx 502 依旧，需 `pnpm dev` + uvicorn）。
+
+---
+
 ### 2026-10-20（收口后维护期 · **所有者判决 A：授权改冻结区并重跑闭闸**）— P7 Agent 化：`v1-019` 考点重释义 + 判据闸门复测（**未闭闸**）
 
 > 触发：所有者判决「A（授权改冻结区并重跑闭闸）」——采纳「仅约束写操作调用」的重释义版本。实验登记：`experiments/v1/EXP-P7-GATE2.md`（预登记先行）；修订报告：`reports/p0-report-v1-cases-revision-2026-10-20.md`。

@@ -54,3 +54,6 @@
 {"ts": "2026-10-20T14:06:10.041852", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
 {"ts": "2026-10-20T14:10:41.141231", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
 {"ts": "2026-10-20T14:26:41.606384", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
+{"ts": "2026-10-21T11:30:24.931901", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
+{"ts": "2026-10-21T15:13:44.416655", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
+{"ts": "2026-10-21T15:19:01.037845", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}

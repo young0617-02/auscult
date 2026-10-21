@@ -282,6 +282,7 @@ deploy\down.ps1      # 一键停止（可选 -v 清卷）
 - 验证：`scripts\verify_query_sensor.py`（3 设备 x 13 窗口 exit 0、`P95~24.2ms`，`ISS-047` 修复后复跑通过）；
 - 复灌 = 重跑上面两步（DBIRTH 建表幂等、DDATA 按 ts 主键去重）；不需要时关闭解码器终端即可，已落库数据不受影响。
 - ⚠️ **落库不满自查（ISS-050，2026-10-20）**：单轮灌数 10804 报文应全部落库（`select count(*) from iot.st_pump_metrics` 增量核对）。若增量明显偏小（历史缺陷：QoS 0 订阅下 broker 对慢订阅者不排队、静默丢消息），确认解码器为 **QoS 1 订阅**（`scripts/self_decoder.py` 已修）且 `configs/mosquitto.conf` 的 `max_queued_messages=20000` 已生效（改后需 `docker restart auscult-mosquitto`）；解码器落库速率上限 ≈48 行/s（逐行 REST 写），批量 INSERT 优化列 P1。
+- ⚠️ **落库不满自查（ISS-057，2026-10-21）**：若上面都正常但**仍只落 ~12%**（≈1250/10800），先查宿主是否被别的 `mosquitto.exe` 占了 1883 —— `docker port auscult-mosquitto` 若**只显示 9001**，说明容器 1883 映射失败，灌数/解码链路实际连到了宿主 broker（默认队列 1000 → 静默丢弃）。停掉宿主 mosquitto 或让它改端口后重跑 `deploy\up.ps1`。
 
 ## 六、目录导航
 

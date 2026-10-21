@@ -162,8 +162,8 @@ def _call_ollama(messages: list[dict], timeout: float = TIMEOUT_SEC) -> str:
     缓存只存 content 原文（含 think），think 剥离/JSON 解析/置信度计算照常走，
     即缓存不改变任何下游语义。
     """
-    from ..llm import config as llm_config                    # noqa: PLC0415
-    from ..llm.client import get_client                       # noqa: PLC0415
+    from ...llm import config as llm_config                   # noqa: PLC0415
+    from ...llm.client import get_client                      # noqa: PLC0415
 
     client = get_client(role=llm_config.ROLE_DIAGNOSE)
     model = client.model

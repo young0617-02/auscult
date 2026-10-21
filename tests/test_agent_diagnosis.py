@@ -584,3 +584,35 @@ def test_agent_mode_graph_end_to_end(monkeypatch):
     assert [e.chunk_id for e in result["evidence"]] == ["c_001"]
     assert any(s["tool"] == "search_knowledge" for s in result["agent_steps"])
     assert "blocked" not in result          # 引用有效 → 未触发硬校验
+
+
+def test_call_ollama_relative_imports_resolve(monkeypatch):
+    """确定性诊断的 LLM 出口：**函数级相对导入必须可解析**（回归锁）。
+
+    2026-10-21 真机复跑实测（`scripts/smoke_agent_cloud.py` 之外的默认形态自检）：
+    `app/graph/nodes/diagnose.py::_call_ollama` 曾写成 `from ..llm import ...`，
+    在 `app.graph.nodes` 命名空间下解析成**不存在的** `app.graph.llm` →
+    默认形态（deterministic）每次调用必崩 `ModuleNotFoundError`。
+    该缺陷由 P7 统一客户端改造（`c80f2b4`）引入，且测试全打桩 `get_client`、
+    从未真实走过函数级导入，故 260 例回归全绿也未发现。
+
+    本测试**直接调用** `_call_ollama`（唯一 messages → 缓存必未命中），
+    任何相对层级写错都会在此暴露。
+    """
+    import uuid
+
+    from app.graph.nodes import diagnose as diagnose_mod
+
+    class _FakeClient:
+        model = "deepseek-r1:7b"
+
+        def chat(self, messages, *, timeout=None):
+            assert timeout == 5.0
+            return ChatResult(model=self.model, content="确定性诊断结论")
+
+    monkeypatch.setattr("app.llm.client.get_client", lambda role: _FakeClient())
+
+    out = diagnose_mod._call_ollama(
+        [{"role": "user", "content": f"reglock-import-{uuid.uuid4().hex}"}],
+        timeout=5.0)
+    assert out == "确定性诊断结论"
