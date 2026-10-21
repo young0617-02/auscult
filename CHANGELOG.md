@@ -30,6 +30,21 @@
   `docs/p7-design-agent-diagnosis-2026-10-19.md` §四配置表（+2 开关）· §六 U1 · §八修订；README §4.5；`deploy/.env.example`。
 - 回归：`pytest tests/ -q` = **285 passed**（+5：脱敏 2 / refusal 1 / E6d·E6e 2）；前端 vitest refusal 4 例全绿。
 
+**收尾验收（云端真实链路，2026-10-21 晚）**
+
+| 环节 | 实测结果 |
+|---|---|
+| 离线回归 | `pytest tests -q` **285 passed**；前端 vitest **26 suites / 57 tests** 全绿；`tsc --noEmit` 0 错；`deploy/smoke.ps1` **6/6 PASS** |
+| 后端重启后配置 | `/api/health` → `backend=cloud mode=agent sanitize=True fallback=True`（新开关已生效；⚠️ 运行时须用 `.venv` 解释器，系统 Python 缺 `socketio`） |
+| `scripts/smoke_agent_cloud.py --no-resume`（PUMP-A） | 真实云端 + 真实工具完成诊断（4 次云端调用）；`verdict=CHECK` 仅因 `W_BACKEND_ALREADY_CLOUD` 这条**预期空转**告警被脚本计入 errors |
+| 审核 resume（零云端调用） | 图恢复 → finalize，`diagnosis` 以 `PUMP-A` 开头 → **ISS-062 端到端验证通过**（不再出现 `设备#`） |
+| HTTP 全链路 `POST /api/diagnose`（eng_dev 内联告警，severity=critical） | 异步受理 0.1s，30s 内 `done`；`nodes=[parse_alarm, diagnose, escalate_cloud, finalize]`、`agent_steps` 4 条、`refusal=null`（契约字段可见） |
+| 报告落库 `RPT-c3f62cc00d2febb5` | confidence 0.565 / risk medium / degrade=None / **`has_masked_token=False`** |
+| 前端与网关 | `:3000/login` 200、`:9763/` 200、`:9763/api/health` 200 |
+| 预算 | 56 → 60（本次实跑 4 次；resume 0 次） |
+
+**遗留（不阻塞收尾，已登记）**：历史 **8 份**报告（修复前落库）`payload.diagnosis` 仍含 `设备#f6de90`；`payload` 未保存 `device_id`，无法自动还原 → 按「审计快照不可改」保留原样，新数据不再产生。
+
 ---
 
 ### 2026-10-21（收口后维护期 · **Agent 化收尾：参数级校验接线**）— 关闭「`validate_tool_args` 零调用」缺口

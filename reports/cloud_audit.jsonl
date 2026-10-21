@@ -109,3 +109,5 @@
 {"ts": "2026-10-21T21:52:56.448450", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
 {"ts": "2026-10-21T21:59:30.936228", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
 {"ts": "2026-10-21T22:02:19.307765", "thread_id": "thr-test", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
+{"ts": "2026-10-21T22:10:46.274015", "thread_id": "thr-smoke-agent-1792591803", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
+{"ts": "2026-10-21T22:13:09.267783", "thread_id": "thr-9e2d13b6f4564d37a0c9", "model": "N/A", "success": true, "latency_ms": 0.0, "error": null, "budget_ok": true, "skipped": "backend_already_cloud"}
