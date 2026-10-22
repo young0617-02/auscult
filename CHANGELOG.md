@@ -8,6 +8,33 @@
 
 ---
 
+## 2026-10-22（维护期 · **Agent 时序取证修复：窗口锚在告警时刻 + 测点截断可见**）
+
+> 全链路 e2e 复测（`docs/e2e-verification-2026-10-22.md`）暴露：历史告警的取证窗口
+> 以 `now` 为锚，且 `sensor_ids` 超限被静默截断 —— 两者叠加使"有数据"的告警也被
+> 判成"数据矛盾/温度测点无数据"并转人工。本次按 ISS-064 / ISS-065 修复。
+
+- **代码**：`app/agent/tool_registry.py::_resolve_window` 新增 `anchor_ms` —— 告警存在时
+  缺省窗口=`[alarm.ts-24h, alarm.ts]`、相对时间（`6h`/`24h`）从告警时刻起算；
+  `ts=0`/未来锚点回落 `now`（实时判据行为不变），绝对 ISO 不受影响，终点仍不越过 `now`。
+- **代码**：`_exec_query_sensor` 传 `anchor_ms=alarm.ts`，并把实际窗口回灌
+  `result.window{start_ms,end_ms}`，模型与审计都能看到"查的是哪段"。
+- **代码**：`_MAX_SENSORS_PER_CALL` 3→**5**；仍超限时回灌 `notices`（列出未查询测点并
+  注明"没有结论"），不再静默丢弃 —— 与 ISS-056「空结果不静默包装」同口径。
+- **测试**：`tests/test_agent_diagnosis.py` 新增 `test_resolve_window_anchors_on_alarm_ts`、
+  `test_execute_query_sensor_reports_truncation`；全量离线回归 **391 passed**。
+- **实测**：修复后同一历史告警（10-20T01:30Z）缺省窗口=`[10-19T01:30Z, 10-20T01:30Z]`，
+  5 个测点全部返回（各 77 点，`bearing_temp` max 59.29），不再出现"温度测点无数据"。
+- **重启后 e2e 复测**（`cloud + agent` 形态）：① 有数据链路 `thr-9d6d6526f0bc413da265`
+  — `human_reason` 中「时间过滤疑似失效」「温度测点无数据」消失、温度 58.7°C 入结论、
+  confidence 0.72→**0.795**，剩余转人工理由仅为"告警值 7.62 与存储峰值 1.36 矛盾"（e2e 构造值，
+  属合理转人工）；② 无数据链路 `thr-b5e2bcfb6ed644e6aadd` 仍正确转人工（窗口锚定后确为 0 行），
+  该分支未被改坏。两条线程停在 `waiting_review` 未代审。
+- **文档**：缺陷清单登记 ISS-064 / ISS-065；新增 `docs/e2e-verification-2026-10-22.md`
+  （两条 e2e 链路 + 验收口径 + 复现要点）。
+
+---
+
 ## 2026-10-22（维护期 · **交付包封版 v1.0.0：打包脚本 + 语义 tag**）
 
 > §7.3 第 8 项是唯一未落地项：仓库有 10 个 baseline/gate tag，但**无语义版本、无打包入口**，验收无从执行。
@@ -23,6 +50,32 @@
 - **踩坑**：脚本含中文 → 必须存为 **UTF-8 with BOM**；否则 `powershell -File`（5.1）按 ANSI 解码，中文标点吃掉后续引号，报 "Array index expression is missing"。
 - **配置**：`.gitignore` 增 `dist/`、`*.err.log`、`*.out.log`。
 - **回填**：`plan/Phase 6` §7.3 #8 → `[x]`（合计 **`[x]` 7 · `[~]` 1**）；打 tag `v1.0.0`。
+
+---
+
+## 2026-10-22（维护期 · **集成测试隔离：回归不再写生产库与仓库产物**）
+
+> 上一轮验证暴露的问题：`scripts/test_*.py` 打真栈，直接写生产库 `auscult_v2`，并把审计/轨迹/指标
+> 追加进**仓库已跟踪**的 `reports/*.jsonl`、`experiments/v1/raw/*.jsonl` —— 每跑一次回归脏一片，
+> diff 无法评审。本轮专门做隔离。
+
+- **新增 `app/observability/paths.py`**：`REPORTS_DIR / TRACE_DIR / METRICS_DIR` 的单一来源，
+  支持 `AUSCULT_REPORTS_DIR` 覆盖。5 个写点（security / cloud / review 审计、trace 轨迹、
+  metrics 指标）全部改为引用它，不再各自拼 `PROJECT_ROOT/"reports"`。
+- **新增根 `conftest.py`**（在 import app **之前**生效 —— 路径与 DSN 都是 import 时常量，fixture 改不动）：
+  ① 产物目录指到 `%TEMP%/auscult-it-reports-*`；② 建一次性临时库 `auscult_it_<uuid>`
+  （`db/migrations` 6 个 + 种子 4 角色 + 2 条最小工单样本），`API_PG_URL`/`LANGGRAPH_PG_URL` 切过去，
+  会话结束 `DROP DATABASE … WITH (FORCE)`；③ 建库失败则回退生产库并 `[it-isolation][WARN]` 告警，不静默。
+  开关 `AUSCULT_IT_DB=off`（只隔离产物目录）。
+- **`scripts/run_agent_gate.py`**：`AUDIT_PATH` 加 `AUSCULT_AGENT_GATE_AUDIT_PATH` 覆盖；并把审计重定向
+  从**模块级副作用**改为 `main()` 内 `try/finally` —— 原先任何人 `import` 该模块就会永久改写
+  `sanitizer.AUDIT_LOG_PATH`，导致同进程后续用例（d24 审计、p5_d12 工具白名单）写到"自己读不到"的文件。
+- **拔掉 3 处绕过隔离的硬编码 DSN**：`test_p4_d05` / `test_p4_d06` / `test_d20`×2 改为 `POSTGRES_URL`；
+  5 处自拼产物路径（`test_d14/d18/d22/p4_d05/p5_d12`）改为 `app.observability.paths`。
+- **结果**：`pytest` **566 passed / 0 failed（97 s）**；跑完 `git status` 在 `reports/`、`experiments/`
+  下**零变化**；临时库自动 DROP，无残留。
+- **遗留（需单独授权）**：生产库仍有 **52 份历史测试报告**（总 82 份，`thread_id` 形如
+  `d19-*`/`d20-*`/`d24-*`）为隔离落地前所留，清理属破坏性操作，待批准后单独执行。
 
 ---
 
