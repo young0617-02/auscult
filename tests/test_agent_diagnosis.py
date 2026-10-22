@@ -306,6 +306,68 @@ def test_resolve_window_defaults():
     assert start3 < end3 and end3 == now
 
 
+def test_resolve_window_anchors_on_alarm_ts():
+    """回归锁：历史/回放告警的窗口必须锚在 alarm.ts，而不是 now（2026-10-22 修复）。
+
+    缺陷现象：10-20 的告警在 10-22 复诊时，窗口被算成 [now-24h, now] → 查到与
+    告警时刻无关的数据 → 模型误判"告警值与存储严重矛盾/时间过滤失效"。
+    """
+    now = 1_790_000_000_000
+    alarm_ts = now - 48 * 3_600_000          # 两天前的告警
+
+    # 缺省窗口 = [告警-24h, 告警]，不是 [now-24h, now]
+    start, end = tr._resolve_window({}, now_ms=now, anchor_ms=alarm_ts)
+    assert end == alarm_ts and start == alarm_ts - 24 * 3_600_000
+
+    # 相对时间也从告警时刻起算
+    start2, end2 = tr._resolve_window({"start": "6h"}, now_ms=now, anchor_ms=alarm_ts)
+    assert end2 == alarm_ts and start2 == alarm_ts - 6 * 3_600_000
+
+    # ts=0（实时判据/缺 ts）→ 回落 now，保持历史行为
+    start3, end3 = tr._resolve_window({}, now_ms=now, anchor_ms=0)
+    assert end3 == now and start3 == now - 24 * 3_600_000
+
+    # 绝对 ISO 不受锚点影响；终点仍不得越过 now
+    start4, end4 = tr._resolve_window(
+        {"start": "2026-09-18T00:00:00Z", "end": "2026-09-18T06:00:00Z"},
+        now_ms=now, anchor_ms=alarm_ts)
+    assert start4 == tr.parse_timestamp("2026-09-18T00:00:00Z", now_ms=now)
+    assert end4 == tr.parse_timestamp("2026-09-18T06:00:00Z", now_ms=now)
+
+
+def test_execute_query_sensor_reports_truncation(monkeypatch):
+    """回归锁：sensor_ids 超限**不再静默截断**，必须回灌 notices（2026-10-22 修复）。
+
+    缺陷现象：传 5 个测点只查 3 个且无提示，模型把"没查温度"说成"温度测点无数据"。
+    """
+    queried: list[str] = []
+
+    def _fake_query_sensor(device_id, metric, start_ts, end_ts, *, timeout=0.5):
+        queried.append(metric)
+        return {"rows": [{"ts": 1, "value": 4.0}], "count": 1}
+
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor", _fake_query_sensor)
+
+    # 告警的 5 个常用测点应一次查完，不产生截断提示
+    five = [f"PUMP-A-01.{m}" for m in ("vib_x", "vib_y", "vib_z",
+                                       "temp_bearing_de", "temp_bearing_nde")]
+    out = tr.execute_tool("query_sensor", {"device_id": "PUMP-A-01",
+                                          "sensor_ids": five}, alarm=_alarm())
+    assert out["ok"] is True
+    assert len(out["result"]["series"]) == 5
+    assert "notices" not in out["result"]
+
+    # 超限 → 截断必须可见，且列出未查询的测点
+    seven = five + ["PUMP-A-01.vib_peak", "PUMP-A-01.motor_current"]
+    out2 = tr.execute_tool("query_sensor", {"device_id": "PUMP-A-01",
+                                           "sensor_ids": seven}, alarm=_alarm())
+    assert len(out2["result"]["series"]) == tr._MAX_SENSORS_PER_CALL
+    notices = out2["result"]["notices"]
+    assert any("上限" in n for n in notices)
+    assert any("PUMP-A-01.vib_peak" in n and "PUMP-A-01.motor_current" in n
+               for n in notices)
+
+
 def test_execute_query_sensor_maps_short_names(monkeypatch):
     """schema 测点短名 → TDengine 列；ISS-049 归一声明；统计摘要入结果。"""
     captured = {}

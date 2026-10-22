@@ -65,7 +65,8 @@ SENSOR_COLUMN_MAP: dict[str, str] = {
 #: 图纸/台账口径（`A 0泵`、客户号），候选①对其**无迁移对象**，见 `app/device_ids` 头注。
 DEVICE_ALIAS_MAP: dict[str, str] = CANONICAL_TO_LEGACY
 
-_MAX_SENSORS_PER_CALL = 3      # 单次工具调用最多查 3 个测点（延迟护栏）
+_MAX_SENSORS_PER_CALL = 5      # 单次工具调用最多查 5 个测点（延迟护栏；超限必回灌 notices）
+_MAX_WINDOW_MS = 24 * 3_600_000   # 缺省回看窗口（自锚点起算）
 _MAX_TEXT_CHARS = 300          # 单条知识块注入 LLM 的最大字符数
 _MAX_ROWS = 20                 # 工单/图谱命中注入 LLM 的最大条数
 
@@ -136,19 +137,37 @@ def parse_timestamp(value: Any, *, now_ms: int | None = None) -> int | None:
     return int(dt.timestamp() * 1000)
 
 
-def _resolve_window(time_range: Any, *, now_ms: int) -> tuple[int, int]:
-    """time_range → (start_ms, end_ms)；缺省 start = now-24h，end = now。
+def _resolve_window(time_range: Any, *, now_ms: int,
+                    anchor_ms: int | None = None) -> tuple[int, int]:
+    """time_range → (start_ms, end_ms)，以**告警时刻**为缺省锚点。
 
-    幻觉出的未来起点（start > now）钳制回 24h 窗口——不下发 start > end 的
+    锚点语义（2026-10-22 修复）：
+    - `anchor_ms`（= `alarm.ts`）存在且合法时，相对时间（"6h"/"24h"）与缺省窗口
+      都从告警时刻起算 → 缺省窗口 = `[锚点-24h, 锚点]`；
+    - `anchor_ms` 缺失/为 0/在未来（如实时判据里的 `ts=0`）→ 回落 `now_ms`，
+      与历史行为一致；
+    - 绝对 ISO 时间不受锚点影响（模型给了起止就按模型给）；
+    - 终点永不超过 `now_ms`（不查未来数据）。
+
+    为什么必须锚在告警时刻：回放/历史告警（如 10-20 的告警在 10-22 复诊）若按
+    now 起算，查的窗口与告警时刻错配 → 模型会拿到无关数据并误判"告警值与存储
+    严重矛盾/时间过滤失效"，把本该自动定论的诊断推向人工。
+
+    幻觉出的未来起点（start > 锚点）钳制回缺省窗口——不下发 start > end 的
     非法区间给 TDengine。
     """
+    anchor = anchor_ms if isinstance(anchor_ms, int) and 0 < anchor_ms <= now_ms else now_ms
     tr_ = time_range if isinstance(time_range, dict) else {}
-    start = parse_timestamp(tr_.get("start"), now_ms=now_ms)
-    end = parse_timestamp(tr_.get("end"), now_ms=now_ms)
-    if start is None or start > now_ms:
-        start = now_ms - 24 * 3_600_000
-    if end is None or end < start or end > now_ms:
+    start = parse_timestamp(tr_.get("start"), now_ms=anchor)
+    end = parse_timestamp(tr_.get("end"), now_ms=anchor)
+    if start is None or start > anchor:
+        start = anchor - _MAX_WINDOW_MS
+    if end is None or end < start:
+        end = anchor
+    if end > now_ms:                       # 不查未来
         end = now_ms
+    if start > end:                        # 兜底：起点不得晚于终点
+        start = end - _MAX_WINDOW_MS
     return start, end
 
 
@@ -209,12 +228,25 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     sensor_ids = args.get("sensor_ids") or []
     if not sensor_ids and alarm is not None and alarm.metric:
         sensor_ids = [f"{alarm.device_id}.{alarm.metric}"]
-    sensor_ids = [str(s) for s in sensor_ids][:_MAX_SENSORS_PER_CALL]
+    requested = [str(s) for s in sensor_ids]
+    sensor_ids = requested[:_MAX_SENSORS_PER_CALL]
     if not sensor_ids:
         return {"ok": False, "error": "缺少参数 sensor_ids 且无法从告警推断测点"}
 
+    # 超限**必须显式回灌**（2026-10-22 修复）：此前静默截断，模型把"没查"当成
+    # "无数据"，于是 human_reason 里出现"温度测点无数据"的错误归因。
+    notices: list[str] = []
+    dropped = requested[_MAX_SENSORS_PER_CALL:]
+    if dropped:
+        notices.append(
+            f"sensor_ids 超过单次上限 {_MAX_SENSORS_PER_CALL}，本次只查 "
+            f"{sensor_ids}；未查询：{dropped}（它们**没有**结论，需另调用一次补齐）")
+
     now_ms = int(time.time() * 1000)
-    start_ts, end_ts = _resolve_window(args.get("time_range"), now_ms=now_ms)
+    # 窗口锚在告警时刻（历史/回放告警不再查到与告警无关的 now 窗口）
+    anchor_ms = getattr(alarm, "ts", None) if alarm is not None else None
+    start_ts, end_ts = _resolve_window(args.get("time_range"), now_ms=now_ms,
+                                       anchor_ms=anchor_ms)
     baseline = getattr(alarm, "baseline", None)
 
     series: list[dict[str, Any]] = []
@@ -254,8 +286,12 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
                                "error": "; ".join(errors) or "无可用测点数据"}
         if empty_reason:
             out["empty_reason"] = empty_reason
+        if notices:
+            out["notices"] = notices
+        out["window"] = {"start_ms": start_ts, "end_ms": end_ts}
         return out
-    result: dict[str, Any] = {"device_id": resolved_id, "series": series}
+    result: dict[str, Any] = {"device_id": resolved_id, "series": series,
+                              "window": {"start_ms": start_ts, "end_ms": end_ts}}
     if device_id != resolved_id:
         # 透明度：让模型与审计都看到发生了编号归一（ISS-056）
         result["device_id_resolved"] = {"requested": device_id, "used": resolved_id}
@@ -263,6 +299,8 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
         result["partial_errors"] = errors
     if empty_reason:
         result["empty_reason"] = empty_reason
+    if notices:
+        result["notices"] = notices
     if any(s["column"] == "vib_rms" and s["sensor_id"].endswith(("vib_x", "vib_y", "vib_z"))
            for s in series):
         result["note"] = ("三向振动（vib_x/vib_y/vib_z）当前存储未分向，"
