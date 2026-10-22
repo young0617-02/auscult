@@ -109,7 +109,9 @@ def test_graph_smoke() -> None:
     from app.tools.query_sensor import _td_query  # noqa: PLC0415
     from app.graph.build import build_graph  # noqa: E402
 
-    result_ts = _td_query("SELECT ts FROM iot.st_pump_metrics LIMIT 1")
+    # 2026-10-22：设备号统一规范编号（TDengine TAG 已迁移），取首 ts 必须带设备过滤
+    result_ts = _td_query(
+        "SELECT ts FROM iot.st_pump_metrics WHERE device_id = 'PUMP-A-01' LIMIT 1")
     from datetime import datetime  # noqa: PLC0415
     ts_str = result_ts["data"][0][0]
     dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
@@ -118,7 +120,7 @@ def test_graph_smoke() -> None:
     config = {"configurable": {"thread_id": "d10-smoke"}}
     initial = {
         "alarm": {
-            "alarm_id": "smoke-10", "device_id": "PUMP-A",
+            "alarm_id": "smoke-10", "device_id": "PUMP-A-01",
             "metric": "vib_rms", "value": 7.1, "severity": "low", "ts": ts,
         },
         "thread_id": "d10-smoke",
@@ -128,6 +130,15 @@ def test_graph_smoke() -> None:
     with build_checkpointer() as saver:
         graph = build_graph(saver)
         result = graph.invoke(initial, config=config)
+
+        # 2026-10-22（Must#9）：真实诊断走 agent 形态，若模型判定 risk=high/主动求助，
+        # 图会挂在 human_review；本用例考的是 finalize 出报告，故按审核语义补一次 resume。
+        if "human_review" in (graph.get_state(config).next or ()):
+            from langgraph.types import Command  # noqa: PLC0415
+
+            result = graph.invoke(
+                Command(resume={"action": "approved", "reviewer_id": "rev-d10",
+                                "comment": "集成冒烟：人工确认"}), config=config)
 
         report_id = result.get("report_id")
         assert report_id is not None and report_id.startswith("RPT-")

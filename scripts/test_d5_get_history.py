@@ -26,7 +26,8 @@ from app.graph.state import AlarmEvent, DiagnosisState, WorkOrder  # noqa: E402
 
 def _get_first_ts() -> int:
     from app.tools.query_sensor import _td_query  # noqa: PLC0415
-    result = _td_query("SELECT ts FROM iot.st_pump_metrics LIMIT 1")
+    result = _td_query(
+        "SELECT ts FROM iot.st_pump_metrics WHERE device_id = 'PUMP-A-01' LIMIT 1")
     from datetime import datetime  # noqa: PLC0415
     ts_str = result["data"][0][0]
     dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
@@ -91,7 +92,7 @@ def test_m31_serial_smoke() -> None:
     config = {"configurable": {"thread_id": "m31-smoke"}}
     initial = {
         "alarm": {
-            "alarm_id": "m31-1", "device_id": "PUMP-A",
+            "alarm_id": "m31-1", "device_id": "PUMP-A-01",
             "metric": "vib_rms", "value": 7.1, "ts": ts,
         },
         "thread_id": "m31-smoke",
@@ -107,20 +108,31 @@ def test_m31_serial_smoke() -> None:
         assert alarm is not None and alarm.rule_id == "thr_vib_rms"
         assert alarm.severity == "high"
 
-        report = result.get("sensor_report")
-        assert report is not None and report["count"] > 0
+        # 2026-10-22：默认 agent 形态不接 analyze_sensor 节点 → sensor_report 必然为空。
+        from app.llm.config import diagnosis_mode  # noqa: PLC0415
+
+        if diagnosis_mode() == "deterministic":
+            report = result.get("sensor_report")
+            assert report is not None and report["count"] > 0
+        else:
+            assert not [e for e in (result.get("errors") or [])
+                        if str(e.get("code", "")).startswith("E_")], result.get("errors")
+            assert graph.get_state(config).next in ((), ("human_review",))
 
         evidence = result.get("evidence", [])
-        assert len(evidence) > 0
+        if diagnosis_mode() == "deterministic":
+            assert len(evidence) > 0
 
-        # get_history: PUMP-A 可能无工单（work_orders 用中文 device_id），但节点不应报错
+        # get_history: PUMP-A-01 可能无工单（work_orders 用中文 device_id），但节点不应报错
         work_orders = result.get("work_orders", [])
         # PG checkpoint 落盘验证
         snapshot = graph.get_state(config)
         assert snapshot is not None
 
+    sensor_n = (report["count"] if diagnosis_mode() == "deterministic"
+                else "n/a（agent 形态无 sensor 节点）")
     print(f"[PASS] M3.1 串联冒烟（PG checkpoint 落盘 + "
-          f"sensor={report['count']} evidence={len(evidence)} "
+          f"sensor={sensor_n} evidence={len(evidence)} "
           f"orders={len(work_orders)}）")
 
 

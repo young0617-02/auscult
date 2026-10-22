@@ -119,7 +119,7 @@ def test_diagnose_node() -> None:
     from app.graph.nodes.diagnose import diagnose  # noqa: E402
     state = DiagnosisState(
         alarm=AlarmEvent(
-            alarm_id="d6-test", device_id="PUMP-A",
+            alarm_id="d6-test", device_id="PUMP-A-01",
             metric="vib_rms", value=7.1, baseline=4.5,
             severity="high", ts=0,
         ),
@@ -156,7 +156,8 @@ def test_graph_smoke() -> None:
     from app.tools.query_sensor import _td_query  # noqa: PLC0415
     from app.graph.build import build_graph  # noqa: E402
 
-    result_ts = _td_query("SELECT ts FROM iot.st_pump_metrics LIMIT 1")
+    result_ts = _td_query(
+        "SELECT ts FROM iot.st_pump_metrics WHERE device_id = 'PUMP-A-01' LIMIT 1")
     from datetime import datetime  # noqa: PLC0415
     ts_str = result_ts["data"][0][0]
     dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
@@ -166,7 +167,7 @@ def test_graph_smoke() -> None:
     config = {"configurable": {"thread_id": "d6-smoke"}}
     initial = {
         "alarm": {
-            "alarm_id": "smoke-6", "device_id": "PUMP-A",
+            "alarm_id": "smoke-6", "device_id": "PUMP-A-01",
             "metric": "vib_rms", "value": 7.1, "ts": ts,
         },
         "thread_id": "d6-smoke",
@@ -178,15 +179,27 @@ def test_graph_smoke() -> None:
     # 验证全链路执行
     alarm = result.get("alarm")
     assert alarm is not None and alarm.rule_id == "thr_vib_rms"
-    report = result.get("sensor_report")
-    assert report is not None and report["count"] > 0
-    evidence = result.get("evidence", [])
-    assert len(evidence) > 0
-    diagnosis = result.get("diagnosis")
-    assert diagnosis is not None  # diagnose 节点已执行
-    print(f"[PASS] 图内冒烟（conf={result.get('confidence', 0):.3f} "
-          f"risk={result.get('risk_level')} "
-          f"evidence={len(evidence)}）")
+    # 2026-10-22：默认 agent 形态的图是 START → parse_alarm → diagnose(agent) → 路由，
+    # 没有 analyze_sensor／gather 节点，故 sensor_report/evidence 依形态而空；断言按形态分流。
+    from app.llm.config import diagnosis_mode  # noqa: PLC0415
+
+    mode = diagnosis_mode()
+    if mode == "deterministic":
+        report = result.get("sensor_report")
+        assert report is not None and report["count"] > 0
+        evidence = result.get("evidence", [])
+        assert len(evidence) > 0
+        diagnosis = result.get("diagnosis")
+        assert diagnosis is not None  # diagnose 节点已执行
+        print(f"[PASS] 图内冒烟（{mode}，conf={result.get('confidence', 0):.3f} "
+              f"risk={result.get('risk_level')} evidence={len(evidence)}）")
+    else:
+        assert not [e for e in (result.get("errors") or [])
+                    if str(e.get("code", "")).startswith("E_")], result.get("errors")
+        nxt = graph.get_state(config).next
+        assert nxt in ((), ("human_review",))
+        print(f"[PASS] 图内冒烟（{mode}，终态 next={nxt} "
+              f"conf={result.get('confidence', 0):.3f} risk={result.get('risk_level')}）")
 
 
 def main() -> int:

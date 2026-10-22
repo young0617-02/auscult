@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -41,8 +42,15 @@ def test_state() -> None:
     print("[PASS] DiagnosisState 实例化 + Pydantic 校验")
 
 
+@patch.dict("os.environ", {"AUSCULT_CLOUD_FALLBACK": "0"})
 def test_route() -> None:
-    """2. 条件路由五档优先级（plan §3.3）。"""
+    """2. 条件路由五档优先级（plan §3.3）。
+
+    2026-10-22：`retry_count>=3` 在「本地失败兜底云端」开启（默认）且后端为 local、
+    `diagnosis is None` 时会走 `escalate_cloud`（2026-10-21 架构补口），不再是纯 degrade。
+    本用例考的是**五档优先级本身**，故显式关闭兜底开关隔离该变量；
+    兜底分支由 `test_route_fallback_to_cloud` 覆盖。
+    """
     # ① retry_count ≥ 3 → degrade（最高优先级，先于 confidence）
     s = DiagnosisState(confidence=0.9, risk_level="low", retry_count=3)
     assert _route_condition(s) == "degrade", f"retry≥3 应走 degrade，got {_route_condition(s)}"

@@ -205,11 +205,18 @@ def test_factory_local_defaults(monkeypatch):
 
 
 def test_factory_cloud_backend(monkeypatch):
-    """cloud 后端：端点/模型/密钥来自云端配置加载器（不依赖 cloud.json 存在）。"""
+    """cloud 后端：端点/模型/密钥来自云端配置加载器（不依赖 cloud.json 存在）。
+
+    2026-10-22：补 `reset_client_cache()` —— 客户端工厂按 (backend, model) 做了进程内缓存，
+    全量跑时前面的用例已缓存过 cloud 客户端，这里就会拿到旧实例（模型/密钥对不上）。
+    """
+    from app.llm.client import reset_client_cache  # noqa: PLC0415
+
     monkeypatch.setenv("AUSCULT_LLM_BACKEND", "cloud")
     monkeypatch.setattr("app.llm.client._load_cloud_settings",
                         lambda: ("https://cloud/v1/chat/completions",
                                  "Qwen/Qwen3.8-27B", "sk-test"))
+    reset_client_cache()
     client = get_client(llm_config.ROLE_AGENT)
     assert client.model == "Qwen/Qwen3.8-27B"
     assert client.api_key == "sk-test"
@@ -1573,3 +1580,49 @@ def test_exec_query_graph_start_node_alias(monkeypatch):
     assert "device_id_resolved" not in out3["result"]
     assert "note" not in out3["result"]                       # 有实体命中 → 不给空结果提示
 
+
+
+# ---------------------------------------------------------------- 云端端点归一（2026-10-22 实测缺陷）
+# 缺陷现象：endpoint 只填 base URL（…/v1）→ POST 打到 /v1 → HTTP 404 → 3 次重试 →
+# 静默降级（agent_steps 空 / confidence 0），表象与「模型不会调工具」完全一致。
+def test_cloud_endpoint_base_url_appends_chat_completions():
+    from app.llm.client import _normalize_cloud_endpoint
+
+    assert (_normalize_cloud_endpoint("https://api-inference.modelscope.cn/v1")
+            == "https://api-inference.modelscope.cn/v1/chat/completions")
+    assert (_normalize_cloud_endpoint("https://dashscope.aliyuncs.com/compatible-mode/v1/")
+            == "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
+    assert (_normalize_cloud_endpoint("  https://host/v1beta  ")
+            == "https://host/v1beta/chat/completions")
+
+
+def test_cloud_endpoint_full_url_is_idempotent():
+    from app.llm.client import _normalize_cloud_endpoint
+
+    url = "https://host/v1/chat/completions"
+    assert _normalize_cloud_endpoint(url) == url
+    assert _normalize_cloud_endpoint(url + "/") == url
+
+
+def test_cloud_endpoint_ambiguous_shape_raises():
+    """形态不明一律 fail-fast，不给运行期留 404 的余地。"""
+    from app.llm.client import _normalize_cloud_endpoint
+
+    with pytest.raises(RuntimeError, match="chat/completions"):
+        _normalize_cloud_endpoint("https://host/openai")
+    with pytest.raises(RuntimeError):
+        _normalize_cloud_endpoint("https://host/v1/messages")
+
+
+def test_get_cloud_client_normalizes_endpoint_from_config(monkeypatch):
+    """工厂出口必须使用归一后的端点（配置只写 base URL 也能打通）。"""
+    from app.llm.client import get_cloud_client, reset_client_cache
+
+    monkeypatch.setattr(
+        "app.router.cloud.load_cloud_config",
+        lambda: {"endpoint": "https://host/v1", "model": "m", "api_key": "k"})
+    reset_client_cache()
+    try:
+        assert get_cloud_client().endpoint == "https://host/v1/chat/completions"
+    finally:
+        reset_client_cache()

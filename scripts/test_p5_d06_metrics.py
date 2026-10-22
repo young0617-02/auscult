@@ -62,12 +62,15 @@ def test_collector_bridge() -> None:
     mc.record_confidence(0.82)
     routes_after = _metric_sample("auscult_routes_total", "finalize")
     conf_after = _metric_sum("auscult_diagnosis_confidence")
-    assert routes_after - routes_before == 2.0, f"路由计数未同步: {routes_before}→{routes_after}"
-    assert conf_after - conf_before == 0.82, f"置信度直方图未同步: {conf_before}→{conf_after}"
+    # 2026-10-22：Prometheus 注册表是**进程级全局**，全量跑时其它用例/后台线程也会打点，
+    # 精确等于断言（==2.0）会随机失败。改为「至少本用例的增量」——仍能抓住"根本没接上"
+    # （差值为 0）这个真正的回归，同时不再被共享状态干扰。
+    assert routes_after - routes_before >= 2.0, f"路由计数未同步: {routes_before}→{routes_after}"
+    assert conf_after - conf_before >= 0.82, f"置信度直方图未同步: {conf_before}→{conf_after}"
 
     review_before = _metric_sum("auscult_review_duration_ms")
     mc.record_review(60000.0, "approved")
-    assert _metric_sum("auscult_review_duration_ms") - review_before == 60000.0, "审核时长未同步"
+    assert _metric_sum("auscult_review_duration_ms") - review_before >= 60000.0, "审核时长未同步"
     print("[PASS] MetricsCollector → Prometheus 桥接（route/confidence/review）")
 
 

@@ -19,6 +19,8 @@
 from __future__ import annotations
 
 import json
+import logging
+import re
 import time
 import urllib.error
 import urllib.request
@@ -195,6 +197,47 @@ def _normalize_call(item: Any) -> ToolCall | None:
 _clients: dict[tuple[str, str], OpenAICompatClient] = {}
 
 
+#: OpenAI 兼容对话端点后缀（`OpenAICompatClient` 的契约：完整端点 URL）
+_CHAT_COMPLETIONS_SUFFIX = "/chat/completions"
+
+#: 允许补路径的 base URL 形态：以版本段结尾，如 `/v1`、`/v1beta`、`/compatible-mode/v1`
+_BASE_VERSION_RE = re.compile(r"/v\d+[A-Za-z0-9._-]*$")
+
+_logger = logging.getLogger("auscult.llm.client")
+
+
+def _normalize_cloud_endpoint(endpoint: str) -> str:
+    """把 `env/cloud.json` 的 endpoint 归一到**完整对话端点**。
+
+    为什么需要（2026-10-22 实测）：`OpenAICompatClient` 把 `endpoint` **原样**作为
+    POST 目标，契约是「完整 URL（含 /v1/chat/completions）」。切换云商时若按多数
+    SDK 习惯只填 base URL（`https://host/v1`），请求会打到 `/v1` 上返回
+    `HTTP 404 page not found`；现象是「诊断 1 秒完成、agent_steps 空、confidence 0、
+    降级为低置信度」——**与「模型不会调工具」（ISS-060）表象完全一致**，极易误判。
+    故在加载期就把该口径收敛掉：能确认是 base URL 则补齐路径并告警，形态不明则
+    fail-fast 并给出可照抄的写法，绝不把 404 留到运行期变成 3 次重试 + 静默降级。
+
+    - `…/chat/completions` → 原样返回（幂等）；
+    - `…/v1`、`…/v1/`、`…/compatible-mode/v1` → 补 `/chat/completions`（记 WARNING）；
+    - 其它（如 `…/openai`、`…/v1/messages`）→ `RuntimeError`。
+    """
+    ep = (endpoint or "").strip().rstrip("/")
+    if not ep:
+        return ep
+    if ep.endswith(_CHAT_COMPLETIONS_SUFFIX):
+        return ep
+    if _BASE_VERSION_RE.search(ep):
+        normalized = ep + _CHAT_COMPLETIONS_SUFFIX
+        _logger.warning(
+            "env/cloud.json 的 endpoint 只给了 base URL，已自动补全为完整端点：%s → %s"
+            "（建议直接把配置写全，避免依赖该兜底）", ep, normalized)
+        return normalized
+    raise RuntimeError(
+        "env/cloud.json 的 endpoint 既不是完整对话端点，也不像 OpenAI 兼容 base URL："
+        f"{ep!r}。请填 `https://<host>/v1/chat/completions`，或至少填到版本段"
+        " `https://<host>/v1`（会被自动补齐路径）。")
+
+
 def _load_cloud_settings() -> tuple[str, str, str]:
     """云端端点配置（复用 router/cloud.py 的单一加载器，避免两处口径漂移）。"""
     from ..router.cloud import load_cloud_config        # noqa: PLC0415 防循环导入
@@ -207,7 +250,7 @@ def _load_cloud_settings() -> tuple[str, str, str]:
                               ("api_key", api_key)) if not v]
     if missing:
         raise RuntimeError(f"env/cloud.json 缺必填项: {missing}")
-    return endpoint, model, api_key
+    return _normalize_cloud_endpoint(endpoint), model, api_key
 
 
 def get_client(role: str = cfg.ROLE_DIAGNOSE) -> OpenAICompatClient:

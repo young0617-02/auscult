@@ -26,6 +26,33 @@
 
 ---
 
+## 2026-10-22（维护期 · **云端模型切换回归：endpoint 硬化 + 28 个集成断言复位**）
+
+> 所有者换成 ModelScope `Qwen/Qwen3.8-27B` 后做全功能验证：主链全部正常，但暴露 1 个**会静默降级**的配置坑，
+> 以及 28 个因近期行为变更（设备号迁移 / Must#9 高风险必审 / agent 形态默认）而失效的集成断言。
+
+- **代码（`app/llm/client.py`）**：新增 `_normalize_cloud_endpoint()` —— endpoint 只写到版本段（`…/v1`、`…/v1beta`、
+  `…/compatible-mode/v1`）时自动补 `/chat/completions` 并记 `WARNING`；形态不明（`…/openai`、`…/v1/messages`）
+  **直接 `RuntimeError`** 并给出可照抄写法。根因：客户端把 `endpoint` **原样** POST，只填 base URL 会 `HTTP 404`
+  → 3 次重试 → 降级为「低置信度」，现象与 ISS-060「模型不会调工具」一模一样，极易误判为模型能力问题。
+- **测试（新增 4 例）**：`tests/test_agent_diagnosis.py` 锁死归一行为（base URL 补齐、完整端点幂等、
+  形态不明 fail-fast、工厂出口使用归一后端点）。
+- **集成脚本（15 个）复位**：设备号改 `PUMP-A-01`（取首 `ts` 的 SQL 补 `WHERE device_id=…` 过滤）；
+  agent 形态下 `sensor_report`/`evidence` 断言按 `diagnosis_mode()` 分流；打桩 `diagnose` 的用例固定
+  `AUSCULT_DIAGNOSIS_MODE=deterministic`（否则等于没打桩、真调 LLM）；Must#9 后 `high` 必审 → 补
+  `Command(resume=approved)` 再断言报告；路由断言按新优先级翻转（`high` 前置、`retry≥3` 兜底可走 escalate）；
+  预算闸门桩改 `BudgetGuard.reserve()`（ISS-054 先增后调后旧桩失效）；共享 JSONL / Prometheus 注册表断言
+  改为按本用例标识过滤或 `>=` 增量。
+- **结果**：`pytest` 全量 **566 passed / 0 failed / 98 s**（修复前 534 passed / 28 failed / 20 min ——
+  慢的根因就是打桩失效在真调 LLM）；离线 `pytest tests/` **400 passed / 32 s**。
+- **配置**：`env/cloud.json` 的 endpoint 补全为 `…/v1/chat/completions`（原文件备份 `cloud.json.bak-20261022`）；
+  `run_demo_s1.py` 演示口令改读 `AUSCULT_SEED_PASSWORD`；`retrieve_knowledge.py` 的 `"unknown"` 哨兵值进
+  密钥扫描白名单（`test_secret_scan` 复位）。
+- **仍未做**：集成测试直写生产库 —— 跑一次仍向 `reports` 注入 8 份测试报告，并追加 `reports/*.jsonl`、
+  `experiments/v1/raw/*.jsonl` 等**已跟踪**产物（本次已 `git checkout --` 还原）。建议独立 schema 或跑后清理。
+
+---
+
 ## 2026-10-22（维护期 · **§7.3 全绿：干净环境清空卷演练留档**）
 
 > 最后一项 `[~]` 的真实原因不是"起不来"，而是**"全新目录 ≠ 空卷"**：`deploy/docker-compose.yml`

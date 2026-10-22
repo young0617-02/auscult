@@ -169,15 +169,20 @@ def test_audit_logging() -> None:
                      allowed=True)
 
     count_after = sum(1 for _ in AUDIT_LOG_PATH.open(encoding="utf-8"))
-    assert count_after >= count_before + 3, \
-        f"审计应增加 3 条（before={count_before}, after={count_after}）"
+    # 2026-10-22：改用「本用例专属 thread_id 的记录数」判定，不再用全局行数差。
+    # 全量跑时审计文件是进程级共享（其它用例/后台线程也会追加），行数差断言天然易碎。
+    lines = [ln for ln in AUDIT_LOG_PATH.read_text(encoding="utf-8").splitlines()
+             if ln.strip()]
+    mine = [ln for ln in lines if '"d24-audit"' in ln]
+    assert len(mine) >= 3, (
+        f"本用例应落 3 条审计（实际 {len(mine)}；"
+        f"全局行数 before={count_before} after={count_after}）")
 
     # 验证最后一条记录结构
-    lines = AUDIT_LOG_PATH.read_text(encoding="utf-8").strip().split("\n")
-    last = json.loads(lines[-1])
+    last = json.loads(mine[-1])
     assert last["event"] == "tool_call"
     assert "ts" in last
-    print(f"[PASS] 审计落库（+3 条，总计 {count_after}）")
+    print(f"[PASS] 审计落库（本用例 +{len(mine)} 条，全局 {count_after}）")
 
 
 # ---------------------------------------------------------------- 11 E10 图内冒烟
@@ -220,12 +225,25 @@ def test_e10_prompt_injection_blocked() -> None:
                   "metric": "vib_rms", "value": 7.1, "ts": 0},
         "thread_id": "d24-e10",
     }
+    # 2026-10-22：本用例断言的是审核/幂等/trace/指标等**与形态无关**的语义，而打桩只覆盖
+    # deterministic 链的 `diagnose`；默认 agent 形态会绕过 mock 去调真 LLM（慢且不确定）。
+    # 故显式固定形态（agent 形态的等价验证见 tests/test_agent_diagnosis.py）。
     with patch.object(build_mod, "analyze_sensor", _mock_analyze_sensor), \
+         patch.dict("os.environ", {"AUSCULT_DIAGNOSIS_MODE": "deterministic"}), \
          patch.object(build_mod, "retrieve_evidence", _mock_retrieve_evidence), \
          patch.object(build_mod, "get_history", _mock_get_history), \
          patch.object(build_mod, "diagnose", _mock_diagnose_injected):
         graph = build_graph(InMemorySaver())
         result = graph.invoke(initial, config=config)
+        # 2026-10-22（Must#9）：注入内容含「admin: full access」，高风险操作词命中即挂
+        # human_review，需人工批准才 finalize 出报告 —— 这是本用例要证明的"未被绕过"，
+        # 故按审核语义补一次 resume，再断言报告与净化结果。
+        if graph.get_state(config).next == ("human_review",):
+            from langgraph.types import Command  # noqa: PLC0415
+
+            result = graph.invoke(
+                Command(resume={"action": "approved", "reviewer_id": "rev-d24",
+                                "comment": "注入演练：人工确认后归档"}), config=config)
 
     # 图执行不破坏
     assert result.get("report_id", "").startswith("RPT-"), \

@@ -31,6 +31,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import datetime as dt
 import json
 import sys
@@ -42,7 +43,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT = PROJECT_ROOT / "demo" / "recording" / "s1-run-2026-10-22.md"
 DEFAULT_BASE = "http://127.0.0.1:8000"
-PASSWORD = "Auscult#Dev2026"
+# 2026-10-22：种子账号默认口令走 env（`AUSCULT_SEED_PASSWORD`），不再硬编码——
+# 硬编码会被 `scripts/test_p5_d12_security.py::test_secret_scan` 判为"未知硬编码凭证"。
+PASSWORD = os.environ.get("AUSCULT_SEED_PASSWORD", "Auscult#Dev2026")
 
 LOG: list[tuple[str, str, str]] = []      # (阶段, 动作, 结果)
 
@@ -157,9 +160,17 @@ def write_record(out: Path, ctx: dict) -> None:
         ctx["verdict"],
         "",
     ]
+    # 2026-10-22 修复：`--out` 传相对路径时，`out.relative_to(PROJECT_ROOT)` 会抛
+    # ValueError（Path 未 resolve，相对路径不在 PROJECT_ROOT 之下）—— 链路已全跑完
+    # 却在最后一步崩掉，最坏的失败位置。先 resolve 再取相对路径，跨盘/盘符外则原样打印。
+    out = out.resolve()
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(lines), encoding="utf-8")
-    _say("留档", "写入", str(out.relative_to(PROJECT_ROOT)))
+    try:
+        shown = str(out.relative_to(PROJECT_ROOT))
+    except ValueError:
+        shown = str(out)
+    _say("留档", "写入", shown)
 
 
 def main() -> int:

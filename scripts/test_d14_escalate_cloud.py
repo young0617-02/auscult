@@ -199,8 +199,13 @@ def test_graph_smoke_escalate() -> None:
 
     def _mock_retrieve_evidence(state):
         return {
+            # c_002 必须存在：`_VALID_CLOUD_RESPONSE` 的 suggestions 引用了 ["c_001", "c_002"]，
+            # 引用硬校验（finalize）要求被引 chunk_id 必须在 evidence 内，否则直接 blocked 降级
+            # （2026-10-22 复跑发现：只给 c_001 时图会因引用校验失败而不出报告）。
             "evidence": [EvidenceItem(chunk_id="c_001", text="轴承磨损",
-                                       score=0.9, source_type="knowledge")],
+                                      score=0.9, source_type="knowledge"),
+                         EvidenceItem(chunk_id="c_002", text="振动超标处置规程",
+                                      score=0.85, source_type="knowledge")],
             "graph_paths": [GraphPath(description="轴承磨损 → 振动超标")],
         }
 
@@ -225,13 +230,25 @@ def test_graph_smoke_escalate() -> None:
                   "metric": "vib_rms", "value": 7.1, "ts": 0},
         "thread_id": "d14-smoke",
     }
-    with patch.object(build_mod, "analyze_sensor", _mock_analyze_sensor), \
+    # 2026-10-22：云端升级（escalate）是 **deterministic 链**的专属环节；默认 agent 形态下
+    # agent 循环自己取证、不经过 escalate 节点，本用例的断言（escalate_cloud / 云端复核）
+    # 在 agent 形态下无意义。故此处显式把形态钉在 deterministic，保持用例原意不变。
+    with patch.dict("os.environ", {"AUSCULT_DIAGNOSIS_MODE": "deterministic"}), \
+         patch.object(build_mod, "analyze_sensor", _mock_analyze_sensor), \
          patch.object(build_mod, "retrieve_evidence", _mock_retrieve_evidence), \
          patch.object(build_mod, "get_history", _mock_get_history), \
          patch.object(build_mod, "diagnose", _mock_diagnose), \
          patch.object(cloud, "call_cloud", return_value=_VALID_CLOUD_RESPONSE):
         graph = build_graph(InMemorySaver())
         result = graph.invoke(initial, config=config)
+        # 2026-10-22（Must#9）：云端复核结论含「停机/更换」等高风险操作词 → 挂 human_review，
+        # 需人工批准才 finalize；本用例关心的是"升级链路已走通"，故补一次 resume。
+        if graph.get_state(config).next == ("human_review",):
+            from langgraph.types import Command  # noqa: PLC0415
+
+            result = graph.invoke(
+                Command(resume={"action": "approved", "reviewer_id": "rev-d14",
+                                "comment": "云端复核结论：人工确认"}), config=config)
     assert result.get("report_id", "").startswith("RPT-"), \
         f"report_id 未生成: {result.get('report_id')}"
     assert result.get("escalate_cloud") is True, "escalate_cloud 标记未置位"

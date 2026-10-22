@@ -50,14 +50,15 @@ def test_retrieve_evidence_node() -> None:
     from app.graph.nodes.retrieve_evidence import retrieve_evidence  # noqa: E402
 
     # 获取 TDengine 第一条数据时间戳
-    result = _td_query("SELECT ts FROM iot.st_pump_metrics LIMIT 1")
+    result = _td_query(
+        "SELECT ts FROM iot.st_pump_metrics WHERE device_id = 'PUMP-A-01' LIMIT 1")
     from datetime import datetime  # noqa: PLC0415
     ts_str = result["data"][0][0]
     dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
     ts = int(dt.timestamp() * 1000)
 
     state = DiagnosisState(alarm=AlarmEvent(
-        alarm_id="d4-test", device_id="PUMP-A",
+        alarm_id="d4-test", device_id="PUMP-A-01",
         metric="vib_rms", value=7.1, baseline=4.5,
         severity="high", ts=ts,
     ))
@@ -88,7 +89,8 @@ def test_graph_smoke() -> None:
     from app.tools.query_sensor import _td_query  # noqa: PLC0415
     from app.graph.build import build_graph  # noqa: E402
 
-    result = _td_query("SELECT ts FROM iot.st_pump_metrics LIMIT 1")
+    result = _td_query(
+        "SELECT ts FROM iot.st_pump_metrics WHERE device_id = 'PUMP-A-01' LIMIT 1")
     from datetime import datetime  # noqa: PLC0415
     ts_str = result["data"][0][0]
     dt = datetime.fromisoformat(ts_str.replace("Z", "+00:00"))
@@ -98,7 +100,7 @@ def test_graph_smoke() -> None:
     config = {"configurable": {"thread_id": "d4-smoke"}}
     initial = {
         "alarm": {
-            "alarm_id": "smoke-4", "device_id": "PUMP-A",
+            "alarm_id": "smoke-4", "device_id": "PUMP-A-01",
             "metric": "vib_rms", "value": 7.1, "ts": ts,
         },
         "thread_id": "d4-smoke",
@@ -108,8 +110,16 @@ def test_graph_smoke() -> None:
     result = graph.invoke(initial, config=config)
     alarm = result.get("alarm")
     assert alarm is not None and alarm.rule_id == "thr_vib_rms"
-    report = result.get("sensor_report")
-    assert report is not None and report["count"] > 0
+    # 2026-10-22：默认 agent 形态不接 analyze_sensor 节点 → sensor_report 必然为空。
+    from app.llm.config import diagnosis_mode  # noqa: PLC0415
+
+    if diagnosis_mode() == "deterministic":
+        report = result.get("sensor_report")
+        assert report is not None and report["count"] > 0
+    else:
+        assert not [e for e in (result.get("errors") or [])
+                    if str(e.get("code", "")).startswith("E_")], result.get("errors")
+        assert graph.get_state(config).next in ((), ("human_review",))
     evidence = result.get("evidence", [])
     print(f"[PASS] 图内冒烟（evidence={len(evidence)}）")
 

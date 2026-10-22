@@ -109,12 +109,16 @@ def test_budget_status() -> None:
 
 
 def test_cloud_budget_exceeded_degrade() -> None:
-    """7. CloudRouter 预算熔断 → degrade_reason="budget_exceeded"。"""
+    """7. CloudRouter 预算熔断 → degrade_reason="budget_exceeded"。
+
+    2026-10-22：预算闸门自 ISS-054 起改为 `BudgetGuard.reserve()`（先增后调），
+    旧的桩（给 redis 客户端 `.get` 返回 "999999"）已不再命中闸门 —— 于是测试会
+    穿透到真实云端调用。改为直接打桩 `reserve()`，只验证 router 的熔断分支。
+    """
     state = _make_state()
     router = CloudRouter()
-    with patch.object(budget_mod, "_get_client") as mock_client_fn:
-        mock_client = mock_client_fn.return_value
-        mock_client.get.return_value = "999999"
+    with patch.object(BudgetGuard, "reserve",
+                      return_value=(False, 341, 340, "exceeded")):
         result = router.escalate(state)
     assert result.get("degrade_reason") == "budget_exceeded"
     assert result.get("escalate_cloud") is True
@@ -122,14 +126,18 @@ def test_cloud_budget_exceeded_degrade() -> None:
     print("[PASS] CloudRouter 预算熔断 → degrade")
 
 
+@patch.dict("os.environ", {"AUSCULT_CLOUD_FALLBACK": "0"})
 def test_route_condition_all_branches() -> None:
     """8. 条件边全量：5 分支路由。
 
-    1. retry_count >= 3 → degrade
+    1. retry_count >= 3 → degrade（兜底开关关闭时；开启时走 escalate_cloud）
     2. confidence < 0.50 → degrade
     3. confidence ∈ [0.50, 0.75) → escalate_cloud
     4. risk_level == "high" → human_review
     5. else → finalize
+
+    2026-10-22：显式关闭 `AUSCULT_CLOUD_FALLBACK` 以隔离「本地失败兜底云端」变量，
+    否则第 1 档会合法地变成 escalate_cloud（2026-10-21 架构补口）。
     """
     # 1. retry >= 3 → degrade
     s = _make_state(confidence=0.9, retry_count=3, risk_level="low")
@@ -163,9 +171,13 @@ def test_route_condition_all_branches() -> None:
     s = _make_state(confidence=0.30, retry_count=3, risk_level="low")
     assert _route_condition(s) == "degrade", "retry≥3 应优先于 conf<0.50"
 
-    # 优先级验证：conf<0.50 优先于 risk=high
+    # 优先级验证：**risk=high 优先于 conf<0.50** → human_review
+    # 2026-10-22（Must#9 绕过路径①）：原顺序下 `high + conf<0.50` 直接 degrade，
+    # 报告落库却 review_status=NULL、never 可补审，与"高风险审核覆盖 100%"矛盾。
+    # 所有者裁决改为高风险前置，故此处断言随之翻转。
     s = _make_state(confidence=0.40, retry_count=0, risk_level="high")
-    assert _route_condition(s) == "degrade", "conf<0.50 应优先于 risk=high"
+    assert _route_condition(s) == "human_review", \
+        "risk=high 应优先于 conf<0.50 分流（Must#9）"
 
     print("[PASS] 条件边全量（5 分支 + 优先级验证）")
 

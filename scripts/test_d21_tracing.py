@@ -236,7 +236,11 @@ def test_graph_smoke() -> None:
             "thread_id": "d21-smoke",
         }
         with tracer.span("graph.invoke", input_summary=initial):
+            # 2026-10-22：本用例断言的是审核/幂等/trace/指标等**与形态无关**的语义，而打桩只覆盖
+            # deterministic 链的 `diagnose`；默认 agent 形态会绕过 mock 去调真 LLM（慢且不确定）。
+            # 故显式固定形态（agent 形态的等价验证见 tests/test_agent_diagnosis.py）。
             with patch.object(build_mod, "analyze_sensor", _mock_analyze_sensor), \
+                 patch.dict("os.environ", {"AUSCULT_DIAGNOSIS_MODE": "deterministic"}), \
                  patch.object(build_mod, "retrieve_evidence", _mock_retrieve_evidence), \
                  patch.object(build_mod, "get_history", _mock_get_history), \
                  patch.object(build_mod, "diagnose", _mock_diagnose):

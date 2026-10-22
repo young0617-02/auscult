@@ -35,6 +35,7 @@ from app.graph.nodes.review import (  # noqa: E402
     _load_rules,
     evaluate_high_risk,
     human_review,
+    should_auto_approve,
 )
 
 
@@ -124,21 +125,27 @@ def test_payload_structure() -> None:
 
 
 def test_auto_approved() -> None:
-    """7. auto_approved：risk=high 但无规则命中 → 安全阀。
+    """7. 安全阀：**非 high** 且无高风险命中 → auto_approved；而 high 一律必审。
 
-    但 always_interrupt_when_high=true → 仍需审核。
-    测试关闭该策略时 auto_approved 生效。
+    2026-10-22（Must#9）：`risk_level=high` 无条件强制人工审核，
+    `always_interrupt_when_high` 开关不再能放行 high —— 原用例「关掉该开关就能放行 high」
+    正是被所有者判定为"绕过路径"的行为。故本用例改为守护新不变式：
+      - high + 策略关闭 → **仍然不可自动放行**；
+      - medium + 无关键词命中 → 安全阀照常生效（auto_approved）。
     """
-    state = _make_state(diagnosis="轴承磨损", risk="high",
-                        suggestions=[Suggestion(action="检查润滑")])
-    # mock 关闭 always_interrupt_when_high
-    with patch("app.graph.nodes.review._load_rules",
-               return_value={"high_risk_keywords": [],
-                             "high_risk_operations": [],
-                             "review_policy": {"always_interrupt_when_high": False}}):
-        result = human_review(state)
+    rules = {"high_risk_keywords": [], "high_risk_operations": [],
+             "review_policy": {"always_interrupt_when_high": False}}
+    with patch("app.graph.nodes.review._load_rules", return_value=rules):
+        high_state = _make_state(diagnosis="轴承磨损", risk="high",
+                                 suggestions=[Suggestion(action="检查润滑")])
+        assert should_auto_approve(high_state, evaluate_high_risk(high_state)) is False, \
+            "risk=high 必须进人工审核（Must#9），策略开关不得放行"
+
+        mid_state = _make_state(diagnosis="偶发振动", risk="medium",
+                                suggestions=[Suggestion(action="持续观察")])
+        result = human_review(mid_state)
     assert result["human_review"]["decision"] == "auto_approved"
-    print("[PASS] auto_approved（安全阀）")
+    print("[PASS] 安全阀（medium 放行 / high 必审）")
 
 
 def test_graph_interrupt_resume() -> None:
@@ -178,7 +185,11 @@ def test_graph_interrupt_resume() -> None:
                   "metric": "vib_rms", "value": 7.1, "ts": 0},
         "thread_id": "d16-smoke",
     }
+    # 2026-10-22：本用例断言的是审核/幂等/trace/指标等**与形态无关**的语义，而打桩只覆盖
+    # deterministic 链的 `diagnose`；默认 agent 形态会绕过 mock 去调真 LLM（慢且不确定）。
+    # 故显式固定形态（agent 形态的等价验证见 tests/test_agent_diagnosis.py）。
     with patch.object(build_mod, "analyze_sensor", _mock_analyze_sensor), \
+         patch.dict("os.environ", {"AUSCULT_DIAGNOSIS_MODE": "deterministic"}), \
          patch.object(build_mod, "retrieve_evidence", _mock_retrieve_evidence), \
          patch.object(build_mod, "get_history", _mock_get_history), \
          patch.object(build_mod, "diagnose", _mock_diagnose):

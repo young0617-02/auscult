@@ -29,7 +29,10 @@ from app.graph.nodes.analyze_sensor import _compute_stats, analyze_sensor  # noq
 def _get_first_ts() -> int:
     """从 TDengine 获取第一条数据的 epoch ms（用于构造测试告警）。"""
     from app.tools.query_sensor import _td_query  # noqa: PLC0415
-    result = _td_query("SELECT ts FROM iot.st_pump_metrics LIMIT 1")
+    # 2026-10-22：设备号统一到规范编号（TDengine TAG 已由 migrate_device_ids 迁为 PUMP-A-01），
+    # 取首 ts 必须带设备过滤，否则可能取到别的设备的首个采样点、窗口内 0 行。
+    result = _td_query(
+        "SELECT ts FROM iot.st_pump_metrics WHERE device_id = 'PUMP-A-01' LIMIT 1")
     ts_str = result["data"][0][0]
     # TDengine REST 返回 ISO 8601 字符串 → epoch ms
     from datetime import datetime, timezone  # noqa: PLC0415
@@ -40,8 +43,8 @@ def _get_first_ts() -> int:
 def test_query_sensor_real() -> None:
     """1. query_sensor 查询真实 TDengine 数据。"""
     ts = _get_first_ts()
-    result = query_sensor("PUMP-A", "vib_rms", ts - 60000, ts + 60000)
-    assert result["device_id"] == "PUMP-A"
+    result = query_sensor("PUMP-A-01", "vib_rms", ts - 60000, ts + 60000)
+    assert result["device_id"] == "PUMP-A-01"
     assert result["metric"] == "vib_rms"
     assert result["count"] > 0
     assert all("ts" in r and "value" in r for r in result["rows"])
@@ -96,7 +99,7 @@ def test_analyze_sensor_node() -> None:
     """5. analyze_sensor 节点（真实告警 → sensor_report）。"""
     ts = _get_first_ts()
     state = DiagnosisState(alarm=AlarmEvent(
-        alarm_id="d3-test", device_id="PUMP-A",
+        alarm_id="d3-test", device_id="PUMP-A-01",
         metric="vib_rms", value=7.1, baseline=4.5,
         severity="high", ts=ts,
     ))
@@ -104,7 +107,7 @@ def test_analyze_sensor_node() -> None:
     assert "sensor_report" in result
     report = result["sensor_report"]
     assert report is not None
-    assert report["device_id"] == "PUMP-A"
+    assert report["device_id"] == "PUMP-A-01"
     assert report["metric"] == "vib_rms"
     assert report["count"] > 0
     assert "avg" in report and "max" in report and "trend" in report
@@ -130,7 +133,7 @@ def test_graph_smoke() -> None:
     config = {"configurable": {"thread_id": "d3-smoke"}}
     initial = {
         "alarm": {
-            "alarm_id": "smoke-3", "device_id": "PUMP-A",
+            "alarm_id": "smoke-3", "device_id": "PUMP-A-01",
             "metric": "vib_rms", "value": 7.1, "ts": ts,
         },
         "thread_id": "d3-smoke",
@@ -140,10 +143,22 @@ def test_graph_smoke() -> None:
     result = graph.invoke(initial, config=config)
     # parse_alarm 规范化 + analyze_sensor 查询
     alarm = result.get("alarm")
-    assert alarm is not None and alarm.device_id == "PUMP-A"
-    report = result.get("sensor_report")
-    assert report is not None and report["count"] > 0
-    print(f"[PASS] 图内冒烟（sensor count={report['count']}）")
+    assert alarm is not None and alarm.device_id == "PUMP-A-01"
+    # 2026-10-22：图内形态可切（AUSCULT_DIAGNOSIS_MODE，默认 agent）。agent 形态不接
+    # analyze_sensor 节点，sensor_report 必然为空 —— 旧断言 `sensor_report is not None`
+    # 只对 deterministic 成立，改为按形态断言（agent 下断言合法终态 + 无 E_* 硬错误）。
+    from app.llm.config import diagnosis_mode  # noqa: PLC0415
+
+    mode = diagnosis_mode()
+    if mode == "deterministic":
+        report = result.get("sensor_report")
+        assert report is not None and report["count"] > 0
+        print(f"[PASS] 图内冒烟（{mode}，sensor count={report['count']}）")
+    else:
+        assert not [e for e in (result.get("errors") or [])
+                    if str(e.get("code", "")).startswith("E_")], result.get("errors")
+        assert graph.get_state(config).next in ((), ("human_review",))
+        print(f"[PASS] 图内冒烟（{mode}，终态 next={graph.get_state(config).next}）")
 
 
 def main() -> int:

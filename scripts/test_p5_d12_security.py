@@ -91,10 +91,13 @@ def test_tool_whitelist() -> None:
 
     audit_tool_call(None, "delete_all_data", {"device_id": "PUMP-A"}, allowed=False)
 
-    # JSONL 尾行
+    # JSONL：取**本用例刚写入的那条**（`delete_all_data`），而不是全文件尾行 ——
+    # 2026-10-22：审计文件是进程级共享，全量跑时可能有其它用例/后台线程后写入。
     jsonl = PROJECT_ROOT / "reports" / "security_audit.jsonl"
     lines = jsonl.read_text(encoding="utf-8").strip().splitlines()
-    tail = json.loads(lines[-1])
+    mine = [ln for ln in lines if '"delete_all_data"' in ln]
+    assert mine, "未找到本用例的审计记录"
+    tail = json.loads(mine[-1])
     assert tail["event"] == "tool_call", tail
     assert tail["detail"]["tool"] == "delete_all_data"
     assert tail["detail"]["allowed"] is False
@@ -220,6 +223,8 @@ _ALLOWED_VALUES = {
     "your-api-key-here", "sk-xxx", "<token>", "${var}",
     # 非凭证：DeepSeek-R1 特殊 token 字面量（llm_adapter.py R1_END_TOKEN）
     "<｜end▁of▁thinking｜>",
+    # 非凭证：取值失败的哨兵值（scripts/retrieve_knowledge.py 的 `token = "unknown"`）
+    "unknown", "n/a",
 }
 
 
