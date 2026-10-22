@@ -61,3 +61,30 @@ def get_maintenance_history(
 
     columns = ["order_id", "device_id", "fault", "action", "result", "created_at"]
     return [dict(zip(columns, row, strict=False)) for row in rows]
+
+
+#: 库里实际存在的设备编号样本（ISS-056：空结果时回灌给模型自我纠正）
+_KNOWN_DEVICES_QUERY = (
+    "SELECT DISTINCT device_id FROM work_orders ORDER BY 1 LIMIT %s"
+)
+
+
+def list_known_devices(*, limit: int = 5, timeout: float = 1.0) -> list[str] | None:
+    """工单库里实际存在的设备编号样本（ISS-056 · 2026-10-22）。
+
+    背景：`work_orders.device_id` 的口径与告警/TDengine 的编号体系**未核查一致**
+    （离线环境无法连库实证；parsed 源文件里甚至是客户号/“A 0泵”这类值）——
+    硬编码别名映射有"猜错方向"的风险。故空结果时改为把库里**真实样本**回灌模型，
+    让它自己纠正编号，比任何猜测都可靠。
+
+    返回: 编号列表；库不可达/查询失败返回 None（调用方保守处理，不谎称"无此设备"）。
+    """
+    import psycopg  # noqa: PLC0415
+
+    try:
+        with psycopg.connect(PG_URL, connect_timeout=int(timeout)) as conn:
+            with conn.cursor() as cur:
+                cur.execute(_KNOWN_DEVICES_QUERY, (limit,))
+                return [str(r[0]) for r in cur.fetchall()]
+    except Exception:                                       # noqa: BLE001 - 探测失败不阻塞
+        return None

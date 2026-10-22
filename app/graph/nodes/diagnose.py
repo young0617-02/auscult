@@ -268,8 +268,15 @@ def compute_ece(
 
 # ---------------------------------------------------------------- D6: diagnose 节点
 
-def _determine_risk_level(alarm_severity: str, confidence: float) -> str:
-    """风险等级判定。"""
+def _determine_risk_level(alarm_severity: str, confidence: float,
+                          needs_human: bool = False) -> str:
+    """风险等级判定。
+
+    `needs_human`（2026-10-22 · E4）= 模型**主动求助**：一旦置真即强制 `high`，
+    从而复用既有 `human_review` interrupt 路径，不新增中断类型。
+    """
+    if needs_human:
+        return "high"
     if confidence < 0.50:
         return "high"
     if confidence < 0.75:

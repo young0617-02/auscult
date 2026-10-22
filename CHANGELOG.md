@@ -8,6 +8,404 @@
 
 ---
 
+## 2026-10-22（维护期 · **交付包封版 v1.0.0：打包脚本 + 语义 tag**）
+
+> §7.3 第 8 项是唯一未落地项：仓库有 10 个 baseline/gate tag，但**无语义版本、无打包入口**，验收无从执行。
+> 本次补 `deploy\package.ps1`，把「封版」从口头约定变成一条可复现命令。
+
+- **代码**：新增 `deploy\package.ps1`（robocopy staging → 关键件自检 → 环境目录反向断言 → 写 manifest → `Compress-Archive`）。
+  产物 `dist\auscult-v1.0.0.zip`：**556 文件 / 压缩 3 MB / 解压 6.5 MB**。
+- **排除**（宁可少打，不可泄漏）：`.venv`/`.venv-mineru`/`node_modules`/`.next`/`test-results`/`__pycache__`；
+  `data`/`traces`/`metrics`/`logs`/`blobs`/`chunks`/`backups`/`experiments`；**`env/`（`cloud.json` 直填 API key）**；
+  `*.log`/`*.err`/`*.bak*`/`*.zip`/`*.dump`/`*.tgz`/`.env*`（仅留 `deploy\.env.example` 模板）。
+- **防残缺**：8 类关键件白名单（`README.md`/`requirements.txt`/`app\api\main.py`/`deploy\up.ps1`/`deploy\smoke.ps1`/`db\migrations`/部署文档/`plan`）+ 体积基线告警（>80 MB 说明漏排除）。
+- **可审计**：包内 `PACKAGE-MANIFEST.txt` 记录生成时间、git HEAD、文件数、解压体积、已排除清单、逐文件字节。
+- **踩坑**：脚本含中文 → 必须存为 **UTF-8 with BOM**；否则 `powershell -File`（5.1）按 ANSI 解码，中文标点吃掉后续引号，报 "Array index expression is missing"。
+- **配置**：`.gitignore` 增 `dist/`、`*.err.log`、`*.out.log`。
+- **回填**：`plan/Phase 6` §7.3 #8 → `[x]`（合计 **`[x]` 7 · `[~]` 1**）；打 tag `v1.0.0`。
+
+---
+
+## 2026-10-22（维护期 · **Must#9 封堵：高风险审核三条绕过路径**）
+
+> "高风险必审"此前只在**正常路径**成立。核对发现三条绕过，其中最严重的一条会让
+> `risk=high` 报告**既不审核、也永远无法补审**（`review_status=NULL` 且不在 `waiting_review`）。
+
+| # | 绕过路径 | 处置 |
+|---|---|---|
+| ① | `high + confidence<0.50` → `degrade`（不审核） | `_route_condition` 把 **high 分支提到 confidence 之前**（与 E4 `needs_human` 同位置） |
+| ② | `escalate_cloud → finalize` 直连 | 改为 `add_conditional_edges("escalate_cloud", _route_after_cloud)`：high/求助 → 补审，低置信 → 降级，拒答 → 定稿 |
+| ③ | `auto_approved` 受 YAML 开关控制 | 抽出 `should_auto_approve()`，叠加 `risk_level != "high"` / `not needs_human` 的**代码级硬约束**——配置只能更严，不能更松 |
+
+- **连带消解**：degrade/escalate 产出 `risk=high` 但 `review_status=NULL`、又不在待审态的**状态机矛盾**。
+- **行为变化**：high 不再走 `escalate_cloud`（0.5–0.75 区间直接人审）；云端升级后的 high 结论补审；
+  `always_interrupt_when_high=false` 也拦不住 high 审核。
+- **测试**：新增 `tests/test_high_risk_routing.py` **16 例**；`test_agent_mode_graph_end_to_end` 原断言"high 直接出报告"
+  （正是被判定的绕过行为）改为「挂 `human_review` → `Command(resume=approved)` → 出报告」。全量 **387 passed**。
+- **演示同步**：`demo/scenario.md` §五 S4（`vib_rms=5.1` 属 high）不再演示云端兜底，改为直接进审核；
+  兜底演示改用 `bearing_temp=82`（medium）或"参数被拒 ≥2 次"。README "高风险覆盖率 100%"补口径（拒答/降级不计入分母）。
+- **回填**：`plan/Phase 6` §7.1 #9 → `[x]`（合计 **`[x]` 11 · `[~]` 2**）；核对报告 §九 记录影响面矩阵。
+
+---
+
+## 2026-10-22（维护期 · **停止条件 S2 闭合：三处口径误标修正** → M6.4 达成）
+
+> 指标口径单一事实源（`docs/p6-metrics-canonical-2026-10-22.md`）建立后，把对外材料里的**误标**逐一改掉。
+> 核心错误只有一个，但传染了三处：把「12 题检索执行口径 1.0」当成「工具调用首次成功率」。
+
+- **修正 3 处**：
+  - `README.md` §3.2 指标表：`工具调用首次成功率 1.0（12/12）` → **`98.67%（74/75，EXP-P7-P1）`**，并注明保守下界 89.33%；
+    表下补「口径准绳」声明（两处不一致以口径文件为准）；Phase 2 行的 `P95 86.1 ms` 标注为 **RRF-only 阶段口径**。
+  - `docs/p5-handover-p6.md` §二/§三：同错 → 98.67%（74/75）；补「口径准绳」注。
+  - `docs/p6-gate-closure-2026-10-10.md` S2 行：`1.0 / 159.4ms / 1.0` → `1.0 / 159.4ms / 98.67%（74/75）`，
+    并写明原值的真实口径（12 题检索命中）。
+- **未改**：`reports/p0-*`、`reports/README.md` 索引、`archive/**` —— 属历史证据，按黑名单规则
+  「只可在复盘材料出现且须标时点」处理。
+- **停止条件三条全部闭合 → M6.4 达成**（`plan/Phase 6` §7.2 三条均 `[x]`；验收清单 `[x] 6 · [~] 1 · [ ] 1`，
+  仅剩"交付包封版"与"干净环境清空卷演练留档"）。
+
+---
+
+## 2026-10-22（维护期 · **Must#7 补齐：零引用不再能定稿**）— 用真实链路坐实的缺口
+
+> 上午 S1 实测出一份**零引用报告照样定稿**（`RPT-dfbf857be97f625e`，`citations=None`、结论「尚不明确」）。
+> 「证据引用强制」此前只对"引用无效"生效，对"不给引用"完全放行 —— 宣称与实现不符。
+
+- **代码**（`app/graph/nodes/finalize.py`）：新增 `E_NO_CITATION` 硬阻断 —— 根因/建议的引用总数为 0 时
+  不产 `report_id`、报告不落库。**例外**：`refusal`（合规拒答）与 `degrade_reason` 非空（降级）路径放行，
+  否则会把 e2e `E3/E5/E6`「降级后仍出报告」一并打死（`build.py` 的 `degrade` 之后即 `finalize`）。
+- **测试**：新增 `tests/test_finalize_citations.py` **8 例**（有引用 / 零引用 / 空根因 / 无效引用 /
+  `chunk_id=` 前缀归一 / 降级例外 / 拒答例外 / 阻断时 warnings 一并带出）；
+  `scripts/test_d10_finalize.py` 两处按旧行为写的断言同步为 `blocked`。全量 **371 passed**（363 → 371）。
+- **行为变化**：本地 7B 若再零引用，S1 **不会产出报告**（`run_demo_s1.py` 如实 FAIL）。
+  这是"正确地拒绝"，演示口径需提前说明（`demo/scenario.md` 引用硬校验条已补 ② 零引用）。
+- **回填**：`plan/Phase 6` §7.1 #7 → `[x]`（Must 链合计 `[x] 10 · [~] 3`）；核对报告 §八 记录改动 + 影响面矩阵；
+  `demo/recording/s1-run-2026-10-22.md` 标注"该报告在修复后不会定稿"。
+
+---
+
+## 2026-10-22（维护期 · **停止条件 S1 闭合：S1 主场景全链 98.1s 跑通至定稿**）
+
+> 补齐 `demo/recording/rehearsal-log.md` 2026-10-10 留下的缺口（当时只跑到 `diagnose`→risk=high）。
+> 本次起真实后端（uvicorn :8000，六组件 health 全 up），跑到报告审核定稿，全程留档。
+
+- **新增编排工具** `scripts/run_demo_s1.py`：登录(eng_dev/rev_dev) → `POST /api/diagnose` → 轮询节点进度
+  → 报告 → SoD 拒绝 → 审核通过 → 定稿，一条命令跑完，并自动生成 markdown 留档（诊断是异步的，
+  手工 curl/点界面无法稳定复现）。
+- **实测结果**：**98.1s** 全链；`parse_alarm → diagnose → waiting_review`（risk=high 强制中断）
+  → `eng_dev` 自审 **403** → `rev_dev` approved → `human_review → finalize → done`；
+  `RPT-dfbf857be97f625e` 定稿、`GET /api/reports/{id}` 200、`review_status=approved`。
+  留档：`demo/recording/s1-run-2026-10-22.md`。
+- **诚实的质量结论**（未粉饰）：报告**零引用**（`citations=None`）、结论「轴承振动异常的具体原因和处理措施
+  尚不明确」、`confidence=0.625`、`query_sensor` 首轮 `ok=false`、Agent 仅 1 轮收敛。
+  ① 已核实**与编号迁移无关**——同参数手动复跑 `PUMP-C-01.vib_rms` / `PUMP-C.vib_rms` / `vib_rms`
+  三种前缀全部 ok，失败源于模型传参；② 归 ISS-060（本地 7B 质量）；③ **同时坐实核对报告 §五-1 的缺口**：
+  `citations=[]` 时 `finalize` 不拦截，零引用报告照样定稿 → 修复前不应对外强调"报告必带引用"。
+- **演示脚本同步**（`demo/scenario.md`）：S1–S4 的 `device_id` 由台账口径 `C 0泵` 改为规范编号
+  `PUMP-C-01`（迁移后库里已无旧编号）；`severity` 由 `critical` 改为 `AlarmEvent` 词表 `high`；
+  节点序列更新为 P7 实际链路（传感器/检索/图谱/工单在 `diagnose` 内以工具循环取得）；新增"实测质量披露"验收点。
+- **回填**：`plan/Phase 6` §7.2 第 1 条与 §7.3 第 3 项 → `[x]`（合计 `[x] 6 · [~] 1 · [ ] 1`，
+  仅剩"交付包封版"）；风险册 R23（演示链路未跑到报告/审核）→ **已关闭**，质量项并入 R21/ISS-060。
+
+---
+
+## 2026-10-22（维护期 · **停止条件 S3 闭合：风险册 v2 定稿 + 指标口径单一事实源**）
+
+> 上一轮核对把"卡交付"的原因定位到文档口径与收口材料，本轮把其中两件做完——
+> 停止条件第 3 条（版本锁定清单 + 风险登记册定稿）从 `[ ]` 变 `[x]`。
+
+- **风险册升 v2 定稿**（`docs/prj-ledger-risk-register.md`）：R1–R16 逐条给终态——**11 条关闭**
+  （R3 环境基线 v2 / R5 评测集改 12 题配套集 / R6 分词器抽检 32 条 0 失败 / R7 Ollama 定版 0.34.2 /
+  R9 Mosquitto 4.11 MiB / R10 峰值 20.73GB≤24GB / R11 checkpoint 切 PG / R12 幂等 count=1 实测 /
+  R13 降级代价表填数值 / R14 MinerU 批量失败率 0 / R16 已收口）；**显式接受 3 条**（R4 Schema 再改即升 v5、
+  R15 真实数据授权未取得→不得宣称现场可用、R21 本地 7B 需 32B 硬件）；**降级为已知缺陷 2 条**
+  （R17→ISS-052/053、R22→ISS-061）；**新增 §2.1 R17–R23** 覆盖 P6/P7（此前完全未入册）。
+- **指标口径单一事实源**（新增 `docs/p6-metrics-canonical-2026-10-22.md`）：终止"三套口径并存"——
+  对外值定为 Recall@5 **1.0**、检索 P95 **159.4ms**、工具首次成功率 **98.67%（74/75，EXP-P7-P1）**；
+  强制并列披露三个限定（语料 36 块天花板低 / 保守下界 **89.33%** / 端到端 **9248.8ms 未达标已接受**）；
+  建立**黑名单**（`0.91·5.6ms·0.9422`、GATE2 `84.0%`、GATE-D `82.67%`、`940ms` HTTP P95、
+  以及 P5 表中"工具首次成功率 1.0"实为**检索执行口径**）。`docs/p0-spec-scope-mvp.md` 的 S2 行改为引用本文。
+- **版本锁补登记**（`docs/prj-ledger-version-lock.md`）：新增 §4.2 **P3–P7 报告登记 13 份**
+  （此前只覆盖 P0–P2，导致"清单与报告 digest 一致"无法核对）；明确 prometheus `latest` 为
+  **压测期临时栈显式豁免**（digest 已锚定、测后销毁），不再算"裸 tag 残留"。
+- **回填**：`plan/Phase 6` §7.2 第 3 条 → `[x]`，§7.3 第 5/6 项 → `[x]`（合计 `[x] 5 · [~] 1 · [ ] 2`）；
+  `reports/p6-readiness-must-chain-2026-10-22.md` 追加 §七 记录同日闭合动作。
+- **剩余停止条件**：第 1 条（演示跑到报告/审核 + 录屏）、第 2 条（对外材料全面改为引用口径文件）——
+  都是执行动作，不是文档缺口。
+
+---
+
+## 2026-10-22（维护期 · **P6 交付就绪核对：Must 链 13 项逐项挂证据，判定尚未达 M6.4**）
+
+> 背景：`plan/Phase 6` §7.1–7.3 三张表长期全是 ☐，无法区分"没做"和"没回填"。本轮按证据核对，
+> 结论是**功能基本齐、卡在口径与收口文档**——不是缺能力。
+
+- **核对结论**（报告：`reports/p6-readiness-must-chain-2026-10-22.md`）：
+  Must 链 **9 项硬证据 + 4 项带缺口**（#3 传感器分析缺 `p95/anomaly` 判据字段；#5 "图谱支撑路径"
+  实为实体簇、`edges` 恒空；#7 空 `citations` 不拦 + 无负路径测试；#9 高风险审核有低置信度/
+  云端升级/`auto_approved` 三条绕过路径）。停止条件第 1、2 条形式上成立但**口径三套并存**
+  （`0.91/5.6ms/0.9422` vs `1.0/159.4ms/1.0` vs 工具口径 `89.33%/98.67%`），第 3 条**不成立**
+  （风险册停在 10-08、13 条未关、未收录 P6/P7 风险）。
+- **真机复跑**：`deploy/smoke.ps1` **6/6 PASS**（PG 18 表 / Milvus / Redis / Neo4j / Nginx）。
+- **文档 · 口径修正**：`plan/Phase 6` §5.2 与 §7.3 的 `make smoke` 改为实际入口 `deploy\smoke.ps1`
+  （仓库从无 Makefile，且 `smoke.ps1` 不含 Playwright F1–F11 子集——原设计描述与实现不符）；
+  §7.1–7.3 回填三态标记（`[x]`/`[~]`/`[ ]`）+ 证据列。
+- **未做**（交给后续）：主场景演示复现（排练只到 `diagnose`）、风险册定稿、报告 digest 补 P3–P7、
+  `v1.0.0` 封版。
+
+---
+
+## 2026-10-22（维护期 · **ISS-056 收尾三件：删空表 / 统一展示口径 / 定退场判据**）
+
+- **数据**：`DROP TABLE iot.d_plant1_PUMP-A-01`（删前复核 `count(*)=0`）。该表是迁移后某次写入
+  按"模板名"留下的空子表，留着会让新数据分叉到"同 TAG 双子表"（查询会合并、不丢数据，但子表管理混乱）。
+  `SHOW iot.TABLES` 现为 6 张（`s_plant1_*` 3 + `d_plant1_PUMP-A/B/C` 3）。
+- **代码 · 展示口径**：`app/device_ids` 增 `canonicalize_text()` / `canonicalize_ids()`
+  （独立短编号 → 规范编号，`PUMP-A-01`/`X-PUMP-A`/`PUMP-AX`/未登记编号一律不动）；
+  `app/api/routes/reports.py` 的列表与详情出口接入——**历史 payload 仍是 `PUMP-A`（库内证据不改写），
+  API 返回 `PUMP-A-01`**。实测 `RPT-fa1b64066214ba3f`：DB `PUMP-A 的 vib_rms 达到 7.62 mm/s…`
+  → API `PUMP-A-01 的 vib_rms 达到 7.62 mm/s…`。前端由 API 驱动，无需单独改。
+- **可观测 · 映射退场判据**：新增 `auscult_device_id_scheme_mismatch_total{direction}`
+  （`short_input` = canonical 模式仍收到短编号 / `canonical_input` = legacy 模式收到规范编号），
+  由 `tool_registry._storage_id()` 在三处调用点打点。退场条件写进 `app/device_ids` 头注与 runbook §八：
+  **连续 7 天为 0 + `--verify` 的 `off_scheme` 恒空 + 各端已只产出规范编号**。在此之前保留兼容层。
+- **测试**：`tests/test_device_id_migration.py` 13 → 18 例（展示归一的独立匹配 / 嵌套 payload /
+  真实 API 出口不改库内 / 漂移打点正负例）；全量 **363 passed**。
+
+---
+
+## 2026-10-22（维护期 · **ISS-062 遗留清账：8 份历史报告代号已还原**）— 候选集补双口径，脚本不再是空转
+
+> dry-run 首跑暴露一个**静默失效**：8 份报告全部 `unmapped`（可还原 0 份）。原因是代号
+> `设备#f6de90` 按**迁移前**短编号 `PUMP-A` 取 hash，而库内 `alerts.device_id` 已被迁移为
+> `PUMP-A-01`，候选集只取现值 → 反查表里没有这个 hash。若不修，"脚本已备"会变成"跑了也白跑"。
+
+- **修复**：`collect_candidates` 增加 `_with_scheme_variants()`——用 `app.device_ids` 双向映射把
+  候选补成**双口径**（`PUMP-A` ↔ `PUMP-A-01`）；反查表按 hash 原文还原，**不改写历史事实**
+  （历史报告是证据，零猜测优先）。未登记编号（`FAN-9`）不会被伪造出别名。
+- **真机执行**：`--apply` 还原 **8/8** 份；库侧复核 `payload::text LIKE '%设备#%'` = **0**；
+  31 份报告 `idempotency_key` 全未变（只改 payload 文本）；二次 dry-run = 0（可重复执行）。
+- **测试**：`tests/test_corpus_maintenance.py` 11 → 13 例（双口径候选 / 未登记编号不伪造别名）。
+
+---
+
+## 2026-10-22（维护期 · **ISS-042 处置：Milvus 端点单一事实源**）— 三口径收成一处，一键启动后不再写错实例
+
+> 三口径：`compose.base` `19530`（Phase 0 基线）/ `compose.v2`·`deploy` `19531`（宿主映射）/
+> 脚本硬编码 `39530`（宿主 `kee-milvus`）。脚本各自写字面量 → 一键启动后可能写进别人的 collection，
+> 或自检误报端口冲突（威胁干净环境一键启动）。
+
+- **代码 · 单一事实源** 新增 `scripts/milvus_endpoint.py`：`DEFAULT_MILVUS_PORT = 19531`（与
+  `deploy/docker-compose.yml` 的 `19531:19530`、`app/api/config.py::MILVUS_PORT` 一致）、
+  `MILVUS_PORT` env 覆盖（`39530` = kee-milvus 复现口径）、非法/越界值回退默认（同一纪律：配置手误不把连接打到空）。
+- **代码 · 收口改造**：`retrieval_base` / `reconcile` / `outbox_worker` 的重复 f-string、
+  `build_milvus_v1.DEFAULT_URI`（原硬编码 `127.0.0.1:19530`）、`v2_load_test.DEFAULT_MILVUS_URI`、
+  `run_v2 --milvus-uri` 默认值全部改走 `milvus_uri()`。
+- **刻意不改**：`docker/compose.base.yml`（Phase 0 基线快照）、`scripts/check_ports.ps1`（Phase 0
+  冻结端口检查工具，改它与 `env/ports.md` 基线矛盾）。容器内 Milvus 恒为 `19530`，本改动只统一**宿主**端口。
+- **测试**：新增 `tests/test_milvus_endpoint.py` 15 例（默认值 / env 覆盖 / 手误回退 / compose 宿主端口同源 /
+  应用侧同源 / 五个脚本无残留字面量），纯静态 + 无 pymilvus 依赖。
+
+---
+
+## 2026-10-22（维护期 · **ISS-056 真机验收通过，关单**）— 三侧口径实测一致，子表名不影响查询
+
+> 迁移执行完成后的收口验证（docker 栈在线：PG 5433 / TDengine 6041 / Neo4j 7474）。
+> 证据全部来自真机命令输出，非打桩。
+
+- **`--verify`**：`sides_reached=3`、`off_scheme` 三侧全空、`ok=true`、`scheme=canonical`。
+- **PG**：`SELECT device_id, count(*) FROM alerts` → 仅 `[('PUMP-A-01', 1)]`（无短编号残留）。
+- **TDengine**：`SELECT tbname, device_id, count(*)` → `d_plant1_PUMP-A→PUMP-A-01`（12919）、
+  `-B→PUMP-B-01`（4314）、`-C→PUMP-C-01`（4083）；**子表名保留历史短编号形态**，
+  按 TAG 查询不受影响（3.3.8.0 `RENAME` 语法不通且无必要，脚本"只 SET TAG"的设计得到真机确认）。
+  发现残留空子表 `d_plant1_PUMP-A-01`（0 行），已在 runbook 记为待处置项（建议 `DROP TABLE`）。
+- **端到端**：`query_sensor('PUMP-A-01', vib_rms, 全窗)` → 12919 行；`verify_query_sensor.py`
+  三设备各 48–52 窗口、P95≈30.4ms；`query_sensor` 用 1h 窗口 → `empty_reason=no_data_in_window`
+  （数据止于 2026-10-21，分类正确，不再是 `device_not_found`）。
+- **工具层归一**：`query_graph(start_node=PUMP-A)` → `device_id_resolved={requested:PUMP-A, used:PUMP-A-01}`；
+  `get_maintenance_history(PUMP-A-01)` → `work_orders=[]` + `known_device_ids=[A 0泵, …]`（台账口径如实回灌）。
+- **回归**：**342 passed**。
+- **遗留（另立项，不在本轮范围）**：① 图谱实体是部件/现象口径，无设备编号实体 → 设备关系查询必然空，
+  需实体对齐；② `work_orders` 源数据为图纸/台账口径，无编号可迁，根治需重做台账解析映射。
+- **文档**：ISS-056 台账条目补真机证据并关单；runbook 第六节改为"真机执行后复核"、第七节验收清单勾选；
+  `Material/05` 剩余清单同步为"已实现且真机验收通过"。
+
+---
+
+## 2026-10-22（维护期 · **ISS-056 收口：编号口径默认切到 `canonical`**）— 默认值必须与库内实际形态一致
+
+> 真机迁移已执行完毕（PG `alerts` / TDengine TAG+子表名 / Neo4j 实体名三侧均为规范编号，
+> 灌数端默认值同步为 `PUMP-A-01` 体系）。此时查询端默认仍是 `legacy` 会把 `PUMP-A-01`
+> 映射回已不存在的 `PUMP-A` → 全链路"设备不存在"（已实测）。**默认翻转为 `canonical`**：
+> 未迁移的旧库需显式 `AUSCULT_DEVICE_ID_SCHEME=legacy`，回滚路径不变（切回 legacy 即旧行为）。
+
+- **代码**：`app/device_ids.DEFAULT_SCHEME = "canonical"`；非法值/手误仍保守回退默认（不把查询打到空）。
+- **测试**：默认语义翻转（未设环境变量 = canonical、短编号两跳升规范编号；`legacy` 分支改为显式 `setenv`），
+  `test_device_alias_map_normalizes_product_id` / `get_maintenance_history` / `query_graph` 三段别名用例
+  均补齐"默认 canonical + 显式 legacy"双向断言；`test_corpus_stats_counts_and_blind_spots` 补 PG 断连桩
+  （原先直连真实库，本机有 PG 时 `pg_doc_chunks` 不为 `skipped`，随环境漂移）。**342 passed**。
+- **文档**：`app/device_ids.py` 头注与本节说明默认值变更原因。
+
+---
+
+## 2026-10-22（维护期 · **语料盲区 A 类消解：只改改写层，不动语料**）— 15 个盲区里 8 个是"用词差异"，不必扩语料
+
+> `reports/p1-corpus-stats-2026-10-22.md` 体检出 15 个语义域盲区。复核后按**成本**分成三类：
+> A 类 8 个是"语料有事实、只是不用用户那个词"（汽蚀→气蚀、异响→噪声、趋势→漂移、波形→频谱、
+> 油液→润滑油、阈值/限值/标准→警戒值/4.5 mm/s）；B 类 7 个是域真缺失（齿轮/阀门/喘振/裂纹/疲劳）；
+> C 类是编号的 OCR 逐字符空格形态（`P U M P-A`）。**只做 A 类**（+ 规范→短编号），语料与索引零改动。
+
+- **代码**：`scripts/query_rewrite.expand_keywords()` + `configs/query_synonyms.json`（词表只收**有命中实证**
+  的近义词，齿轮/阀门/喘振等不配，避免制造"已解决"的错觉）。
+- **关键取舍：只追加 `keywords`，绝不改 `semantic`**——sparse 走服务端 BM25（jieba），keywords 是词项拼接文本，
+  追加近义词只扩大 OR 召回、原词一项不少；而 `semantic` 一变，dense 向量与 rerank 打分都会平移 = 悄悄改了
+  P7 检索基线，无法再与既有实验数字对账。
+- **C 类部分**：`PUMP-A-01 → PUMP-A`（语料/图谱仍是短编号）已扩；**空格 OCR 形态不做**——它需要检索侧
+  chunk 文本归一（属 B 批），在查询侧硬塞 `P U M P-A` 会被 jieba 切成单字母，反而稀释召回。
+- **实测**（词面命中块数 / 36 块）：汽蚀 0→1、异响 0→7、阈值 6→13、剥落 0→6、趋势 11→12；
+  5/5 抽样盲区问句从"必然空结果"变为"有候选"。
+- **可复现性**：`AUSCULT_QUERY_EXPAND=0` 一键回到 2026-10-22 之前行为；改写结果新增 `expansion` 审计字段
+  （扩了哪些词一目了然，不静默改变检索）。
+- **测试**：**341 passed**（333 + 8：词表实证性、纯追加不改原词、A 类逐词、B 类不伪造、编号扩展、
+  开关回退、semantic 不变、配置缺失静默降级）。
+- **文档**：`reports/p1-corpus-stats-2026-10-22.md` 追加"处置进展"（含实测表，历史数字保留不改）；
+  `Material/02` §15 遗留 4；`Material/05` 剩余清单。
+
+---
+
+## 2026-10-22（维护期 · **ISS-056 候选①：数据层编号统一**）— 从"查询垫片"走到"同一套口径"，迁移窗口可回滚
+
+> 候选②只是让查询"查得到"，垫片本身仍是第二套口径。本轮实施候选①：把**存量数据原地改写**为规范编号，
+> 产品层/数据层同口径。不采用"清库重灌"——会丢历史时序、破坏已锁定实验的可复现性；TAG/子表名/实体名
+> 均可原地改写，需重灌的只有 Redis 去重键（TTL 5min，迁移窗口后自然过期）。
+
+- **代码 · 单一事实源** `app/device_ids.py`：`CANONICAL_TO_LEGACY`（PUMP-A-01 ↔ PUMP-A）双向映射 +
+  `canonical()/legacy()/storage_id()`；库内形态由 `AUSCULT_DEVICE_ID_SCHEME` 决定——当轮默认 `legacy`
+  以保证**迁移前零行为变化**（迁移完成后的默认值翻转见本节上一条），非法值保守回退默认值
+  （配置手误不得把查询打到空）。未知编号恒原样透传。
+- **代码 · 工具层改造**：`query_sensor` / `query_graph`（start_node）/ `get_maintenance_history` 由
+  `DEVICE_ALIAS_MAP.get(...)` 改为 `storage_id()`（两跳：先规范再落库内形态）；`DEVICE_ALIAS_MAP` 保留为只读兼容别名。
+- **代码 · 迁移执行器** `scripts/migrate_device_ids.py`：三侧原地迁移（TDengine 子表 TAG + `RENAME`、
+  PG `alerts`（`alarm_id` 不变）、Neo4j `Entity.name`）；**默认 dry-run**、`--target` 分侧、`--apply` 落库、
+  `--revert` 反向回滚、`--verify` 三侧口径核对（不可达即 `ok=False`，不给假绿灯）；逐条容错不阻断。
+- **代码 · 灌数端**：`v3_ingest_direct` / `gen_sparkplug` / `spb_simulator` 默认设备改规范编号（否则迁移后又被写回旧口径）。
+- **范围边界（如实记录）**：`work_orders.device_id` **无迁移对象**——源数据是图纸/台账口径（`A 0泵`、客户号），
+  本就不含产品编号（语料 `PUMP-` 0 命中）；工单侧继续用"空结果回灌真实编号样本"过渡，根治需另立项。
+- **测试**：**333 passed**（320 + 13：映射三态 / 工具层按 scheme 落库内形态 / 灌数默认值锁 / PG·TD·Neo4j 三段迁移
+  （dry-run 不写、apply 写、单条失败不阻断）/ revert / 非受控编号拒绝 / 离线退出码 2 / verify 不可达）。全部离线零真实栈。
+  顺带修复既有**测试隔离缺陷**：`test_agent_gate.py` 的 `install_stubs()` 直接改全局 `_EXECUTORS` 无回滚，
+  会泄漏到同进程后续测试（`execute_tool` 静默走 STUB）→ 加 autouse fixture 快照/恢复。
+- **文档**：新增 `docs/p7-runbook-device-id-migration-2026-10-22.md`（执行顺序 / 回滚 / 已知限制 / 验收清单）；
+  `Material/02` §4 机制表、§15 遗留；`Material/05` 剩余清单；ISS-056 条目改为"候选①已实施，待栈在线执行"。
+
+---
+
+## 2026-10-22（维护期 · **ISS-062 遗留清理脚本 + 语料规模体检**）— 历史报告代号可补偿还原，语料盲区首次量化
+
+> 对照最初评审材料的剩余清单：本地 32B 硬件（外部依赖，不动）之外的两项低优先遗留
+> ——「历史报告含脱敏代号」「语料规模演示级」——本轮把**决策材料与工具**备齐，均不擅自改数据基线。
+
+- **代码 · 历史报告脱敏代号清理**（ISS-062 遗留，`scripts/restore_masked_device_ids.py`）：ISS-062 只修了新报告出口，
+  修复前落库的 8 份报告 payload 仍是 `设备#f6de90` 且无 `device_id` 字段。脚本从 PG `alerts`/`work_orders`
+  收集候选设备（`--extra` 可追加），用**出口同算法**（`hash_device_id` sha256[:6]）建反查表；
+  **默认 dry-run**、`--apply` 才 UPDATE，且只改 payload 文本不动幂等键（可重复执行）；
+  **能全映射才替换，无法映射的代号原样保留并列入人工清单**——宁可漏还原，不可错还原。
+  当前离线环境 PG 不可达，退出码 2（不谎称"无待清理"）；栈在线后跑一次 `--apply`。
+- **代码 · 语料规模体检**（`Material/02` §15 遗留 4，`scripts/corpus_stats.py` + `reports/p1-corpus-stats-2026-10-22.md`）：
+  **不灌数据**（`chunks_v1.jsonl` 是全部已锁定实验的语料基准，扩语料=平移基线，须所有者单独判决），只量化现状：
+  36 chunks / 19 docs / 3147 tokens；**语义域盲区 15 词**（齿轮、密封、剥落、喘振、汽蚀、限值、阈值…）；
+  且语料文本**不含产品设备编号**（`PUMP-` 0 命中，设备以 C-200/P-150 等图纸型号出现）→ 按编号提问的检索会失配。
+  `--strict` 可作 CI 守门（有盲区即失败）。
+- 回归：**320 passed**（309 + 11：清理脚本 7 例 + 体检脚本 4 例，全部离线零 PG）。
+- **文档**：`docs/prj-ledger-known-issues.md` ISS-062（遗留清理脚本待栈在线执行）；`Material/02` §15 遗留表
+  （#4/#6 更新为"已备工具/已体检，待判决/待执行"）；`Material/05-评审回应.md` 剩余清单同步。
+
+---
+
+## 2026-10-22（维护期 · **评审增量 E5 未收敛信号 + 求助率监控 + ISS-056 图谱/工单侧收尾**）— 失败信号继续前移，设备号口径三侧归一
+
+> 依据对最初评审材料的逐条复查（`Material/05-评审回应.md`）：E1–E4 落地后剩余的真实尾巴有两条半——
+> 「未收敛」未接路由（材料二 #6 三组合只兑现两条）、求助率不可观测、ISS-056 只治理了 `query_sensor` 一侧。
+
+- **代码 · E5 未收敛 → 路由信号**：`_finalize_answer` 新增 `forced` 参数，步数用尽后的强制收口轮置
+  `state.not_converged`（语义 = 结论是"拖"出来的，不是收敛出来的）；`build._should_escalate_not_converged`
+  与 E2 **同口径护栏**（`AUSCULT_CLOUD_FALLBACK` 开 + `local` 后端 + 未升级过）→ 提前 `escalate_cloud`，
+  云端凭 E1 的本地轨迹二次裁决。优先级：`needs_human`（E4）> 未收敛/参数被拒（E2/E5）> `confidence`。
+- **代码 · 求助率监控（E4 运维缺口）**：新增指标 `auscult_needs_human_total{reason}`（`needs_human` 模型主动求助 /
+  `risk_high` 风险等级高），在 `review.human_review` 真正转人工时打点——模型若退化成"拿不准就上交"，
+  该指标占比会先于审核工单积压发出信号。同时 `thread_status` 暴露 `needs_human` / `human_reason`
+  （`runner._absorb_needs_human`，与 `refusal` 同口径：只认 diagnose 增量、假值不清除）。
+- **代码 · ISS-056 图谱/工单侧收尾**：`query_graph` 的 `start_node` 与 `get_maintenance_history` 的 `device_id`
+  同型过 `DEVICE_ALIAS_MAP` 归一并回带 `device_id_resolved`；图谱空命中给 `note`（编号口径不符 vs 无关联可区分）。
+  工单侧空结果**不单向猜映射**——`work_orders.device_id` 的真实口径未经在线实证（灌数源 `parsed/workorders_*.md`
+  里是客户号/“A 0泵”这类值，与 ISS-056 记载的“短编号”不符），故新增 `list_known_devices()` 探测库里**实际编号样本**
+  回灌模型自我纠正；探测失败保守不给样本（不谎称"无此设备"）。**待实测**：docker 栈在线后验证图谱/工单别名归一实效。
+- 回归：**309 passed**（302 + 7：未收敛置位与路由三护栏 + 全图 E5、求助原因计数与 runner 归集、工单/图谱归一与空结果样本）。
+- **文档**：`docs/prj-ledger-known-issues.md` ISS-056（图谱/工单侧处置 + 待实测标注）；`Material/05-评审回应.md`
+  剩余清单（ISS-056 图谱/工单侧标记已实现）；`Material/02-技术文档.md` §4 机制表、§6.2 路由优先级。
+
+---
+
+## 2026-10-22（维护期 · **外部评审增量 E3/E4 落地**）— Agent 看得见自己的进度，也说得清"拿不准"
+
+> 依据外部架构评审（`Material/05-评审回应.md`）：E1/E2（云端二次裁决 / 参数早期兜底）已于同日落地，本次补完剩余两条 P2/P3 ——
+> 此前 messages 线性累积，模型只能从长历史里自行归纳"已查过什么"；且"证据不足以定责"只能硬编结论或落 `E_JSON_PARSE`。
+
+- **代码 · E3 状态回灌**：`agent_diagnose._Collector` 新增 `calls`（逐次调用成败/`reject_kind`/错误）与 `notes`（工具 `note`/`partial_errors`）归集；
+  新增 `brief()` 由**代码**生成「当前诊断状态」摘要 —— 工具计数 / 传感器读数（count·avg·max·exceed_count·trend）/ **可引用 chunk_id** /
+  图谱路径数 / 工单数 / 失败与被拒原因 —— 每轮工具执行后作为下一条 `user` 消息回灌。
+  同一轮多个工具**只追加一条**；摘要与 tool 回灌同走脱敏口径（真实设备号 → `设备#hash`）；不参与状态归集（内部仍用真实结果）。
+  价值：减少重复取数与 chunk_id 编造；失败分支也可见，避免"被拒 → 再试同一个调用"的空转（此前 `absorb` 在 `ok=False` 时早退，信息直接丢失）。
+- **代码 · E4 主动求助**：收口 JSON 新增 `needs_human` / `human_reason`（提示词契约 + `_as_bool` 宽容解析：`true`/`"true"`/`"是"`）。
+  置真时：① `_determine_risk_level(..., needs_human=True)` **强制 `risk_level=high`**；② `state.needs_human`/`human_reason` 落库、`errors` 记
+  `W_HUMAN_REQUESTED`（非阻塞级）；③ `_route_condition` 在 `confidence` 判定**之前**直达 `human_review`（否则会被 `escalate_cloud`/`degrade` 吞掉，
+  interrupt 永远走不到；`retry_count ≥ 3` 的既有优先级不变）；④ 审核 payload 带 `human_reason`、`question="模型主动请求人工介入"`，
+  `evaluate_high_risk` 的 reasons 写明"模型主动求助: <原因>"。**不新增工具、不新增中断类型**（材料建议的 `ask_human_expert` 未采纳）。
+- 回归：**302 passed**（294 + 8：状态摘要内容与失败分支、求助强制 high、字符串布尔、决策层覆盖、路由顺序、审核 payload、全图 interrupt 落点）。
+- **文档**：`Material/05-评审回应.md`（E3/E4 标记已实现 + 剩余清单更新）、`Material/01-需求文档.md`（新增 US-4.2b / US-4.4c，US-4.3 补路由顺序）、
+  `Material/02-技术文档.md`（§4 机制表、§6.1 状态字段、§6.2 路由优先级）、`Material/03-架构图文档.md`（§3.1 循环与路由、§4 时序）。
+
+---
+
+## 2026-10-22（维护期 · **ISS-056 设备号口径治理（方案② + 空结果可区分）**）— 静默空结果不再伪装成"无异常"
+
+> 根因：产品提示词/判据用完整编号 `PUMP-A-01`，而 TDengine TAG、`alarm_engine` 产出、灌数脚本一律用短编号 `PUMP-A`
+> （`show iot.tables` 实测仅 3 张子表）→ `query_sensor("PUMP-A-01")` 返回 `ok=True, count=0` 的**静默空结果**，
+> 模型无法区分「设备号写错」与「窗口内无数据」。2026-10-21 关单的只是"行为阻断"，口径漂移一直遗留。
+
+- **代码 · 方案② 工具层设备别名归一**（不动数据层、不拆提示词约束）：新增 `DEVICE_ALIAS_MAP`
+  （`PUMP-A-01→PUMP-A` / `-B-01→PUMP-B` / `-C-01→PUMP-C`），与 `SENSOR_COLUMN_MAP`（ISS-049 测点名归一）**同型先例**；
+  未命中原样透传（真实未知设备不会被这张表伪装成有数据）。result 增 `device_id_resolved{requested, used}` 保证透明度。
+- **代码 · 空结果可区分（ISS-056 真正的另一半）**：`_exec_query_sensor` 不再把 0 行包装成 `count=0` 的有效证据；
+  空结果时多发一次不限窗口的计数查询（`_device_has_any_data`）分类为
+  `empty_reason=device_not_found`（库里没这台设备）/ `no_data_in_window`（设备存在但窗口内无数据），
+  并经 `partial_errors` / `error` 回灌模型，使其能自我纠正（如改回告警里的 `PUMP-A`）。
+  **探测失败保守返回"设备存在"** —— TDengine 抖动不应被谎称成"设备不存在"。
+- 回归：**294 passed**（289 + 5：映射归一 / 设备不存在 / 窗口内无数据 / 部分空仍带原因 / 探测失败保守）。
+- **文档**：`docs/prj-ledger-known-issues.md` ISS-056 遗留项处置记录；`Material/01-需求文档.md` US-1.1/US-3.1；
+  `Material/02-技术文档.md` §4 工具护栏；`Material/05-评审回应.md` 剩余清单。
+- **未做（范围控制）**：图谱（`query_graph`）与工单（`get_maintenance_history`）侧的设备号口径未一并治理 ——
+  两者的实体口径需先核查（Neo4j 用 `PUMP-A-01`、`work_orders.device_id` 用 `PUMP-A`），另行立项。
+
+---
+
+## 2026-10-22（维护期 · **外部评审增量 E1/E2 落地**）— 云端兜底从"能兜"变成"兜得准"
+
+> 依据外部架构评审（`Material/05-评审回应.md`）：评审确认架构方向正确，指出两条真正没做全的增量。
+
+- **代码 · E2 · 参数失效提前兜底**：`tool_registry.execute_tool` 三类拒绝新增结构化标记 `rejected` + `reject_kind`
+  （`write_guard` / `whitelist` / `arg`，不改既有 `ok`/`error` 契约）；`agent_diagnose` 累计
+  `state.tool_arg_rejections`（**只计 whitelist/arg** —— 写操作护栏是正确行为、执行体缺失是配置问题，均不计）；
+  `build._route_condition` 在 `confidence` 判定**之前**新增分支：`≥2` 且 `local` 后端、未升级过 → `escalate_cloud`。
+  价值：模型"不懂领域语义"的**最早**信号是参数被拒，不必等置信度被磨到 0.75，省无效轮次与云端额度。
+- **代码 · E1 · 云端二次裁决而非重猜**：`cloud.escalate` prompt 头部插入「本地 Agent 排查轨迹」段
+  （逐 step 工具名/成败/耗时/被拒类型），并显式要求"基于轨迹与证据做裁决或路径修正，不要从零重跑"。
+  脱敏纪律：轨迹只含参数**键名**不含值（`agent_steps` 本身也只记 `args_keys`），无额外外泄面。
+- 回归：**289 passed**（285 + 4：计数口径含"写护栏不计"反向断言、路由四边界、全图 E2E 断言"未白跑第 4 轮"、轨迹注入与"不含设备号"）。
+- **文档**：`Material/05-评审回应.md`（E1/E2 标记已实现）、`Material/01-需求文档.md` 新增 US-4.4b、`Material/02-技术文档.md` §3.3/§4。
+
+---
+
 ### 2026-10-21（收口后维护期 · **Agent 化收尾：本地架构补齐 + 合规口径按本地定稿**）
 
 > 依据所有者三项裁决：① **保留本地部署架构**（云端仅兜底，先用 7B 验连通性，32B 硬件先不管）；

@@ -146,6 +146,47 @@ def sanitize_state(state: DiagnosisState) -> dict[str, Any]:
     }
 
 
+def _build_trajectory_section(state: DiagnosisState) -> str:
+    """本地 Agent 排查轨迹摘要（2026-10-22 · 外部评审增量 E1）。
+
+    **为什么加**：云端兜底原先只拿到最终 state + 四类证据，等于让它"凭现场重猜"；
+    而本地模型走过的路径（查过什么、拿到什么、哪些参数被拒）是最有价值的先验。
+    外部评审原话：「把完整诊断轨迹打包给云端做二次裁决，而不是让它从头重跑」。
+
+    **脱敏纪律**：只输出工具名 / 参数**键名** / 耗时 / 被拒类型，**不含参数值**，
+    因此没有设备号外泄面；`agent_steps` 本身也只记 args_keys（见 agent_diagnose）。
+    """
+    steps = list(state.agent_steps or [])
+    if not steps:
+        return ""
+
+    lines: list[str] = []
+    for s in steps:
+        tool = s.get("tool")
+        if tool is None:
+            if s.get("forced_final"):
+                lines.append(f"  [step {s.get('step')}] （达到步数上限，强制收口，无工具调用）")
+            continue
+        ok = "成功" if s.get("ok") else "失败"
+        extra = ""
+        rk = s.get("reject_kind")
+        if rk:
+            kind_cn = {"whitelist": "工具不在白名单", "arg": "参数校验未过",
+                       "write_guard": "写操作护栏（正确拒绝）"}.get(rk, rk)
+            extra = f"，被拒原因={kind_cn}"
+        latency = s.get("latency_ms")
+        lines.append(f"  [step {s.get('step')}] 调用 {tool} → {ok}"
+                     f"（{latency}ms）{extra}")
+
+    body = "\n".join(lines)
+    return ("【本地 Agent 排查轨迹】\n"
+            f"{body}\n"
+            f"（参数/白名单被拒合计 {state.tool_arg_rejections} 次）\n"
+            "说明：以上是本地模型已经走过的取证路径与结果，其中失败的调用说明"
+            "它对领域语义存在偏差。请**基于这些轨迹与下列证据做二次裁决或路径修正**，"
+            "不要从零重新排查。")
+
+
 def _build_cloud_prompt(sanitized: dict[str, Any]) -> str:
     """从脱敏后的 dict 构造 user prompt（与 diagnose 同结构，但 device_id 已脱敏）。"""
     alarm = sanitized["alarm"]
@@ -271,6 +312,12 @@ class CloudRouter:
         # 脱敏
         sanitized = sanitize_state(state)
         user_prompt = _build_cloud_prompt(sanitized)
+        # E1（2026-10-22 · 外部评审）：把本地 Agent 的排查轨迹一并交给云端，
+        # 让它做"二次裁决/路径修正"而不是凭现场重猜。轨迹只含工具名/参数键名/
+        # 耗时/被拒类型，无参数值，故无额外脱敏面（agent_steps 本身就只记 args_keys）。
+        trajectory = _build_trajectory_section(state)
+        if trajectory:
+            user_prompt = f"{trajectory}\n\n{user_prompt}"
         hash_post = _sha256_short(user_prompt)
 
         # 脱敏前原文 hash（审计用：取未脱敏 prompt）

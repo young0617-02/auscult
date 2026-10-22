@@ -322,7 +322,10 @@ def main():
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--mqtt-host", default=os.environ.get("MQTT_HOST", "127.0.0.1"))
     ap.add_argument("--mqtt-port", type=int, default=int(os.environ.get("MQTT_PORT", "1883")))
-    ap.add_argument("--devices", default="PUMP-A,PUMP-B,PUMP-C", help="逗号分隔设备 id（首设备注入异常）")
+    # ISS-056 候选①：默认发**规范编号**（产品口径，见 app/device_ids.py）；
+    # 旧短编号仍可用 --devices 传入（迁移未完成时联调老数据）。
+    ap.add_argument("--devices", default="PUMP-A-01,PUMP-B-01,PUMP-C-01",
+                    help="逗号分隔设备 id（首设备注入异常）")
     ap.add_argument("--hours", type=float, default=1.0, help="逻辑时间跨度（小时，默认 1h 小规模验证）")
     ap.add_argument("--interval-ms", type=int, default=1000, help="采样间隔 ms（默认 1Hz）")
     ap.add_argument("--alert-start-ratio", type=float, default=0.3, help="异常段起始（逻辑时间窗比例）")

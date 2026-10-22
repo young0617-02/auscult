@@ -38,6 +38,10 @@ from pathlib import Path
 from typing import Any, Iterable, Protocol
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+
+from milvus_endpoint import milvus_uri  # noqa: E402
+
 GOLDEN_PATH = PROJECT_ROOT / "evals" / "golden_set_v1.jsonl"
 CORPUS_PATH = PROJECT_ROOT / "evals" / "corpora_v1" / "corpus_100.jsonl"
 RAW_DIR = PROJECT_ROOT / "experiments" / "v2" / "raw"
@@ -727,7 +731,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--rrf-k", type=int, default=RRF_K, help="RRF k 值（候选 60）")
     parser.add_argument("--pg-sparse", choices=PG_SPARSE_IMPLS, default=None,
                         help="pgvector 侧稀疏实现路线（必填声明，见 p0-report-v2-hybrid-retrieval §4.3）")
-    parser.add_argument("--milvus-uri", default="http://127.0.0.1:19531")
+    parser.add_argument("--milvus-uri", default=milvus_uri())
     parser.add_argument("--dsn", default="postgresql://root:123456@127.0.0.1:5433/auscult_v2",
                         help="PostgreSQL DSN（默认 auscult_v2 库，与 v2_pg_build.py 建库一致）")
     parser.add_argument("--embed-model", default=BGE_M3_MODEL_PATH,

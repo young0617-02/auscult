@@ -151,7 +151,7 @@ deliverable/
 ├─ README.md
 ├─ docker-compose.yml            # 一键启动（含 healthcheck/依赖/限额）
 ├─ .env.example
-├─ Makefile                      # make up / make init / make demo / make down
+├─ Makefile                      # 设计产物，未落地（实际用 deploy/*.ps1，见下注）
 ├─ deploy/
 │  ├─ init/                      # 建库、建表、导入语料与演示数据
 │  ├─ nginx/
@@ -163,6 +163,11 @@ deliverable/
 ```
 
 **一键启动冒烟**：`make up` → 等待健康检查 → `make smoke`（含 Playwright F1–F11 子集）→ 输出"就绪"。
+
+> **落地偏离记录（2026-10-22）**：仓库**未引入 Makefile**，实际入口为 `deploy/up.ps1`（启动）、
+> `deploy/init.ps1`（初始化）、`deploy/smoke.ps1`（冒烟）、`deploy/down.ps1`（停止）——Windows 交付形态。
+> 且 `smoke.ps1` 只做 6 项健康检查，**不含 Playwright F1–F11 子集**（前端 e2e 在 `client/tests/e2e`，
+> 9 例，最后一次执行记录 2026-10-09）。引用本节的文档请用实际脚本名，勿写 `make smoke`。
 
 ### 5.3 演示脚本（主场景）
 
@@ -239,42 +244,53 @@ Step 8  追溯：报告内每条结论可点回原文；Trace 时间线展示全
 
 ### 7.1 Must 链 13 项终核（V5.0 §10.1）
 
-| # | 能力 | 核对 |
-|---|---|---|
-| 1 | 告警产生 | ☐ |
-| 2 | 告警去重 | ☐ |
-| 3 | 传感器分析 | ☐ |
-| 4 | 混合检索（`Recall@5 ≥85%`） | ☐ |
-| 5 | 图谱检索（≥1 条支撑路径） | ☐ |
-| 6 | 诊断推理（根因+建议+置信度） | ☐ |
-| 7 | 证据引用强制 | ☐ |
-| 8 | 报告生成 | ☐ |
-| 9 | 高风险强制审核 | ☐ |
-| 10 | 业务表落库 | ☐ |
-| 11 | 审计日志（不可篡改） | ☐ |
-| 12 | 降级路径 | ☐ |
-| 13 | 前端展示 | ☐ |
+> **2026-10-22 逐项核对**（证据与缺口详见 `reports/p6-readiness-must-chain-2026-10-22.md`）。
+> 标记：`[x]` 有硬证据（实测数字/通过用例）；`[~]` 有实现或部分证据但**带缺口**（见报告 §五）；`[ ]` 缺失。
+
+| # | 能力 | 核对 | 关键证据 / 缺口 |
+|---|---|---|---|
+| 1 | 告警产生 | [x] | 12 004 行落 TDengine；`thr_vib_rms` 1 条候选（4.5936>4.5）、误报 0 |
+| 2 | 告警去重 | [x] | 5min 重跑 `dedup_count 1→2`、PG 仍 1 条（Redis key + 内存降级）；缺 pytest 回归锁 |
+| 3 | 传感器分析 | [x] | **2026-10-22 补齐判据字段**：`p95`（线性插值）+ `anomaly`/`anomaly_reasons`（超阈值 / 上升尖峰，给理由不只给布尔）；`query_sensor` 返回体增 `stats{avg,max,min,p95}`。真机 PUMP-C-01 71 点 → `p95=1.3621`、`anomaly=false`（1.29<4.5 正确不误报） |
+| 4 | 混合检索（`Recall@5 ≥85%`） | [x] | **Recall@5 = 1.0**（12 题）/ 0.91（golden 50 题）；语料 36 子块，天花板低，需随局限声明传播 |
+| 5 | 图谱检索（≥1 条支撑路径） | [x] | **2026-10-22 补真实路径**：Cypher 同时返回 `path_nodes`/`path_rels`（原只回 `cid` 把路径丢了）→ `GraphPath.edges` 承载真实受控关系。真机 `振动烈度 -[THRESHOLDS]-> 1.8`（chunk=`criteria_1-1-c0`） |
+| 6 | 诊断推理（根因+建议+置信度） | [x] | e2e 21.5s 出 `RPT-*`；幻觉率 0.0、ECE 0.0 |
+| 7 | 证据引用强制 | [x] | **2026-10-22 补齐**：空引用 → `E_NO_CITATION` 硬阻断（拒答/降级路径例外，避免打死"降级仍出报告"）；负路径锁 `tests/test_finalize_citations.py`（8 例）；`scripts/test_d10_finalize.py` 旧断言已同步为 blocked；全量 **371 passed** |
+| 8 | 报告生成 | [x] | 幂等 INSERT（唯一索引）+ `GET /api/reports[/{id}]` 契约 R06–R13 通过 |
+| 9 | 高风险强制审核 | [x] | **2026-10-22 三条绕过路径封堵**：① high 分支提到 confidence 之前；② `escalate_cloud` 后加 `_route_after_cloud` 补审；③ `auto_approved` 叠加代码级硬约束（YAML 无法关闭）。回归锁 `tests/test_high_risk_routing.py`（16 例），全量 **387 passed**；`interrupt()` + SoD + Redis 锁原实测不变 |
+| 10 | 业务表落库 | [x] | `alerts` 单事务 + ON CONFLICT、`reports` 显式 commit/rollback；`agent_steps` 为 payload JSONB、`work_orders` 仅离线导入 |
+| 11 | 审计日志（不可篡改） | [x] | PG 触发器实测拒 UPDATE/DELETE/TRUNCATE（ERRCODE 42501，8/8）；JSONL 三件无完整性保护 |
+| 12 | 降级路径 | [x] | E3/E5/E6/E6e 降级后仍产出 `RPT-*` 且 `degrade_reason` 非空 |
+| 13 | 前端展示 | [x] | Playwright 9/9（2026-10-09）；`/audit` 为占位页、审核提交动作无 e2e、P4 后未复跑 |
+
+**合计**：`[x]` **13 项** · `[~]` 0 项 · `[ ]` 0 项 —— Must 链全项有硬证据（#3/#5/#7/#9 于 2026-10-22 同日补齐）。
 
 ### 7.2 停止条件三条终核（V5.0 §10.4）
 
-| # | 条件 | 核对 |
-|---|---|---|
-| 1 | Must 链 **13 项端到端可演示**（一次完整跑通告警→报告→审核） | ☐ |
-| 2 | **≥3 项量化指标达标**：`Recall@5 ≥85%` + `P95 检索 <800ms` + 工具首次成功率 ≥90% | ☐ |
-| 3 | 版本锁定清单 + 风险登记册**定稿** | ☐ |
+| # | 条件 | 核对 | 现状 |
+|---|---|---|---|
+| 1 | Must 链 **13 项端到端可演示**（一次完整跑通告警→报告→审核） | [x] | **2026-10-22 实测全链跑通**（`scripts/run_demo_s1.py`，**98.1s**）：`parse_alarm→diagnose→waiting_review`（risk=high 强制中断）→ SoD 403 → `approved→human_review→finalize→done`，`RPT-dfbf857be97f625e` 定稿可读；留档 `demo/recording/s1-run-2026-10-22.md`。**质量披露**：零引用/结论含糊/`query_sensor` 首轮失败（ISS-060，已核实与编号迁移无关） |
+| 2 | **≥3 项量化指标达标**：`Recall@5 ≥85%` + `P95 检索 <800ms` + 工具首次成功率 ≥90% | [x] | **2026-10-22 口径统一并落地**：三项对外值 = **1.0** / **159.4ms** / **98.67%（74/75）**，唯一准绳 `docs/p6-metrics-canonical-2026-10-22.md`；已修正 3 处误标（`README.md` §3.2、`docs/p5-handover-p6.md` §二/§三、`docs/p6-gate-closure-2026-10-10.md` S2 —— 均把"12 题检索执行口径 1.0"误当工具成功率）；保守下界 89.33% 与端到端 9248.8ms 未达标已随表披露 |
+| 3 | 版本锁定清单 + 风险登记册**定稿** | [x] | **2026-10-22 闭合**：风险册升 **v2 定稿**（11 条关闭逐条挂实测证据；R4/R15/R21 显式接受并写明代价；R17/R22 降级为已知缺陷；**新增 R17–R23 覆盖 P6/P7**）；版本锁新增 **§4.2 P3–P7 报告登记（13 份）** + `latest` 豁免口径明确；`docs/p0-spec-scope-mvp.md` S3 行已复核 |
 
 > **三条同时满足 → 项目正式完成（M6.4）。** 若未满足，只允许修复缺陷，不得扩范围。
+> 2026-10-22 判定：**三条全部闭合 → M6.4 达成**（第 1 条 S1 全链实测 98.1s、第 2 条三处口径误标已修正并统一到
+> `docs/p6-metrics-canonical-2026-10-22.md`、第 3 条风险册 v2 与版本锁 §4.2 定稿）。
+> 录屏与"干净环境清空卷"演练留档属**交付形态补档**，不阻塞判定。
 
 ### 7.3 交付验收清单
 
-- [ ] 干净环境 `docker compose up` 一键启动，全服务健康
-- [ ] `make smoke` 冒烟通过
-- [ ] 主场景演示全程复现
-- [ ] 六类文档齐备
-- [ ] 版本锁定清单与各报告 digest 一致
-- [ ] 风险册定稿（剩余风险已显式接受）
-- [ ] 指标报告可查（含局限声明）
-- [ ] 交付包封版（tag/压缩包）
+- [~] 干净环境 `docker compose up` 一键启动，全服务健康（本机 8 容器 up / 7 基建 healthy；**无"全新目录+清空卷"演练留档**，该场景历史上曾 100% 崩，见 ISS-044/057）
+- [x] 冒烟通过（**实际入口 `deploy\smoke.ps1`；仓库无 Makefile，`make smoke` 口径弃用**）：2026-10-22 复跑 **6/6 PASS**
+- [x] 主场景演示全程复现（2026-10-22 全链 **98.1s** 跑通至定稿；留档 `demo/recording/s1-run-2026-10-22.md`；**录屏仍待人工补**，但脚本留档 + `report_id` 可复现）
+- [x] 六类文档齐备（README / 架构 / 部署 / 运维 / API / 数据字典 + ADR-001..009）
+- [x] 版本锁定清单与各报告 digest 一致（10 镜像 digest + 2 模型齐全；**§4.2 已补 P3–P7 共 13 份报告登记**；prometheus `latest` 记「临时栈显式豁免」）
+- [x] 风险册定稿（剩余风险已显式接受）——**v2 定稿**：11 条关闭（挂实测证据）、R4/R15/R21 显式接受并写明代价、R17/R22 降级为已知缺陷、新增 R17–R23 覆盖 P6/P7
+- [x] 指标报告可查（含局限声明）——`reports/p5-eval.md` 局限 + 未达标处置、p2 评测集约束
+- [x] 交付包封版（tag/压缩包）——**tag `v1.0.0` + `dist\auscult-v1.0.0.zip`**；入口 `deploy\package.ps1`（556 文件 / 压缩 3 MB / 解压 6.5 MB；包内 `PACKAGE-MANIFEST.txt` 记录 git HEAD、体积、已排除清单与逐文件字节）
+
+**合计**：`[x]` 7 项 · `[~]` 1 项（干净环境演练留档）
+（核对报告：`reports/p6-readiness-must-chain-2026-10-22.md`；指标口径：`docs/p6-metrics-canonical-2026-10-22.md`）。
 
 ---
 

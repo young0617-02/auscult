@@ -29,7 +29,9 @@ from app.graph.nodes.diagnose import diagnose
 from app.graph.state import AlarmEvent, DiagnosisState
 from app.llm import config as llm_config
 from app.llm.client import ChatResult, OpenAICompatClient, ToolCall, get_client
+from app.observability import prom_metrics as pm
 from app.router.cloud import CloudRouter, call_cloud
+from app.router import cloud as cloud_mod
 from langgraph.checkpoint.memory import InMemorySaver
 
 
@@ -398,10 +400,12 @@ def test_agent_loop_tool_call_then_final(monkeypatch):
     assert out["risk_level"] == "high"          # 自评 0.75 → 复合后 <0.85 且 severity medium
     assert out["confidence"] > 0
     assert len(out["agent_steps"]) == 1 and out["agent_steps"][0]["tool"] == "search_knowledge"
-    # 第二轮请求里应含 role=tool 回灌消息，且仍带工具面
+    # 第二轮请求里应含 role=tool 回灌消息 + 代码生成的状态摘要（E3），且仍带工具面
     second_msgs = fake.calls[1]["messages"]
     roles = [m["role"] for m in second_msgs]
-    assert roles == ["system", "user", "assistant", "tool"]
+    assert roles == ["system", "user", "assistant", "tool", "user"]
+    assert "【当前诊断状态】" in second_msgs[-1]["content"]
+    assert "c_001" in second_msgs[-1]["content"]      # 已取证 chunk_id 显式摆给模型
     assert fake.calls[1]["tools"] is not None
 
 
@@ -611,6 +615,209 @@ def test_agent_loop_json_parse_failure(monkeypatch):
     assert out["diagnosis"] == "这不是 JSON，只是说明文字。"
     assert out["retry_count"] == 1
     assert out["errors"][0]["code"] == "E_JSON_PARSE"
+
+
+# ---------------------------------------------------------------- C2c. ISS-056 设备号口径（2026-10-22）
+
+def test_device_alias_map_normalizes_product_id(monkeypatch):
+    """ISS-056 候选①：工具层按 `AUSCULT_DEVICE_ID_SCHEME` 落到库内形态（默认 canonical）。
+
+    迁移后默认 canonical：短编号输入也落规范编号；显式 legacy 才反向落回短编号。
+    """
+    from app import device_ids as did
+
+    seen: dict[str, Any] = {}
+
+    def _fake_query_sensor(*, device_id, metric, start_ts, end_ts, timeout=0.5):
+        seen["device_id"] = device_id
+        return {"device_id": device_id, "metric": metric, "count": 3,
+                "rows": [{"ts": 1, "value": 4.8}, {"ts": 2, "value": 5.1},
+                         {"ts": 3, "value": 4.9}]}
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor", _fake_query_sensor)
+
+    monkeypatch.delenv(did.SCHEME_ENV, raising=False)     # 默认 = 迁移后口径
+    out = tr._exec_query_sensor({"device_id": "PUMP-A",
+                                 "sensor_ids": ["PUMP-A.vib_rms"]},
+                                alarm=_alarm(device_id="PUMP-A"))
+    assert out["ok"] is True
+    assert seen["device_id"] == "PUMP-A-01"              # 已归一到库内规范编号
+    r = out["result"]
+    assert r["device_id"] == "PUMP-A-01"                 # 回灌模型的是库里的真名
+    assert r["device_id_resolved"] == {"requested": "PUMP-A", "used": "PUMP-A-01"}
+    assert r["series"][0]["count"] == 3                  # 不再是静默空结果
+
+    # 显式 legacy（连未迁移的旧库）：规范编号输入落回短编号
+    monkeypatch.setenv(did.SCHEME_ENV, "legacy")
+    out2 = tr._exec_query_sensor({"device_id": "PUMP-A-01",
+                                  "sensor_ids": ["PUMP-A-01.vib_rms"]},
+                                 alarm=_alarm(device_id="PUMP-A-01"))
+    assert seen["device_id"] == "PUMP-A"
+    assert out2["result"]["device_id_resolved"] == {"requested": "PUMP-A-01",
+                                                    "used": "PUMP-A"}
+
+
+def test_empty_result_distinguishes_device_not_found(monkeypatch):
+    """ISS-056：库里没这台设备 → empty_reason=device_not_found（不再静默 count=0）。"""
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor",
+                        lambda **kw: {"rows": []})
+    monkeypatch.setattr(tr, "_device_has_any_data", lambda d, **kw: False)
+
+    out = tr._exec_query_sensor({"device_id": "PUMP-Z-99",
+                                 "sensor_ids": ["PUMP-Z-99.vib_rms"]},
+                                alarm=_alarm(device_id="PUMP-Z-99"))
+    assert out["ok"] is False
+    assert out["empty_reason"] == "device_not_found"
+    assert "在时序库中不存在" in out["error"]
+
+
+def test_empty_result_distinguishes_no_data_in_window(monkeypatch):
+    """ISS-056：设备存在但窗口内无数据 → empty_reason=no_data_in_window。"""
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor",
+                        lambda **kw: {"rows": []})
+    monkeypatch.setattr(tr, "_device_has_any_data", lambda d, **kw: True)
+
+    out = tr._exec_query_sensor({"device_id": "PUMP-A",
+                                 "sensor_ids": ["PUMP-A.vib_rms"]},
+                                alarm=_alarm(device_id="PUMP-A"))
+    assert out["ok"] is False
+    assert out["empty_reason"] == "no_data_in_window"
+    assert "查询窗口内无数据" in out["error"]
+
+
+def test_partial_empty_keeps_series_with_classified_reason(monkeypatch):
+    """部分测点有数据、部分空 → 仍 ok=True，但空的原因要写进 partial_errors。"""
+    def _fake_query_sensor(*, device_id, metric, start_ts, end_ts, timeout=0.5):
+        rows = ([{"ts": 1, "value": 4.8}] if metric == "vib_rms" else [])
+        return {"device_id": device_id, "metric": metric, "count": len(rows),
+                "rows": rows}
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor", _fake_query_sensor)
+    monkeypatch.setattr(tr, "_device_has_any_data", lambda d, **kw: True)
+
+    out = tr._exec_query_sensor(
+        {"device_id": "PUMP-A", "sensor_ids": ["PUMP-A.vib_rms", "PUMP-A.bearing_temp"]},
+        alarm=_alarm(device_id="PUMP-A"))
+    assert out["ok"] is True
+    assert out["result"]["empty_reason"] == "no_data_in_window"
+    assert any("查询窗口内无数据" in e for e in out["result"]["partial_errors"])
+    assert out["result"]["series"][0]["sensor_id"] == "PUMP-A.vib_rms"
+
+
+def test_device_has_any_data_is_conservative_on_probe_failure(monkeypatch):
+    """探测失败（TDengine 抖动）→ 保守假设设备存在，不谎称"设备不存在"。"""
+    import app.tools.query_sensor as qs
+
+    def _boom(*a, **kw):
+        raise ConnectionError("tdengine down")
+    monkeypatch.setattr(qs, "_td_query", _boom)
+    assert tr._device_has_any_data("PUMP-A") is True
+
+
+# ---------------------------------------------------------------- C2b. 评审增量 E1/E2（2026-10-22）
+
+def test_tool_arg_rejections_are_counted(monkeypatch):
+    """E2：白名单/参数被拒要计数，写操作护栏**不**计（那是正确的安全行为）。"""
+    monkeypatch.setenv("AUSCULT_SANITIZE_OUTBOUND", "off")
+    alarm = _alarm()
+    fake = _FakeClient([
+        # 第 1 轮：写操作护栏（**正确拒绝**，不计数）
+        _tool_calls_result(("generate_report", {})),
+        # 第 2 轮：工具不在白名单（计数）
+        _tool_calls_result(("delete_database", {"target": "all"})),
+        # 第 3 轮：合法工具但参数缺失（计数）
+        _tool_calls_result(("query_sensor", {})),
+        # 第 4 轮：正常调用
+        _tool_calls_result(("query_graph", {"start_node": "PUMP-A-01"})),
+        _final_result(_FINAL_JSON),
+    ])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+    # **不打桩 execute_tool** —— 要的就是真实白名单/参数校验的拒绝路径；
+    # 只把最终执行体换成假的，避免真连 Milvus/Neo4j。
+    monkeypatch.setattr(tr, "_EXECUTORS", {"query_graph": lambda a, al: {
+        "ok": True, "result": {"nodes": [], "edges": []}}})
+
+    out = ad.agent_diagnose(_agent_state(alarm=alarm))
+    # 白名单 1 + 参数 1 = 2；写操作护栏 0
+    assert out["tool_arg_rejections"] == 2
+    kinds = [s.get("reject_kind") for s in out["agent_steps"]]
+    assert "write_guard" in kinds            # 轨迹里仍记录（供云端判断）
+    assert "whitelist" in kinds and "arg" in kinds
+    assert out["agent_steps"][0]["ok"] is False
+
+
+def test_route_early_escalate_on_arg_rejections(monkeypatch):
+    """E2 路由：参数被拒 ≥2 且后端为 local、未升级过 → 提前 escalate_cloud。"""
+    monkeypatch.delenv("AUSCULT_CLOUD_FALLBACK", raising=False)
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    state = _agent_state(tool_arg_rejections=2, confidence=0.80)
+    assert build_mod._route_condition(state) == "escalate_cloud"
+
+    # 边界：仅 1 次不触发（仍在正常路由区间内）
+    assert build_mod._route_condition(_agent_state(tool_arg_rejections=1,
+                                                  confidence=0.80)) == "finalize"
+    # 边界：后端即云端 → 不自我触发（escalate 会空转）
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "cloud")
+    assert build_mod._route_condition(_agent_state(tool_arg_rejections=5,
+                                                  confidence=0.80)) == "finalize"
+    # 边界：已升级过 → 不重复触发
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    assert build_mod._route_condition(_agent_state(tool_arg_rejections=5,
+                                                  confidence=0.80,
+                                                  escalate_cloud=True)) == "finalize"
+    # 边界：开关关闭 → 维持既有语义
+    monkeypatch.setenv("AUSCULT_CLOUD_FALLBACK", "0")
+    assert build_mod._route_condition(_agent_state(tool_arg_rejections=5,
+                                                  confidence=0.80)) == "finalize"
+
+
+def test_e2e_arg_rejections_trigger_early_cloud_fallback(monkeypatch):
+    """E2 全图：Agent 两轮参数被拒 → 路由提前升级云端（而非等置信度/重试）。"""
+    monkeypatch.setenv("AUSCULT_DIAGNOSIS_MODE", "agent")
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    monkeypatch.delenv("AUSCULT_CLOUD_FALLBACK", raising=False)
+    monkeypatch.delenv("AUSCULT_SANITIZE_OUTBOUND", raising=False)
+
+    # 前两轮：合法工具 + 空参数 → validate_tool_args 拒绝；第三轮给结论。
+    # 注意：这里**不打桩** execute_tool，走真实白名单/参数校验路径。
+    fake = _FakeClient([
+        _tool_calls_result(("query_sensor", {})),
+        _tool_calls_result(("search_knowledge", {})),
+        _final_result(_FINAL_JSON),
+    ])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+
+    graph = build_graph(InMemorySaver())
+    config = {"configurable": {"thread_id": "thr-e2e-reject"}}
+    result = graph.invoke({"thread_id": "thr-e2e-reject",
+                           "alarm": _alarm().model_dump()}, config)
+
+    assert result.get("tool_arg_rejections") == 2
+    # 云端兜底被触发：escalate_cloud 置位（本地后端下会真的去调云端 → 失败降级，
+    # 但关键是**路由选择了 escalate 而非 finalize**，且没有白跑完剩余步数）
+    assert result.get("escalate_cloud") is True
+    assert len(fake.calls) == 3               # 没有继续烧第 4 轮
+
+
+def test_escalate_includes_local_trajectory(monkeypatch):
+    """E1：云端兜底的 messages 必须带本地排查轨迹，且不含参数值/设备号。"""
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    state = _agent_state(agent_steps=[
+        {"step": 1, "tool": "query_sensor", "ok": False, "args_keys": ["device_id"],
+         "latency_ms": 12.3, "reject_kind": "arg"},
+        {"step": 2, "tool": "query_graph", "ok": True, "args_keys": ["start_node"],
+         "latency_ms": 45.6},
+        {"step": 3, "tool": None, "ok": True, "args_keys": [], "latency_ms": None,
+         "forced_final": True},
+    ], tool_arg_rejections=1)
+
+    section = cloud_mod._build_trajectory_section(state)
+    assert "本地 Agent 排查轨迹" in section
+    assert "query_sensor" in section and "参数校验未过" in section
+    assert "query_graph" in section
+    assert "强制收口" in section
+    assert "PUMP-A-01" not in section            # 只有参数键名，没有值
+
+    # 空轨迹 → 空串（不污染 prompt）
+    assert cloud_mod._build_trajectory_section(_agent_state()) == ""
 
 
 # ---------------------------------------------------------------- C3. 合规拒答/澄清（P7 · 2026-10-21）
@@ -966,14 +1173,26 @@ def test_agent_mode_graph_end_to_end(monkeypatch):
 
     graph = build_graph(InMemorySaver())
     config = {"configurable": {"thread_id": "thr-agent-e2e"}}
-    result = graph.invoke({"thread_id": "thr-agent-e2e",
-                           "alarm": _alarm().model_dump()}, config)
+    graph.invoke({"thread_id": "thr-agent-e2e",
+                  "alarm": _alarm().model_dump()}, config)
+
+    # 2026-10-22（Must#9 修复①）：`risk=high` 一律强制人工审核 → 图在此挂起。
+    # 旧断言假设 high 可直接走到 finalize（正是被判定为"绕过路径"的行为）。
+    from langgraph.types import Command  # noqa: PLC0415
+
+    snap = graph.get_state(config)
+    assert snap.values.get("risk_level") == "high"
+    assert "human_review" in (snap.next or ()), f"高风险未进审核：next={snap.next}"
+
+    result = graph.invoke(Command(resume={"action": "approved", "reviewer_id": "rev_dev",
+                                          "comment": "离线集成测试审核通过"}), config)
 
     assert result["diagnosis"] == "轴承外圈剥落导致振动超标"
     assert result["report_id"] and result["report_id"].startswith("RPT-")
     assert [e.chunk_id for e in result["evidence"]] == ["c_001"]
     assert any(s["tool"] == "search_knowledge" for s in result["agent_steps"])
     assert "blocked" not in result          # 引用有效 → 未触发硬校验
+    assert (result.get("human_review") or {}).get("status") == "approved"
 
 
 def test_call_ollama_relative_imports_resolve(monkeypatch):
@@ -1006,3 +1225,351 @@ def test_call_ollama_relative_imports_resolve(monkeypatch):
         [{"role": "user", "content": f"reglock-import-{uuid.uuid4().hex}"}],
         timeout=5.0)
     assert out == "确定性诊断结论"
+
+
+# ---------------------------------------------------------------- H. E3/E4（2026-10-22 外部评审增量）
+# E4：收口契约 needs_human/human_reason → risk 强制 high → 复用既有 human_review interrupt
+# E3：每轮工具调用后由**代码**回灌「当前诊断状态」摘要（不是让模型自述）
+
+def test_finalize_needs_human_forces_high_and_carries_reason(monkeypatch):
+    """E4：模型主动求助 → risk 强制 high + 原因带回 + W_HUMAN_REQUESTED 留痕。"""
+    payload = json.loads(_FINAL_JSON)
+    payload["needs_human"] = True
+    payload["human_reason"] = "关键测点缺失，需现场确认轴承状态"
+    fake = _FakeClient([_final_result(json.dumps(payload, ensure_ascii=False))])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+
+    out = ad.agent_diagnose(_agent_state())
+    assert out["needs_human"] is True
+    assert out["human_reason"] == "关键测点缺失，需现场确认轴承状态"
+    assert out["risk_level"] == "high"
+    assert out["errors"][0]["code"] == "W_HUMAN_REQUESTED"
+
+
+def test_finalize_needs_human_accepts_string_and_defaults_reason(monkeypatch):
+    """E4 第二例：模型把布尔写成字符串也要识别；缺原因时用兜底文案（不静默）。"""
+    payload = json.loads(_FINAL_JSON)
+    payload["needs_human"] = "是"
+    fake = _FakeClient([_final_result(json.dumps(payload, ensure_ascii=False))])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+
+    out = ad.agent_diagnose(_agent_state())
+    assert out["needs_human"] is True and out["human_reason"] is None
+    assert out["risk_level"] == "high"
+    assert out["errors"][0]["msg"] == "模型主动请求人工介入"
+
+
+def test_determine_risk_level_needs_human_override():
+    """E4 决策层：needs_human 覆盖一切阈值（高置信度也必须转人工）。"""
+    from app.graph.nodes.diagnose import _determine_risk_level
+
+    assert _determine_risk_level("low", 0.99) == "low"
+    assert _determine_risk_level("low", 0.99, needs_human=True) == "high"
+
+
+def test_route_needs_human_goes_to_review_before_confidence(monkeypatch):
+    """E4 路由：求助直达 human_review（不被 confidence<0.75 的 escalate 吞掉）。"""
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    monkeypatch.setenv("AUSCULT_CLOUD_FALLBACK", "0")
+    state = _agent_state(confidence=0.60, risk_level="high", needs_human=True,
+                         human_reason="需人工确认")
+    assert build_mod._route_condition(state) == "human_review"
+    # 重试耗尽的既有优先级不被推翻（避免死循环）
+    assert build_mod._route_condition(_agent_state(confidence=0.60, needs_human=True,
+                                                  retry_count=3)) == "degrade"
+
+
+def test_review_rule_and_payload_honor_needs_human():
+    """E4 审核侧：needs_human 命中审核、原因进 reason 与 payload（审核人能看到"要做什么"）。"""
+    from app.graph.nodes import review as review_mod
+
+    state = _agent_state(diagnosis="证据互相矛盾，需人工确认", confidence=0.62,
+                         risk_level="high", needs_human=True,
+                         human_reason="现场复测轴承温度后再定责")
+    risk_eval = review_mod.evaluate_high_risk(state)
+    assert risk_eval["needs_review"] is True
+    assert any("模型主动求助" in r and "现场复测" in r for r in risk_eval["reasons"])
+
+    payload = review_mod._build_review_payload(state, risk_eval)
+    assert payload["needs_human"] is True
+    assert payload["human_reason"] == "现场复测轴承温度后再定责"
+    assert payload["question"] == "模型主动请求人工介入"
+
+
+def test_state_brief_injected_after_each_tool_round(monkeypatch):
+    """E3：同一轮多个工具后追加**一条**摘要（非每个工具一条），内容含已取证事实。"""
+    fake = _FakeClient([
+        _tool_calls_result(("search_knowledge", {"query": "轴承剥落"}),
+                            ("query_sensor", {"device_id": "PUMP-A-01"})),
+        _final_result(_FINAL_JSON),
+    ])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+
+    def _fake_execute(name, arguments, *, alarm=None, thread_id=None):
+        if name == "search_knowledge":
+            return {"ok": True, "result": {"degraded": False, "items": [
+                {"chunk_id": "c_001", "score": 0.9, "text": "剥落特征"}]}}
+        return {"ok": True, "result": {
+            "device_id": "PUMP-A-01",
+            "series": [{"sensor_id": "PUMP-A-01.vib_rms", "column": "vib_rms",
+                        "count": 12, "avg": 6.2, "max": 7.1, "exceed_count": 4,
+                        "threshold": 4.5}]}}
+    monkeypatch.setattr(ad, "execute_tool", _fake_execute)
+
+    ad.agent_diagnose(_agent_state())
+    msgs = fake.calls[1]["messages"]
+    assert [m["role"] for m in msgs] == ["system", "user", "assistant",
+                                        "tool", "tool", "user"]
+    brief = msgs[-1]["content"]
+    assert "【当前诊断状态】" in brief
+    assert "search_knowledge×1" in brief and "query_sensor×1" in brief
+    assert "c_001" in brief                       # 可引用 chunk_id 显式摆出
+    assert "vib_rms" in brief and "max=7.1" in brief and "exceed_count=4" in brief
+
+
+def test_e2e_needs_human_triggers_existing_review_interrupt(monkeypatch):
+    """E4 全图：求助 → 走**既有** human_review interrupt（不新增中断类型/节点）。"""
+    monkeypatch.setenv("AUSCULT_DIAGNOSIS_MODE", "agent")
+    payload = json.loads(_FINAL_JSON)
+    payload.update({"needs_human": True,
+                    "human_reason": "证据互相矛盾，需人工判定",
+                    "self_confidence": 0.95})
+    fake = _FakeClient([_final_result(json.dumps(payload, ensure_ascii=False))])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+
+    graph = build_graph(InMemorySaver())
+    config = {"configurable": {"thread_id": "thr-needs-human"}}
+    graph.invoke({"thread_id": "thr-needs-human",
+                  "alarm": _alarm().model_dump()}, config)
+
+    snap = graph.get_state(config)
+    assert "human_review" in (snap.next or ())
+    intr = next(getattr(i, "value", None) for t in snap.tasks
+                for i in getattr(t, "interrupts", ()) or ())
+    assert intr["needs_human"] is True
+    assert intr["human_reason"] == "证据互相矛盾，需人工判定"
+    assert intr["risk_level"] == "high"
+    assert intr["question"] == "模型主动请求人工介入"
+    assert any("模型主动求助" in r for r in intr["risk_eval"]["reasons"])
+
+
+def test_state_brief_shows_failed_tool_calls(monkeypatch):
+    """E3 失败分支：被拒/失败也要进摘要（否则模型会无限重试同一调用）。"""
+    fake = _FakeClient([
+        _tool_calls_result(("query_graph", {"start_node": "PUMP-A-01"})),
+        _final_result(_FINAL_JSON),
+    ])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+    monkeypatch.setattr(ad, "execute_tool", lambda *a, **kw: {
+        "ok": False, "rejected": True, "reject_kind": "arg",
+        "error": "参数校验失败：缺少必填参数 start_node"})
+
+    ad.agent_diagnose(_agent_state())
+    brief = fake.calls[1]["messages"][-1]["content"]
+    assert "失败/被拒" in brief
+    assert "query_graph（参数校验未过）" in brief
+    assert "失败/被拒" not in ad._Collector().brief(step=1, max_steps=4)   # 无失败不造假
+
+
+# ---------------------------------------------------------------- I. E5 未收敛信号（2026-10-22）
+# 材料二 #6 的触发条件三组合里，"未收敛"此前的缺口：forced_final 只落 agent_steps，
+# 路由不消费——模型烧完步数被截停与正常收敛在路由上无差别。本组把该信号接进路由。
+
+def test_agent_loop_forced_final_marks_not_converged(monkeypatch):
+    """E5：步数用尽被强制收口 → not_converged=True；正常收敛不置位。"""
+    fake = _FakeClient([
+        _tool_calls_result(("search_knowledge", {"query": "q1"})),
+        _tool_calls_result(("search_knowledge", {"query": "q2"})),
+        _final_result(_FINAL_JSON),
+    ])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+    monkeypatch.setenv("AUSCULT_AGENT_MAX_STEPS", "2")
+    out = ad.agent_diagnose(_agent_state())
+    assert out["agent_steps"][-1]["forced_final"] is True
+    assert out["not_converged"] is True
+
+    fake2 = _FakeClient([_final_result(_FINAL_JSON)])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake2)
+    out2 = ad.agent_diagnose(_agent_state())
+    assert out2.get("not_converged", False) is False
+
+
+def test_route_not_converged_escalates_before_confidence(monkeypatch):
+    """E5 路由：未收敛（local + 未升级）→ 提前 escalate_cloud；求助优先级更高。"""
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    monkeypatch.delenv("AUSCULT_CLOUD_FALLBACK", raising=False)
+    # confidence 0.80 本应 finalize —— 未收敛是比 confidence 更早的失败信号
+    assert build_mod._route_condition(
+        _agent_state(confidence=0.80, not_converged=True)) == "escalate_cloud"
+    # 护栏：已升级过 → 不重复触发
+    assert build_mod._route_condition(
+        _agent_state(confidence=0.80, not_converged=True,
+                     escalate_cloud=True)) == "finalize"
+    # 护栏：后端即云端 → 不自我触发
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "cloud")
+    assert build_mod._route_condition(
+        _agent_state(confidence=0.80, not_converged=True)) == "finalize"
+    # 求助优先于未收敛（"要人定夺" vs "云端再裁一次"）
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    assert build_mod._route_condition(
+        _agent_state(confidence=0.80, not_converged=True, needs_human=True,
+                     risk_level="high")) == "human_review"
+
+
+def test_e2e_not_converged_triggers_cloud_fallback(monkeypatch):
+    """E5 全图：forced_final → 路由提前升级云端（而非等 confidence 判定）。"""
+    monkeypatch.setenv("AUSCULT_DIAGNOSIS_MODE", "agent")
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    monkeypatch.delenv("AUSCULT_CLOUD_FALLBACK", raising=False)
+    monkeypatch.delenv("AUSCULT_SANITIZE_OUTBOUND", raising=False)
+    monkeypatch.setenv("AUSCULT_AGENT_MAX_STEPS", "2")   # 2 轮工具 + 1 次强制收口
+    fake = _FakeClient([
+        _tool_calls_result(("search_knowledge", {"query": "q1"})),
+        _tool_calls_result(("search_knowledge", {"query": "q2"})),
+        _final_result(_FINAL_JSON),
+    ])
+    monkeypatch.setattr(ad, "get_client", lambda role: fake)
+
+    class _Svc:
+        def retrieve(self, question, *, mode=None, cache_key=None):
+            return {"degraded": False, "items": []}
+    monkeypatch.setattr(tr, "_get_retrieval_service", lambda: _Svc())
+
+    graph = build_graph(InMemorySaver())
+    config = {"configurable": {"thread_id": "thr-e5-notconv"}}
+    result = graph.invoke({"thread_id": "thr-e5-notconv",
+                           "alarm": _alarm().model_dump()}, config)
+
+    assert result.get("not_converged") is True
+    assert result.get("escalate_cloud") is True       # 路由选了 escalate 而非 finalize
+    assert len(fake.calls) == 3                       # 没有继续烧第 4 轮
+
+
+# ---------------------------------------------------------------- J. 求助率监控与调用方可见性（E4）
+
+def test_review_counts_needs_human_reason(monkeypatch):
+    """E4 可观测：转人工原因分开计数（模型求助 vs 风险等级高）。"""
+    from app.graph.nodes import review as review_mod
+
+    before_model = pm.NEEDS_HUMAN.labels(reason="needs_human")._value.get()
+    before_risk = pm.NEEDS_HUMAN.labels(reason="risk_high")._value.get()
+    monkeypatch.setattr(review_mod, "interrupt",
+                        lambda payload: {"action": "approved", "reviewer_id": "rev-j"})
+
+    review_mod.human_review(_agent_state(diagnosis="证据矛盾，需人工确认",
+                                         risk_level="high", needs_human=True,
+                                         human_reason="现场复测轴承温度"))
+    assert pm.NEEDS_HUMAN.labels(reason="needs_human")._value.get() == before_model + 1
+    assert pm.NEEDS_HUMAN.labels(reason="risk_high")._value.get() == before_risk
+
+    # 纯风险高（非求助，关键词命中）→ 计 risk_high，不污染求助占比
+    review_mod.human_review(_agent_state(diagnosis="需立即停机检查轴承",
+                                         risk_level="high"))
+    assert pm.NEEDS_HUMAN.labels(reason="risk_high")._value.get() == before_risk + 1
+    assert pm.NEEDS_HUMAN.labels(reason="needs_human")._value.get() == before_model + 1
+
+
+def test_absorb_needs_human_and_thread_status_exposes_it():
+    """E4 调用方可见性：求助标记进 ThreadRecord 与 thread_status（同 refusal 口径）。"""
+    from app.api import runner as runner_mod
+
+    rec = runner_mod.ThreadRecord("thr-nh", AlarmEvent(device_id="PUMP-A"), "eng")
+    runner_mod._absorb_needs_human(rec, "diagnose",
+                                   {"needs_human": True, "human_reason": "现场复测"})
+    runner_mod._absorb_needs_human(rec, "parse_alarm", {"needs_human": True})  # 非 diagnose 忽略
+    runner_mod._absorb_needs_human(rec, "diagnose", {"needs_human": False})    # 假值不清除
+    runner_mod._absorb_needs_human(rec, "diagnose", {"needs_human": True})     # 无 reason 不崩
+    runner_mod._absorb_needs_human(None, "diagnose", {"needs_human": True})    # rec=None 安全
+    assert rec.needs_human is True and rec.human_reason == "现场复测"
+
+    with runner_mod._reg_lock:
+        runner_mod._registry["thr-nh"] = rec
+    try:
+        st = runner_mod.thread_status("thr-nh")
+        assert st["needs_human"] is True and st["human_reason"] == "现场复测"
+    finally:
+        with runner_mod._reg_lock:
+            runner_mod._registry.pop("thr-nh", None)
+
+
+# ---------------------------------------------------------------- K. ISS-056 图谱/工单侧收尾（2026-10-22）
+
+def test_exec_get_maintenance_history_alias_and_empty_reason(monkeypatch):
+    """ISS-056 工单侧：别名归一 + 空结果回灌库里**真实编号样本**（不单向猜映射）。"""
+    from app import device_ids as did
+
+    captured: dict[str, Any] = {}
+
+    def _fake_history(device_id, *, limit=10, timeout=2.0):
+        captured["device_id"] = device_id
+        return []
+    monkeypatch.setattr("app.tools.get_maintenance_history.get_maintenance_history",
+                        _fake_history)
+    monkeypatch.setattr("app.tools.get_maintenance_history.list_known_devices",
+                        lambda **kw: ["PUMP-A", "PUMP-B"])
+
+    monkeypatch.delenv(did.SCHEME_ENV, raising=False)          # 默认 = 迁移后口径
+    out = tr.execute_tool("get_maintenance_history", {"device_id": "PUMP-A"})
+    assert out["ok"] is True
+    res = out["result"]
+    assert captured["device_id"] == "PUMP-A-01"                # 已按别名归一（短 → 规范）
+    assert res["device_id_resolved"] == {"requested": "PUMP-A", "used": "PUMP-A-01"}
+    assert res["empty_reason"] == "no_work_orders"
+    assert res["known_device_ids"] == ["PUMP-A", "PUMP-B"]    # 模型可据此自我纠正
+
+    monkeypatch.setenv(did.SCHEME_ENV, "legacy")               # 显式旧库口径
+    out2 = tr.execute_tool("get_maintenance_history", {"device_id": "PUMP-A-01"})
+    assert captured["device_id"] == "PUMP-A"
+    assert out2["result"]["device_id_resolved"] == {"requested": "PUMP-A-01",
+                                                    "used": "PUMP-A"}
+
+    # 探测失败（库不可达）→ 保守不给样本，不谎称"无此设备"
+    monkeypatch.delenv(did.SCHEME_ENV, raising=False)
+    monkeypatch.setattr("app.tools.get_maintenance_history.list_known_devices",
+                        lambda **kw: None)
+    out3 = tr.execute_tool("get_maintenance_history", {"device_id": "PUMP-A-01"})
+    res3 = out3["result"]
+    assert res3["empty_reason"] == "no_work_orders"
+    assert "known_device_ids" not in res3
+    assert "device_id_resolved" not in res3                    # 未命中原样透传
+
+
+def test_exec_query_graph_start_node_alias(monkeypatch):
+    """ISS-056 图谱侧：start_node 归一进 question；空命中给可解释 note。"""
+    from app import device_ids as did
+
+    seen: dict[str, Any] = {}
+
+    def _fake_graph(question):
+        seen["question"] = question
+        return {"degraded": False, "entities_hit": [], "hits": []}
+    monkeypatch.setattr("app.tools.query_graph.query_graph", _fake_graph)
+
+    monkeypatch.delenv(did.SCHEME_ENV, raising=False)          # 默认 = 迁移后口径
+    out = tr.execute_tool("query_graph", {"start_node": "PUMP-A"})
+    assert seen["question"].startswith("PUMP-A-01 ")          # 短编号 → 规范编号
+    res = out["result"]
+    assert res["device_id_resolved"] == {"requested": "PUMP-A", "used": "PUMP-A-01"}
+    assert "图谱未命中实体" in res["note"]                    # 空结果可解释
+
+    # 显式 legacy（未迁移的旧图谱）：完整编号不进图谱问题
+    monkeypatch.setenv(did.SCHEME_ENV, "legacy")
+    out2 = tr.execute_tool("query_graph", {"start_node": "PUMP-A-01"})
+    assert seen["question"].startswith("PUMP-A ")
+    assert "PUMP-A-01" not in seen["question"]
+    assert out2["result"]["device_id_resolved"] == {"requested": "PUMP-A-01",
+                                                    "used": "PUMP-A"}
+
+    # 未命中别名表 → 原样透传、不假装归一
+    monkeypatch.delenv(did.SCHEME_ENV, raising=False)
+    seen.clear()
+
+    def _fake_graph2(question):
+        seen["question"] = question
+        return {"degraded": False, "entities_hit": ["FAN-9"], "hits": []}
+    monkeypatch.setattr("app.tools.query_graph.query_graph", _fake_graph2)
+    out3 = tr.execute_tool("query_graph", {"start_node": "FAN-9"})
+    assert seen["question"].startswith("FAN-9 ")
+    assert "device_id_resolved" not in out3["result"]
+    assert "note" not in out3["result"]                       # 有实体命中 → 不给空结果提示
+

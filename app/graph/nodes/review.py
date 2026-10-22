@@ -24,6 +24,7 @@ from typing import Any
 import yaml
 from langgraph.types import interrupt
 
+from ...observability import prom_metrics as pm
 from ..state import DiagnosisState
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -80,10 +81,15 @@ def evaluate_high_risk(state: DiagnosisState) -> dict[str, Any]:
     policy = rules.get("review_policy", {})
     always_high = policy.get("always_interrupt_when_high", True)
     needs_review = bool(keywords_hit or operations_hit)
+    # E4（2026-10-22）：模型主动求助（needs_human）→ 必须进人工审核，不受关键词表限制
+    if state.needs_human:
+        needs_review = True
     if always_high and state.risk_level == "high":
         needs_review = True
 
     reasons: list[str] = []
+    if state.needs_human:
+        reasons.append(f"模型主动求助: {state.human_reason or '未说明原因'}")
     if keywords_hit:
         reasons.append(f"关键词命中: {', '.join(keywords_hit)}")
     if operations_hit:
@@ -118,8 +124,12 @@ def _build_review_payload(state: DiagnosisState, risk_eval: dict) -> dict[str, A
         ],
         "evidence_count": len(state.evidence),
         "confidence": state.confidence,
+        # E4：模型主动求助时把「需要人做什么」原样带给审核人
+        "needs_human": state.needs_human,
+        "human_reason": state.human_reason,
         "risk_eval": risk_eval,
-        "question": "高风险诊断，需人工审核",
+        "question": ("模型主动请求人工介入" if state.needs_human
+                     else "高风险诊断，需人工审核"),
         "resume_hint": 'resume({action: "approved"|"rejected", comment, reviewer_id})',
     }
 
@@ -155,6 +165,22 @@ def _validate_resume(decision: Any) -> dict[str, Any]:
             "errors": errors}
 
 
+def should_auto_approve(state: DiagnosisState, risk_eval: dict[str, Any]) -> bool:
+    """是否可跳过 `interrupt`（仅当确定性规则判定"确无高风险"时）。
+
+    2026-10-22（Must#9 绕过路径③）：原判据只看 `risk_eval["needs_review"]`，而它受
+    `configs/risk_rules.yml` 的 `always_interrupt_when_high` 开关影响 —— 该开关一旦被改成
+    false（配置漂移/误改），`risk_level=high` 就会落到这里**自动通过**，等于"改一行 YAML
+    就能绕过强制审核"。此处把 `risk_level=high` 与 `needs_human` 作为**代码级硬约束**叠加，
+    使该行为无法由配置关闭（配置只能让审核更严，不能更松）。
+    """
+    return (
+        not risk_eval["needs_review"]
+        and state.risk_level != "high"
+        and not state.needs_human
+    )
+
+
 # ---------------------------------------------------------------- human_review 节点
 
 def human_review(state: DiagnosisState) -> dict[str, Any]:
@@ -172,11 +198,16 @@ def human_review(state: DiagnosisState) -> dict[str, Any]:
     """
     risk_eval = evaluate_high_risk(state)
 
-    if not risk_eval["needs_review"]:
-        # 确定性规则判定无需审核（安全阀：LLM 误标 high 但无实际高风险操作）
+    if should_auto_approve(state, risk_eval):
+        # 确定性规则判定无需审核（安全阀：LLM 误标 high 但无实际高风险操作）。
+        # 注意：`risk_level=high` / `needs_human` 永不走这里（见 should_auto_approve 注释）。
         return {"human_review": {"decision": "auto_approved",
                                   "status": "auto_approved",
                                   "reason": "无高风险关键词/操作命中"}}
+
+    # E4/E5 可观测（2026-10-22）：转人工的原因分开计数——若"模型主动求助"占比
+    # 异常上升，说明模型在该域退化成"拿不准就上交"，审核量会静默积压。
+    pm.inc_needs_human("needs_human" if state.needs_human else "risk_high")
 
     # 构造 payload 并挂起
     payload = _build_review_payload(state, risk_eval)

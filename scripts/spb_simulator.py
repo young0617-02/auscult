@@ -347,7 +347,9 @@ def main():
     ap.add_argument("--ingest", action="store_true", help="启用连续灌数模式（替代 --scenario）")
     ap.add_argument("--hours", type=float, default=2.0, help="逻辑时间跨度（小时）")
     ap.add_argument("--interval-ms", type=int, default=1000, help="采样间隔 ms（默认 1Hz）")
-    ap.add_argument("--devices", default="PUMP-A,PUMP-B,PUMP-C", help="逗号分隔设备 id（首设备注入超限）")
+    # ISS-056 候选①：默认发**规范编号**（产品口径，见 app/device_ids.py）。
+    ap.add_argument("--devices", default="PUMP-A-01,PUMP-B-01,PUMP-C-01",
+                    help="逗号分隔设备 id（首设备注入超限）")
     ap.add_argument("--alert-start-ratio", type=float, default=0.5, help="超限段起始位置（逻辑时间窗比例）")
     ap.add_argument("--alert-duration-min", type=float, default=25.0, help="超限段持续时间（分钟）")
     ap.add_argument("--seed", type=int, default=20260928, help="随机种子")

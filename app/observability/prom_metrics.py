@@ -89,6 +89,15 @@ AUTO_TRIGGER = Counter(
     "auscult_auto_trigger_total", "告警自动触发计数（P7）",
     ["result"],   # started / skipped / error / disabled
 )
+NEEDS_HUMAN = Counter(
+    "auscult_needs_human_total", "转人工审核的原因计数（E4/E5 可观测）",
+    ["reason"],   # needs_human（模型主动求助）/ risk_high（风险等级高）
+)
+DEVICE_ID_SCHEME_MISMATCH = Counter(
+    "auscult_device_id_scheme_mismatch_total",
+    "工具层入参编号与库内口径不一致的调用计数（ISS-056 映射退场判据）",
+    ["direction"],   # short_input：canonical 模式收到短编号 / canonical_input：legacy 模式收到规范编号
+)
 
 # ---------------------------------------------------------------- 打点辅助
 
@@ -131,6 +140,25 @@ def inc_cache(op: str, result: str) -> None:
 
 def inc_auto_trigger(result: str) -> None:
     AUTO_TRIGGER.labels(result=result).inc()
+
+
+def inc_needs_human(reason: str) -> None:
+    """转人工审核原因打点：区分「模型主动求助」与「风险等级高」。
+
+    动机（E4 运维缺口）：若模型学会"拿不准就求助"（尤其 7B），人工审核量会静默
+    上涨——只有把两者分开计数，才能从 `auscult_needs_human_total{reason=...}`
+    的占比变化里提前发现，而不是等审核工单积压。
+    """
+    NEEDS_HUMAN.labels(reason=reason).inc()
+
+
+def inc_device_id_mismatch(direction: str) -> None:
+    """设备编号口径漂移打点（ISS-056 映射退场判据）。
+
+    动机：`storage_id()` 兼容层什么时候能删，不能靠"感觉该删了"。两类方向都为 0
+    （连续一周）才说明所有调用方都已跟上迁移；否则删掉就是让历史调用方静默查空。
+    """
+    DEVICE_ID_SCHEME_MISMATCH.labels(direction=direction).inc()
 
 
 def refresh_budget_ratio() -> None:

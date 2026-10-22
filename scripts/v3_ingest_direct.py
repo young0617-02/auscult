@@ -51,7 +51,9 @@ def main():
     ap.add_argument("--td-password", default="taosdata")
     ap.add_argument("--hours", type=float, default=2.0)
     ap.add_argument("--interval-ms", type=int, default=1000)
-    ap.add_argument("--devices", default="PUMP-A,PUMP-B,PUMP-C")
+    # ISS-056 候选①（2026-10-22）：默认灌**规范编号**（产品口径），与
+    # `app/device_ids.CANONICAL_TO_LEGACY` 单一事实源一致；旧短编号仍可用 --devices 传入。
+    ap.add_argument("--devices", default="PUMP-A-01,PUMP-B-01,PUMP-C-01")
     ap.add_argument("--alert-start-ratio", type=float, default=0.5)
     ap.add_argument("--alert-duration-min", type=float, default=25.0)
     ap.add_argument("--seed", type=int, default=20260928)

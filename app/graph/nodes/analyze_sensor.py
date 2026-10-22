@@ -13,7 +13,7 @@ import time
 from typing import Any
 
 from ...observability import prom_metrics as pm
-from ...tools.query_sensor import query_sensor
+from ...tools.query_sensor import percentile, query_sensor
 from ..state import DiagnosisState
 
 # 查询窗口: 告警前 30 分钟 ~ 告警后 5 分钟
@@ -28,10 +28,15 @@ def _compute_stats(
     threshold: float | None,
     sampling_interval_ms: float = 1000.0,
 ) -> dict[str, Any]:
-    """计算统计摘要。"""
+    """计算统计摘要（Must#3：含 `p95` 与 `anomaly`，对齐 Phase 0 判据）。
+
+    判据原文（`docs/p0-spec-scope-mvp.md:49`）要求 `query_sensor` 返回
+    「avg/max/min/**p95**/trend + 异常标记 **anomaly**」；原实现两者皆无。
+    """
     if not values:
         return {
             "count": 0, "avg": 0.0, "max": 0.0, "min": 0.0, "last": 0.0,
+            "p95": 0.0, "anomaly": False, "anomaly_reasons": [],
             "exceed_count": 0, "exceed_duration_ms": 0.0,
             "threshold": threshold, "trend": "unknown",
         }
@@ -59,12 +64,25 @@ def _compute_stats(
     else:
         trend = "unknown"
 
+    # Must#3：p95（线性插值，与 query_sensor 契约同算法）+ 可解释的异常标记
+    p95 = round(percentile(values, 0.95), 4)
+    anomaly_reasons: list[str] = []
+    if threshold is not None and exceed_count > 0:
+        anomaly_reasons.append(
+            f"{exceed_count}/{len(values)} 个采样点超阈值 {threshold}（峰值 {round(mx, 4)}）")
+    if trend == "rising" and avg > 0 and mx > avg * 1.5:
+        anomaly_reasons.append(
+            f"趋势上升且峰值 {round(mx, 4)} 达均值 {round(avg, 4)} 的 {round(mx / avg, 2)} 倍")
+
     return {
         "count": len(values),
         "avg": round(avg, 4),
         "max": round(mx, 4),
         "min": round(mn, 4),
         "last": round(last, 4),
+        "p95": p95,
+        "anomaly": bool(anomaly_reasons),
+        "anomaly_reasons": anomaly_reasons,
         "exceed_count": exceed_count,
         "exceed_duration_ms": round(exceed_count * sampling_interval_ms, 1),
         "threshold": threshold,

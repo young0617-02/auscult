@@ -28,6 +28,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..device_ids import CANONICAL_TO_LEGACY, device_id_scheme, storage_id
+from ..observability import prom_metrics as pm
 from ..security.sanitizer import audit_tool_call, validate_tool_args, validate_tool_call
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -52,6 +54,16 @@ SENSOR_COLUMN_MAP: dict[str, str] = {
     "bearing_temp": "bearing_temp", "motor_current": "motor_current",
     "pump_speed": "pump_speed",
 }
+
+#: 产品规范设备号 → 数据层设备号（ISS-056 候选①，2026-10-22）
+#: 口径已收敛到 `app.device_ids`（单一事实源）——本常量保留为**只读兼容别名**，
+#: 实际查询走 `storage_id()`：由 `AUSCULT_DEVICE_ID_SCHEME`（legacy|canonical）决定
+#: 落到"库内当前形态"，使迁移期（新数据规范、旧数据短编号）查询两侧都能命中。
+#: 映射未命中时原样透传（真实未知设备仍走 `_device_has_any_data` 分类）。
+#: 适用范围：`query_sensor` / `query_graph`（start_node）/ `get_maintenance_history`。
+#: 工单侧另配「空结果回灌真实编号样本」兜底：`work_orders.device_id` 源数据是
+#: 图纸/台账口径（`A 0泵`、客户号），候选①对其**无迁移对象**，见 `app/device_ids` 头注。
+DEVICE_ALIAS_MAP: dict[str, str] = CANONICAL_TO_LEGACY
 
 _MAX_SENSORS_PER_CALL = 3      # 单次工具调用最多查 3 个测点（延迟护栏）
 _MAX_TEXT_CHARS = 300          # 单条知识块注入 LLM 的最大字符数
@@ -142,6 +154,45 @@ def _resolve_window(time_range: Any, *, now_ms: int) -> tuple[int, int]:
 
 # ---------------------------------------------------------------- 各工具执行体
 
+def _device_has_any_data(device_id: str, *, timeout: float = 1.0) -> bool:
+    """该设备在时序库中是否有**任何**记录（不限时间窗）。
+
+    ISS-056 的关键补丁：`query_sensor` 查不到数据时返回 `ok=True, count=0`，
+    模型无法区分「设备号写错」与「窗口内确实没数据」。此函数多发一次不限窗口的
+    计数查询把两者分开；**探测失败时保守返回 True**（TDengine 抖动不应被谎称成
+    "设备不存在"，宁可把空结果归因为窗口问题）。
+    """
+    from ..tools.query_sensor import (          # noqa: PLC0415
+        TDENGINE_DB, _SAFE_ID, _td_query,
+    )
+    if not _SAFE_ID.match(device_id or ""):
+        return False
+    try:
+        body = _td_query(
+            f"SELECT count(*) FROM iot.st_pump_metrics "
+            f"WHERE device_id = '{device_id}'",
+            db=TDENGINE_DB, timeout=timeout)
+        return bool(body.get("data") and int(body["data"][0][0] or 0) > 0)
+    except (TimeoutError, ConnectionError, RuntimeError):
+        return True
+
+
+def _storage_id(device_id: str) -> str:
+    """`storage_id()` + 口径漂移打点（ISS-056 映射退场判据）。
+
+    - `direction=short_input`：默认 `canonical` 模式下仍收到短编号（客户端没跟上迁移）；
+    - `direction=canonical_input`：显式 `legacy` 模式下收到规范编号。
+
+    两类都为 0（连续一周）且 `--verify` 的 `off_scheme` 恒空，才可删除映射层
+    （判据见 `app/device_ids` 头注「迁移节奏」第 4 条）。
+    """
+    stored = storage_id(device_id)
+    if stored != (device_id or "").strip():
+        pm.inc_device_id_mismatch(
+            "short_input" if device_id_scheme() == "canonical" else "canonical_input")
+    return stored
+
+
 def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     from ..graph.nodes.analyze_sensor import _compute_stats   # noqa: PLC0415
     from ..tools.query_sensor import query_sensor             # noqa: PLC0415
@@ -149,6 +200,11 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     device_id = str(args.get("device_id") or "").strip()
     if not device_id:
         return {"ok": False, "error": "缺少必填参数 device_id"}
+
+    # ISS-056 候选①：任意输入（规范/短）→ 库内当前形态（由 AUSCULT_DEVICE_ID_SCHEME
+    # 决定；迁移前仍是短编号，迁移后是 PUMP-A-01）。未命中原样透传，真实未知设备
+    # 不会被这张表伪装成有数据。
+    resolved_id = _storage_id(device_id)
 
     sensor_ids = args.get("sensor_ids") or []
     if not sensor_ids and alarm is not None and alarm.metric:
@@ -163,6 +219,7 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
 
     series: list[dict[str, Any]] = []
     errors: list[str] = []
+    empty_reason: str | None = None
     for sensor in sensor_ids:
         short = sensor.split(".")[-1] if "." in sensor else sensor
         column = SENSOR_COLUMN_MAP.get(short)
@@ -170,21 +227,42 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
             errors.append(f"测点 {sensor} 未登记（无对应时序列）")
             continue
         try:
-            rows = query_sensor(device_id=device_id, metric=column,
+            rows = query_sensor(device_id=resolved_id, metric=column,
                                 start_ts=start_ts, end_ts=end_ts,
                                 timeout=1.0)["rows"]
         except (TimeoutError, ConnectionError, RuntimeError) as exc:
             errors.append(f"{sensor} 查询失败: {exc}")
+            continue
+        if not rows:
+            # ISS-056：不再把"查不到"静默包装成 count=0 的有效证据 —— 必须告诉
+            # 模型是"设备号不存在"还是"窗口内无数据"，它才能自我纠正。
+            if _device_has_any_data(resolved_id):
+                errors.append(f"测点 {sensor}（列 {column}）在查询窗口内无数据")
+                empty_reason = empty_reason or "no_data_in_window"
+            else:
+                errors.append(
+                    f"设备 {device_id}（数据层编号 {resolved_id}）在时序库中不存在，"
+                    f"测点 {sensor} 无从查询")
+                empty_reason = empty_reason or "device_not_found"
             continue
         values = [float(r["value"]) for r in rows]
         stats = _compute_stats(values, baseline if column == "vib_rms" else None)
         series.append({"sensor_id": sensor, "column": column, **stats})
 
     if not series:
-        return {"ok": False, "error": "; ".join(errors) or "无可用测点数据"}
-    result: dict[str, Any] = {"device_id": device_id, "series": series}
+        out: dict[str, Any] = {"ok": False,
+                               "error": "; ".join(errors) or "无可用测点数据"}
+        if empty_reason:
+            out["empty_reason"] = empty_reason
+        return out
+    result: dict[str, Any] = {"device_id": resolved_id, "series": series}
+    if device_id != resolved_id:
+        # 透明度：让模型与审计都看到发生了编号归一（ISS-056）
+        result["device_id_resolved"] = {"requested": device_id, "used": resolved_id}
     if errors:
         result["partial_errors"] = errors
+    if empty_reason:
+        result["empty_reason"] = empty_reason
     if any(s["column"] == "vib_rms" and s["sensor_id"].endswith(("vib_x", "vib_y", "vib_z"))
            for s in series):
         result["note"] = ("三向振动（vib_x/vib_y/vib_z）当前存储未分向，"
@@ -233,8 +311,11 @@ def _exec_query_graph(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     start_node = str(args.get("start_node") or "").strip()
     if not start_node:
         return {"ok": False, "error": "缺少必填参数 start_node"}
+    # ISS-056 候选①：图谱实体编号与 query_sensor 同一 `storage_id()` 口径
+    # （迁移前短编号、迁移后规范编号；未命中原样透传）。
+    resolved_node = _storage_id(start_node)
     relations = [str(r) for r in (args.get("relation_types") or [])]
-    question = f"{start_node} 设备关系与故障关联"
+    question = f"{resolved_node} 设备关系与故障关联"
     if relations:
         question += f"（关注关系: {'、'.join(relations)}）"
     try:
@@ -245,35 +326,58 @@ def _exec_query_graph(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
         return {"ok": True, "result": {"degraded": True,
                                        "reason": out.get("reason") or "图谱降级"}}
     hits = out.get("hits") or []
-    return {"ok": True, "result": {
+    result: dict[str, Any] = {
         "degraded": False,
         "entities_hit": out.get("entities_hit") or [],
         "hits": [{"chunk_id": h.get("chunk_id", ""),
                   "score": round(float(h.get("score") or 0.0), 4)}
                  for h in hits[:_MAX_ROWS]],
-    }}
+    }
+    if start_node != resolved_node:
+        # 透明度：让模型与审计都看到发生了编号归一（与 query_sensor 同型）
+        result["device_id_resolved"] = {"requested": start_node, "used": resolved_node}
+    if not result["hits"] and not result["entities_hit"]:
+        # 图谱侧"空结果"也要可解释：实体名不匹配与"确实无关联"是两回事
+        result["note"] = (f"图谱未命中实体 `{resolved_node}`（可能编号口径不符或无关联）；"
+                          f"可换编号重试或依据其他证据下结论")
+    return {"ok": True, "result": result}
 
 
 def _exec_get_maintenance_history(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
-    from ..tools.get_maintenance_history import get_maintenance_history  # noqa: PLC0415
+    from ..tools.get_maintenance_history import (          # noqa: PLC0415
+        get_maintenance_history, list_known_devices,
+    )
 
     device_id = str(args.get("device_id") or "").strip()
     if not device_id:
         return {"ok": False, "error": "缺少必填参数 device_id"}
+    # ISS-056 候选①：工单侧同一 `storage_id()` 口径。注意工单库源数据是图纸/台账口径
+    # （`A 0泵`/客户号），本映射对其无作用——靠下面的空结果样本回灌兜底。
+    resolved_id = _storage_id(device_id)
     limit = min(int(args.get("limit") or 10), _MAX_ROWS)
     try:
-        rows = get_maintenance_history(device_id, limit=limit, timeout=2.0)
+        rows = get_maintenance_history(resolved_id, limit=limit, timeout=2.0)
     except (TimeoutError, ConnectionError, RuntimeError) as exc:
         return {"ok": False, "error": f"工单查询失败: {exc}"}
-    return {"ok": True, "result": {
-        "device_id": device_id,
+    result: dict[str, Any] = {
+        "device_id": resolved_id,
         "work_orders": [{"order_id": r.get("order_id", ""),
                          "fault": r.get("fault", ""),
                          "action": r.get("action", ""),
                          "result": r.get("result"),
                          "created_at": str(r.get("created_at") or "")[:19]}
                         for r in rows],
-    }}
+    }
+    if device_id != resolved_id:
+        result["device_id_resolved"] = {"requested": device_id, "used": resolved_id}
+    if not rows:
+        # ISS-056 空结果可区分：把库里**实际存在的编号样本**回灌（而非猜一个映射），
+        # 模型可据此自我纠正；探测失败时保守不给样本（不谎称"无此设备"）。
+        known = list_known_devices()
+        result["empty_reason"] = "no_work_orders"
+        if known:
+            result["known_device_ids"] = known
+    return {"ok": True, "result": result}
 
 
 _EXECUTORS = {
@@ -300,13 +404,15 @@ def execute_tool(name: str, arguments: dict[str, Any], *,
         audit_tool_call(thread_id, product_name, {"args_keys": sorted(args)},
                         allowed=False)
         return {"ok": False,
+                "rejected": True, "reject_kind": "write_guard",
                 "error": "写操作护栏：报告生成需经人工审核通过后由系统统一执行，"
                          "Agent 不直接生成报告。请继续输出诊断结论 JSON。"}
 
     if not validate_tool_call(product_name):
         audit_tool_call(thread_id, product_name, {"args_keys": sorted(args)},
                         allowed=False)
-        return {"ok": False, "error": f"工具 '{name}' 不在白名单中，已拒绝执行"}
+        return {"ok": False, "rejected": True, "reject_kind": "whitelist",
+                "error": f"工具 '{name}' 不在白名单中，已拒绝执行"}
 
     # 参数级前置校验（2026-10-21 接线）：此前 validate_tool_args 从未被调用，
     # 缺参只能靠各执行体手工兜底 —— 统一在这里拦，模型可据 error 自我纠正。
@@ -315,7 +421,7 @@ def execute_tool(name: str, arguments: dict[str, Any], *,
         audit_tool_call(thread_id, product_name,
                         {"args_keys": sorted(args), "invalid": arg_check["errors"]},
                         allowed=False)
-        return {"ok": False,
+        return {"ok": False, "rejected": True, "reject_kind": "arg",
                 "error": "参数校验失败：" + "；".join(arg_check["errors"])
                          + "。请补齐参数后重试。"}
 

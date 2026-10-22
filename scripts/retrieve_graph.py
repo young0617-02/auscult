@@ -58,13 +58,18 @@ def retrieve_graph(rewrite: dict[str, Any]) -> dict[str, Any]:
     rels_pat = rel_filter
     statements = []
     for name in names:
+        # 2026-10-22（Must#5）：同时返回**路径本身**（节点名 + 关系类型），不再只回 chunk_id。
+        # 原 RETURN 只给 cid，把 `MATCH p = ...` 拿到的路径丢掉了 → 上层 `GraphPath.edges`
+        # 恒空，"支撑路径"名不副实。Cypher 侧只加两列，无额外查询。
         statements.append(
             f"MATCH p = (s:Entity {{name: {name!r}}})-[:{rels_pat}*1..2]-(e:Entity) "
-            f"WITH relationships(p) AS rels "
+            f"WITH p, relationships(p) AS rels "
             f"UNWIND rels AS r "
-            f"WITH r WHERE size(coalesce(r.source_chunk_ids, [])) > 0 "
+            f"WITH p, r WHERE size(coalesce(r.source_chunk_ids, [])) > 0 "
             f"UNWIND r.source_chunk_ids AS cid "
-            f"RETURN DISTINCT cid AS cid"
+            f"WITH DISTINCT cid, p "
+            f"RETURN cid, [n IN nodes(p) | coalesce(n.name, '')] AS path_nodes, "
+            f"[r IN relationships(p) | type(r)] AS path_rels"
         )
 
     started = time.perf_counter()
@@ -75,21 +80,34 @@ def retrieve_graph(rewrite: dict[str, Any]) -> dict[str, Any]:
                 "route_latency_ms": 0.0, "reason": f"{type(exc).__name__}: {exc}"}
     latency_ms = (time.perf_counter() - started) * 1000
 
-    # 汇总所有出现的 chunk_id → 出现次数（作为本路的弱对齐分，不进入 RRF）
+    # 汇总所有出现的 chunk_id → 出现次数（作为本路的弱对齐分，不进入 RRF），
+    # 并保留**首条**命中路径的节点/关系（同一 chunk 可能被多条路径共享，取一条即可）。
     counter: dict[str, int] = {}
+    paths: list[dict[str, Any]] = []
+    seen_path_cid: set[str] = set()
     for result in results:
         for table in result.get("data", []):
-            for col in table.get("row", []):
-                vals = col if isinstance(col, list) else [col]
-                for cid in vals:
-                    if isinstance(cid, str):
-                        counter[cid] = counter.get(cid, 0) + 1
+            row = table.get("row") or []
+            if not row:
+                continue
+            cid = row[0]
+            if not isinstance(cid, str):
+                continue
+            counter[cid] = counter.get(cid, 0) + 1
+            # 兼容旧格式（只有 cid 一列）：hits 照常产出，只是没有路径可填。
+            if len(row) >= 3 and cid not in seen_path_cid:
+                seen_path_cid.add(cid)
+                paths.append({"chunk_id": cid,
+                              "nodes": [str(n) for n in (row[1] or []) if n],
+                              "edges": [str(r) for r in (row[2] or []) if r]})
+
     hits = [make_hit(cid, float(cnt), rank, "graph")
             for rank, (cid, cnt) in enumerate(
                 sorted(counter.items(), key=lambda kv: -kv[1]), start=1)
             ][:top_paths]
     return {"route": "graph", "hits": hits, "degraded": False,
-            "route_latency_ms": latency_ms, "entities_hit": names}
+            "route_latency_ms": latency_ms, "entities_hit": names,
+            "paths": paths[:top_paths]}
 
 
 def _selftest() -> int:

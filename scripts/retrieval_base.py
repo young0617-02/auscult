@@ -14,6 +14,7 @@ import base64
 import json
 import os
 import re
+import sys
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -21,8 +22,14 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 RETRIEVAL_CONFIG = PROJECT_ROOT / "configs" / "retrieval.yml"
 
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+
+from milvus_endpoint import milvus_uri  # noqa: E402
+
 # 拓扑常量（与 build_milvus_v1.py / extract_triples.py 保持一致，便于复用）
-MILVUS_URI = f"http://127.0.0.1:{os.environ.get('MILVUS_PORT', '19531')}"   # 读环境变量，默认 19531（v2 业务栈）；P5 复现 kee-milvus 口径设 MILVUS_PORT=39530
+# ISS-042：端点口径收在 `scripts/milvus_endpoint.py`（默认 19531 = deploy 栈宿主映射；
+# P5 复现 kee-milvus 口径设 MILVUS_PORT=39530）。
+MILVUS_URI = milvus_uri()
 MILVUS_COLLECTION = "kb_p1_v1"
 NEO4J_URI = "http://127.0.0.1:7474"
 NEO4J_USER = "neo4j"

@@ -59,6 +59,35 @@ def _td_query(sql: str, db: str = TDENGINE_DB, timeout: float = 0.5) -> dict:
         raise ConnectionError(f"TDengine 不可达: {e}")
 
 
+def percentile(values: list[float], q: float) -> float:
+    """线性插值分位数（`q=0.95` → P95）。
+
+    与 `reports/p0-report-v3-ingest-license.md` §七 的 P95 口径一致（线性插值，非 nearest-rank），
+    供 `analyze_sensor` 与工具层复用，避免两套算法各算各的。
+    """
+    if not values:
+        return 0.0
+    s = sorted(values)
+    if len(s) == 1:
+        return s[0]
+    pos = (len(s) - 1) * q
+    lo = int(pos)
+    hi = min(lo + 1, len(s) - 1)
+    return s[lo] + (s[hi] - s[lo]) * (pos - lo)
+
+
+def profile(values: list[float]) -> dict[str, float]:
+    """窗口内分布摘要（avg/max/min/p95）——`query_sensor` 契约补齐（Must#3）。"""
+    if not values:
+        return {"avg": 0.0, "max": 0.0, "min": 0.0, "p95": 0.0}
+    return {
+        "avg": round(sum(values) / len(values), 4),
+        "max": round(max(values), 4),
+        "min": round(min(values), 4),
+        "p95": round(percentile(values, 0.95), 4),
+    }
+
+
 def query_sensor(
     device_id: str,
     metric: str,
@@ -98,9 +127,12 @@ def query_sensor(
     data = result.get("data", [])
     rows = [{"ts": row[0], "value": row[1]} for row in data]
 
+    values = [r["value"] for r in rows if isinstance(r["value"], (int, float))]
     return {
         "device_id": device_id,
         "metric": metric,
         "rows": rows,
         "count": len(rows),
+        # Must#3：判据要求 avg/max/min/**p95**/trend，原返回只有 rows/count → 补齐分布摘要
+        "stats": profile(values),
     }

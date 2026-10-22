@@ -29,9 +29,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
 
 from run_v2 import GOLDEN_PATH, load_corpus, load_golden  # noqa: E402
+from milvus_endpoint import milvus_uri  # noqa: E402
 
 DEFAULT_PG_DSN = "postgresql://root:123456@127.0.0.1:5433/auscult_v2"
-DEFAULT_MILVUS_URI = "http://127.0.0.1:19531"
+DEFAULT_MILVUS_URI = milvus_uri()   # ISS-042：端点单一事实源（默认 19531 = deploy 栈）
 TOP_K = 5
 PG_CONTAINER = "auscult-v2-pg"
 MILVUS_CONTAINER = "auscult-v2-milvus"

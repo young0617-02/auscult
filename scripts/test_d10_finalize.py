@@ -52,11 +52,12 @@ def test_empty_diagnosis() -> None:
         risk_level="high",
     )
     result = finalize(state)
-    assert result["report_id"].startswith("RPT-")
-    assert "errors" in result
+    assert result["report_id"] is None           # 2026-10-22：空诊断 + 零引用 → 阻断定稿
+    assert result["blocked"] is True
     codes = [e["code"] for e in result["errors"]]
     assert "W_NO_DIAGNOSIS" in codes
-    print("[PASS] 空诊断 → W_NO_DIAGNOSIS")
+    assert "E_NO_CITATION" in codes
+    print("[PASS] 空诊断 + 零引用 → 阻断（W_NO_DIAGNOSIS + E_NO_CITATION）")
 
 
 def test_invalid_citation() -> None:
@@ -70,9 +71,10 @@ def test_invalid_citation() -> None:
         risk_level="medium",
     )
     result = finalize(state)
+    assert result["report_id"] is None           # 2026-10-14 起 E_ 级即阻断；本断言 2026-10-22 同步
     codes = [e["code"] for e in result.get("errors", [])]
-    assert "W_INVALID_CITATION" in codes
-    print("[PASS] 无效引用 → W_INVALID_CITATION")
+    assert "E_INVALID_CITATION" in codes
+    print("[PASS] 无效引用 → 阻断（E_INVALID_CITATION）")
 
 
 def test_idempotency() -> None:

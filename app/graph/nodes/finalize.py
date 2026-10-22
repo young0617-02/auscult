@@ -39,6 +39,10 @@ def _validate_citations(state: DiagnosisState) -> tuple[list[dict[str, str]], li
     2026-10-14 修复：原实现把无效引用仅记为 `W_INVALID_CITATION`（非阻塞），
     实测导致报告带着 3 条无效引用照常定稿；同时引用格式 `chunk_id=<id>` 与
     evidence 的纯 id 不匹配，使校验恒判无效（误报）。
+
+    2026-10-22 补齐：**空引用**（`citations=[]`）也阻断（`E_NO_CITATION`）。此前只查
+    "引用无效"，实跑 S1 时零引用报告照样定稿，使"无来源不出结论"名不副实。
+    拒答（`refusal`）与降级（`degrade_reason` 非空）路径例外——它们的产出本就不是正式结论。
     """
     warnings: list[dict[str, str]] = []
     errors: list[dict[str, str]] = []
@@ -47,6 +51,17 @@ def _validate_citations(state: DiagnosisState) -> tuple[list[dict[str, str]], li
     if not state.diagnosis:
         warnings.append({"node": "finalize", "code": "W_NO_DIAGNOSIS",
                          "msg": "诊断结论为空"})
+
+    # 2026-10-22（Must#7 缺口修复）：**空引用**同样拦截。
+    # 原实现只在「给了引用但引用无效」时阻断，`citations=[]` 直接跳过 —— 实测 S1 主场景
+    # 零引用报告照样定稿（`RPT-dfbf857be97f625e`），"无来源不出结论"名不副实。
+    # 例外：合规拒答（`refusal`）与已降级（`degrade_reason` 非空）路径按设计允许无引用，
+    # 因为其报告本身就是「无法作答 / 初步判断」，且已带显式降级披露。
+    total_citations = (sum(len(rc.citations) for rc in state.root_causes)
+                       + sum(len(s.citations) for s in state.suggestions))
+    if not total_citations and not state.refusal and not state.degrade_reason:
+        errors.append({"node": "finalize", "code": "E_NO_CITATION",
+                       "msg": "结论未给出任何证据引用（无来源不出结论）"})
 
     # 根因/建议引用的 chunk_id 应在 evidence 中存在（规范化后比对）
     valid_ids = {ev.chunk_id for ev in state.evidence if ev.chunk_id}

@@ -65,8 +65,11 @@ from .diagnose import (  # noqa: E402
 _FORCED_FINAL_INSTRUCTION = (
     "工具调用步数已达上限。请停止调用工具，基于已获得的工具结果，"
     "直接输出最终诊断结论 JSON（citations 只能引用工具结果中出现过的 chunk_id，"
-    "不得编造）。"
+    "不得编造）。若证据仍不足以支撑可执行结论，置 needs_human=true 并写明 human_reason。"
 )
+
+#: 状态摘要中最多列出的 chunk_id 个数（每次回灌都随 messages 出网，需控体积）
+_MAX_BRIEF_CHUNKS = 6
 
 
 class _Collector:
@@ -77,11 +80,24 @@ class _Collector:
         self.graph_paths: list[GraphPath] = []
         self.work_orders: list[WorkOrder] = []
         self.sensor_report: dict | None = None
+        # E3（2026-10-22）：逐次工具调用的成败/拒绝原因 + 工具自带的透明度提示，
+        # 用于代码生成「当前诊断状态」摘要（失败分支也必须可见，否则模型反复重试）。
+        self.calls: list[dict[str, Any]] = []
+        self.notes: list[str] = []
 
     def absorb(self, name: str, out: dict[str, Any]) -> None:
-        if not out.get("ok"):
+        ok = bool(out.get("ok"))
+        self.calls.append({"name": name, "ok": ok,
+                           "error": str(out.get("error") or "")[:100],
+                           "reject_kind": out.get("reject_kind")})
+        if not ok:
             return
         result = out.get("result") or {}
+        for key, label in (("note", "提示"), ("partial_errors", "部分失败")):
+            val = result.get(key)
+            if val:
+                text = val if isinstance(val, str) else "；".join(str(v) for v in val)
+                self.notes.append(f"{label}: {text[:160]}")
         if name == "query_sensor":
             self._absorb_sensor(result)
         elif name == "search_knowledge":
@@ -151,6 +167,73 @@ class _Collector:
         if self.sensor_report is not None:
             out["sensor_report"] = self.sensor_report
         return out
+
+    # ------------------------------------------------------------ E3 状态摘要
+
+    def _tool_counts(self) -> str:
+        counts: dict[str, int] = {}
+        for call in self.calls:
+            counts[call["name"]] = counts.get(call["name"], 0) + 1
+        return "、".join(f"{name}×{n}" for name, n in counts.items())
+
+    def _sensor_line(self) -> str:
+        report = self.sensor_report
+        if not report:
+            return "未获取"
+        bits = [f"测点 {report.get('metric') or '未知'}"]
+        for key in ("count", "avg", "max", "exceed_count", "exceed_duration_ms",
+                    "threshold", "trend"):
+            if report.get(key) is not None:
+                bits.append(f"{key}={report[key]}")
+        return "，".join(str(b) for b in bits)
+
+    def _evidence_line(self) -> str:
+        if not self.evidence:
+            return "未获取"
+        ids = list(dict.fromkeys(e.chunk_id for e in self.evidence if e.chunk_id))
+        top = max((e.score for e in self.evidence), default=0.0)
+        line = f"{len(self.evidence)} 条（最高相关度 {top:.2f}）"
+        if ids:
+            shown = ids[:_MAX_BRIEF_CHUNKS]
+            line += "，可引用 chunk_id：" + "、".join(shown)
+            if len(ids) > len(shown):
+                line += f" 等 {len(ids)} 个"
+        return line
+
+    def _failure_line(self) -> str:
+        labels = {"whitelist": "白名单拒绝", "arg": "参数校验未过",
+                  "write_guard": "写操作护栏"}
+        parts: list[str] = []
+        for call in self.calls:
+            if call["ok"]:
+                continue
+            reason = labels.get(call.get("reject_kind") or "",
+                                call.get("error") or "执行失败")
+            parts.append(f"{call['name']}（{reason}）")
+        return "；".join(parts)
+
+    def brief(self, step: int, max_steps: int) -> str:
+        """「当前诊断状态」摘要（**代码**生成，每轮工具调用后回灌给模型）。
+
+        为什么由代码生成而不是让模型自己总结：模型看不到上一轮被截断的 tool
+        消息时容易重复取数或凭印象编 chunk_id；把已取证事实（含失败原因）显式
+        摆到面前，既省轮次也压低幻觉。内容不含设备号之外的敏感项，仍由调用方
+        按出网口径脱敏后再写入 messages。
+        """
+        lines = [f"【当前诊断状态】（系统据已执行工具结果生成 · 第 {step}/{max_steps} 步）",
+                 f"- 已调用工具：{self._tool_counts() or '无'}",
+                 f"- 传感器时序：{self._sensor_line()}",
+                 f"- 证据：{self._evidence_line()}",
+                 f"- 图谱路径：{len(self.graph_paths)} 条",
+                 f"- 历史工单：{len(self.work_orders)} 条"]
+        failures = self._failure_line()
+        if failures:
+            lines.append(f"- 失败/被拒：{failures}")
+        if self.notes:
+            lines.append("- 工具提示：" + "；".join(self.notes[:3]))
+        lines.append("提示：已取到的证据不要重复查询；证据足够即输出结论 JSON，"
+                     "确有明确缺口再调工具。")
+        return "\n".join(lines)
 
 
 # ---------------------------------------------------------------- 出网脱敏（U1-D1/D2）
@@ -312,12 +395,31 @@ def _restore_device(text: str, state: DiagnosisState, token: str) -> str:
     return text.replace(token, real) if real else text
 
 
+def _as_bool(value: Any) -> bool:
+    """宽容解析模型给的布尔（`true` / `"true"` / `"是"` / 1 …）。
+
+    收口契约是自然语言驱动的 JSON，模型偶发把布尔写成字符串；字典/列表等
+    非标量一律视为假（宁可漏判求助，也不能把无关字段当成求助把全量流量转人工）。
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in ("true", "1", "yes", "y", "是", "需要")
+    return False
+
+
 def _finalize_answer(state: DiagnosisState, content: str,
                      collector: _Collector, steps: list[dict],
-                     token: str = "") -> dict[str, Any]:
+                     token: str = "", rejections: int = 0,
+                     forced: bool = False) -> dict[str, Any]:
     """无工具调用的回复 → 诊断结论（与 diagnose 节点同口径）。
 
     `token` 非空表示本次出网用了脱敏代号，返回前需把代号还原为真实设备号。
+    `rejections` 为本次循环内参数/白名单拦截次数（评审增量 E2）。
+    `forced=True` 表示这是步数用尽后的**强制收口轮**（评审增量 E5：未收敛信号）——
+    结论是"被截停"而不是模型自主收敛出来的，据此置 `state.not_converged`。
     """
     clean = _strip_think(content or "")
     parsed = _extract_json(clean)
@@ -335,6 +437,7 @@ def _finalize_answer(state: DiagnosisState, content: str,
                     "risk_level": "low",
                     "refusal": refusal,
                     "agent_steps": steps,
+                    "tool_arg_rejections": rejections,
                     "errors": [{"node": "agent_diagnose", "code": code,
                                 "msg": refusal["reason"]}],
                     **increments}
@@ -342,6 +445,7 @@ def _finalize_answer(state: DiagnosisState, content: str,
         return {"diagnosis": _restore_device(clean[:500], state, token),
                 "retry_count": state.retry_count + 1,
                 "agent_steps": steps,
+                "tool_arg_rejections": rejections,
                 "errors": [{"node": "agent_diagnose", "code": "E_JSON_PARSE",
                             "msg": "Agent 输出诊断 JSON 解析失败"}],
                 **increments}
@@ -360,6 +464,13 @@ def _finalize_answer(state: DiagnosisState, content: str,
     ]
     self_conf = float(parsed.get("self_confidence") or 0.5)
 
+    # E4（2026-10-22）：主动求助契约 —— needs_human 一旦为真即强制 risk=high，
+    # 复用既有 human_review interrupt（不新增中断类型）；human_reason 原样带回
+    # （报告本地落库，故脱敏代号需还原为真实设备号）。
+    needs_human = _as_bool(parsed.get("needs_human"))
+    human_reason = (_restore_device(str(parsed.get("human_reason") or "").strip(),
+                                    state, token) or None) if needs_human else None
+
     # 置信度复合公式需要「本次取证后的状态」——用 model_copy 合并增量后计算
     # （不写回 state，仅作计算输入；LangGraph 合并由返回值完成）
     merged = state.model_copy(update={
@@ -370,22 +481,32 @@ def _finalize_answer(state: DiagnosisState, content: str,
     raw_conf, breakdown = compute_confidence(merged, self_conf)
     confidence = calibrate_confidence(raw_conf)
     risk = _determine_risk_level(state.alarm.severity if state.alarm else "medium",
-                                 confidence)
+                                 confidence, needs_human=needs_human)
 
-    return {
+    out: dict[str, Any] = {
         "diagnosis": _restore_device(str(parsed.get("diagnosis") or ""), state, token),
         "root_causes": root_causes,
         "suggestions": suggestions,
         "confidence": confidence,
         "confidence_breakdown": breakdown,
         "risk_level": risk,
+        "needs_human": needs_human,
+        "human_reason": human_reason,
+        "not_converged": forced,
         "agent_steps": steps,
+        "tool_arg_rejections": rejections,
         **increments,
     }
+    if needs_human:
+        # 可观测痕迹（W_ 非阻塞级，不参与路由：路由看 needs_human 字段）
+        out["errors"] = [{"node": "agent_diagnose", "code": "W_HUMAN_REQUESTED",
+                          "msg": human_reason or "模型主动请求人工介入"}]
+    return out
 
 
 def _llm_failure(state: DiagnosisState, exc: Exception,
-                 collector: _Collector, steps: list[dict]) -> dict[str, Any]:
+                 collector: _Collector, steps: list[dict],
+                 rejections: int = 0) -> dict[str, Any]:
     """LLM 传输失败 → 与 diagnose 节点同契约（retry_count++，路由接管重试/降级）。"""
     if isinstance(exc, (TimeoutError, ConnectionError)):
         code = "E_LLM_UNREACHABLE"
@@ -394,6 +515,7 @@ def _llm_failure(state: DiagnosisState, exc: Exception,
     # 客户端异常消息已自含上下文（超时秒数/端点），直接透传不重复包装
     return {"retry_count": state.retry_count + 1,
             "agent_steps": steps,
+            "tool_arg_rejections": rejections,
             "errors": [{"node": "agent_diagnose", "code": code, "msg": str(exc)}],
             **collector.increments()}
 
@@ -415,6 +537,7 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
     except RuntimeError as exc:
         # 云端配置缺失等：按 E_LLM_ERROR 走重试/降级（不静默）
         return {"retry_count": state.retry_count + 1,
+                "tool_arg_rejections": 0,
                 "errors": [{"node": "agent_diagnose", "code": "E_LLM_CONFIG",
                             "msg": str(exc)}]}
 
@@ -443,6 +566,7 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
 
     collector = _Collector()
     steps: list[dict] = []
+    arg_rejections = 0          # 参数/白名单拦截计数（评审增量 E2，见 state 字段注释）
 
     for step in range(1, max_steps + 1):
         started = time.perf_counter()
@@ -451,7 +575,7 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
                                     budget=budget, state=state,
                                     collector=collector, steps=steps)
         if failure is not None:
-            return failure
+            return {**failure, "tool_arg_rejections": arg_rejections}
         latency_ms = round((time.perf_counter() - started) * 1000, 1)
 
         if result.tool_calls:
@@ -465,6 +589,13 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
                                    alarm=alarm, thread_id=state.thread_id)
                 collector.absorb(call.name, out)      # 内部状态用真实结果
                 pm.inc_tool_call(call.name, "ok" if out.get("ok") else "error")
+                # 参数/白名单拦截计数（2026-10-22 · 评审增量 E2）：
+                # whitelist / arg 两类 = 模型不懂领域语义；write_guard 是**安全**
+                # 拒绝（正确行为），no_executor 是配置问题 —— 都不计数。
+                reject_kind = (out.get("reject_kind")
+                               if out.get("ok") is False and out.get("rejected") else None)
+                if reject_kind in ("whitelist", "arg"):
+                    arg_rejections += 1
                 # 回灌模型的是脱敏副本（D1 设备号 + D2 工单 result 不出网）
                 messages.append(tool_result_message(
                     call.id, call.name,
@@ -476,6 +607,9 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
                               "ok": bool(out.get("ok")),
                               "args_keys": sorted(call.arguments),
                               "latency_ms": latency_ms,
+                              # 被拒原因（whitelist/arg/write_guard）——供云端
+                              # 兜底时判断"本地为什么走偏"（评审增量 E1）
+                              "reject_kind": reject_kind,
                               # token 成本可观测（2026-10-21，此前完全不可见）
                               "tokens_in": (result.usage.get("prompt_tokens")
                                             if first_of_turn else None),
@@ -484,11 +618,18 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
                               # 完整 usage（含 cached_tokens 之类供应商扩展字段）——
                               # 用于判定上下文缓存是否生效，勿删
                               "usage": (dict(result.usage) if first_of_turn else None)})
+            # E3（2026-10-22）：本轮工具结果之后回灌「当前诊断状态」摘要（**代码**
+            # 生成，不是让模型自己复述）——下一轮据此判断还缺什么，避免重复取数与
+            # 编造 chunk_id。与工具结果同走脱敏口径（真实设备号 → 代号）。
+            brief = collector.brief(step=step, max_steps=max_steps)
+            messages.append({"role": "user", "content": (
+                _replace_ids(brief, alarm.device_id, device_token)
+                if device_token else brief)})
             continue
 
         # 无工具调用 → 收口
         return _finalize_answer(state, result.content, collector, steps,
-                                token=device_token)
+                                token=device_token, rejections=arg_rejections)
 
     # 达到步数上限：无工具强制收口轮（同样先增后调 + 轮内重试 1 次）
     messages.append({"role": "user", "content": _FORCED_FINAL_INSTRUCTION})
@@ -496,10 +637,11 @@ def agent_diagnose(state: DiagnosisState) -> dict[str, Any]:
                                 budget=budget, state=state,
                                 collector=collector, steps=steps)
     if failure is not None:
-        return failure
+        return {**failure, "tool_arg_rejections": arg_rejections}
     steps.append({"step": max_steps + 1, "tool": None, "ok": True,
                   "args_keys": [], "latency_ms": None, "forced_final": True,
                   "tokens_in": result.usage.get("prompt_tokens"),
                   "tokens_out": result.usage.get("completion_tokens")})
     return _finalize_answer(state, content=result.content, collector=collector,
-                            steps=steps, token=device_token)
+                            steps=steps, token=device_token,
+                            rejections=arg_rejections, forced=True)

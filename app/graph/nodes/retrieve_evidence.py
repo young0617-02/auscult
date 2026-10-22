@@ -106,10 +106,28 @@ def retrieve_evidence(state: DiagnosisState) -> dict[str, Any]:
                     source_type="graph",
                 ))
             entities_hit = graph_result.get("entities_hit", [])
-            if entities_hit:
+            # 2026-10-22（Must#5）：优先用**真实路径**构造 GraphPath（节点 + 关系类型 + chunk 归因）。
+            # 旧实现只把命中实体塞进 `nodes`、`edges` 恒空 —— "支撑路径"名不副实。
+            raw_paths = graph_result.get("paths") or []
+            for p in raw_paths[:5]:
+                pnodes = p.get("nodes") or []
+                pedges = p.get("edges") or []
+                if not pnodes:
+                    continue
+                arrow = " -[" + "]->[".join(pedges) + "]->" if pedges else " -> "
+                graph_paths.append(GraphPath(
+                    nodes=pnodes,
+                    edges=pedges,
+                    description=f"图谱路径：{' '.join(pnodes[:1])}{arrow}"
+                                f"{' '.join(pnodes[1:2]) or '…'}"
+                                f"（chunk={p.get('chunk_id', '')}）",
+                ))
+            if not raw_paths and entities_hit:
+                # 兜底：若 query_graph 为旧形态（无 paths），如实标注"仅实体、无路径"，
+                # 不伪装成路径（宁可信息少，不可语义假）。
                 graph_paths.append(GraphPath(
                     nodes=entities_hit,
-                    description=f"图谱命中实体: {', '.join(entities_hit)}",
+                    description=f"图谱命中实体（无路径信息）: {', '.join(entities_hit)}",
                 ))
         else:
             pm.inc_tool_call("query_graph", "empty")

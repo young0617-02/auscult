@@ -29,6 +29,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from dataclasses import asdict, dataclass, field
@@ -70,6 +71,99 @@ FAULT_TERMS: tuple[str, ...] = (
 
 # 数字+单位（用于 keywords 精化，如 "1.8 mm/s"）
 _NUM_RE = re.compile(r"\d+(?:\.\d+)?")
+
+# ---------------------------------------------------------------- 检索扩展（A/C 类，2026-10-22）
+#
+# 背景：`reports/p1-corpus-stats-2026-10-22.md` 体检出 15 个语义域盲区，其中 8 个属于
+# **用词差异**而非域缺失——语料里有事实、只是不用用户/提示词的那个词：
+#   汽蚀→气蚀(2)、异响→噪声(12)、趋势→漂移(2)、波形→频谱(4)、油液→润滑油(4)、
+#   阈值/限值/标准→警戒值(7)/4.5 mm/s(7)。
+# 这一类不需要扩语料（那会平移已锁定实验基线），只需要在改写层做**纯追加**扩展。
+#
+# 为什么只追加 `keywords`、绝不改 `semantic`：
+#   - sparse 走服务端 BM25（jieba），keywords 是"词项集合的拼接文本"，追加同义词只扩大
+#     召回集合（OR 语义），原有词一项不少、排序语义不变；
+#   - `semantic` 一旦变，dense 向量与 rerank 打分都会平移 = 悄悄改了 P7 检索基线，
+#     无法再与既有实验数字对账。故 semantic 恒等于原问。
+#
+# 开关 `AUSCULT_QUERY_EXPAND=0` 可一键回到 2026-10-22 之前的行为（复现旧基线专用）。
+SYNONYM_PATH = PROJECT_ROOT / "configs" / "query_synonyms.json"
+EXPAND_ENV = "AUSCULT_QUERY_EXPAND"
+
+#: 规范完整编号（PUMP-A-01 / MOTOR-B-12）——产品提示词要求，语料/图谱写短编号
+_DEVICE_ID_RE = re.compile(r"\b[A-Z][A-Z0-9]*-(?:[A-Z]|\d+)-\d+\b")
+
+_synonym_cache: dict[str, Any] | None = None
+
+
+def load_synonyms(path: Path | None = None) -> dict[str, Any]:
+    """加载扩展词表；文件缺失/损坏 → 空配置（检索退化为原行为，不抛）。"""
+    global _synonym_cache
+    if path is None and _synonym_cache is not None:
+        return _synonym_cache
+    target = path or SYNONYM_PATH
+    try:
+        cfg = json.loads(target.read_text(encoding="utf-8"))
+        if not isinstance(cfg.get("synonyms"), dict):
+            cfg["synonyms"] = {}
+    except Exception:                                          # noqa: BLE001 - 容错降级
+        cfg = {"synonyms": {}, "device_id_expansion": {"enabled": False}}
+    if path is None:
+        _synonym_cache = cfg
+    return cfg
+
+
+def expand_keywords(question: str, keywords: list[str], *,
+                    enabled: bool | None = None,
+                    path: Path | None = None) -> dict[str, Any]:
+    """A 类同义词 + C 类编号变体的**纯追加**扩展。
+
+    返回 `{"keywords": [...], "report": {...}}`：`report` 供工具元数据/审计回看
+    到底扩了什么（不静默改变检索行为）。
+
+    规则：
+      1. 同义词：键出现在**原问或已有关键词**里 → 追加其值（去重保序）；
+      2. 编号：`PUMP-A-01` → 追加 `PUMP-A`（`app.device_ids.legacy`，未登记原样）；
+      3. `enabled=False`（或 env 关闭）→ 原样返回，零副作用。
+    """
+    if enabled is None:
+        enabled = (os.environ.get(EXPAND_ENV, "1").strip().lower()
+                   not in ("0", "false", "off", "no", "disabled"))
+    if not enabled:
+        return {"keywords": list(keywords),
+                "report": {"enabled": False, "synonyms": {}, "device_variants": []}}
+
+    cfg = load_synonyms(path)
+    synonyms: dict[str, list[str]] = {
+        str(k): [str(v) for v in (vals or [])]
+        for k, vals in (cfg.get("synonyms") or {}).items()
+    }
+    haystack = question or ""
+    hits: dict[str, list[str]] = {}
+    added: list[str] = []
+    for key, vals in synonyms.items():
+        if key not in keywords and key not in haystack:
+            continue
+        fresh = [v for v in vals if v and v not in keywords and v not in added]
+        if fresh:
+            hits[key] = fresh
+            added.extend(fresh)
+
+    variants: list[str] = []
+    if (cfg.get("device_id_expansion") or {}).get("enabled", True):
+        try:
+            from app.device_ids import legacy as _to_legacy      # noqa: PLC0415
+        except Exception:                                        # noqa: BLE001
+            _to_legacy = lambda x: x                             # noqa: E731
+        for m in _DEVICE_ID_RE.finditer(haystack):
+            short = _to_legacy(m.group(0))
+            if short and short != m.group(0) and short not in keywords + variants:
+                variants.append(short)
+
+    return {
+        "keywords": list(keywords) + added + variants,
+        "report": {"enabled": True, "synonyms": hits, "device_variants": variants},
+    }
 
 # LLM 增强输出的 JSON Schema（供 llm_adapter 约束解码；与 tools_v1.json 无重叠，独立 schema）
 QUERY_REWRITE_SCHEMA = {
@@ -155,13 +249,18 @@ def rewrite_rules(question: str) -> dict[str, Any]:
     seen_kw: set[str] = set()
     keywords = [k for k in keywords if not (k in seen_kw or seen_kw.add(k))]
 
+    # A/C 类检索扩展（2026-10-22）：纯追加 keywords，semantic 保持原问（见 expand_keywords 头注）
+    expanded = expand_keywords(q, keywords)
+
     return {
         "semantic": q,
-        "keywords": keywords,
+        "keywords": expanded["keywords"],
         "entities": entities,
         "numeric": numeric_tokens,
         "mode": "rules",
         "ts": datetime.now().isoformat(timespec="seconds"),
+        # 审计可见：到底扩了什么（enabled=False 时为空报告）
+        "expansion": expanded["report"],
     }
 
 

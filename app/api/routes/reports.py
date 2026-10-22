@@ -19,6 +19,7 @@ from fastapi import APIRouter, Depends, Query
 from app.api.db import get_conn
 from app.api.deps import get_current_user
 from app.api.errors import ApiError, ok
+from app.device_ids import canonicalize_ids
 from app.report.idempotency import get_report as _fetch_report
 
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -71,7 +72,9 @@ async def list_reports(
                 ORDER BY created_at DESC
                 LIMIT %s OFFSET %s""",
             [*params, size, (page - 1) * size]).fetchall()
-    return ok({"items": [dict(r) for r in rows],
+    # ISS-056 展示口径：历史 payload 里的短编号（迁移前写入）统一显示为规范编号；
+    # 库内证据不改写（`canonicalize_ids` 纯展示层归一、幂等）。
+    return ok({"items": [canonicalize_ids(dict(r)) for r in rows],
                "total": total, "page": page, "size": size})
 
 
@@ -83,4 +86,4 @@ async def get_report_detail(
     rep = _fetch_report(report_id)
     if rep is None:
         raise ApiError("E_NOT_FOUND", f"报告 {report_id} 不存在")
-    return ok(rep)
+    return ok(canonicalize_ids(rep))     # 展示口径统一，库内 payload 不变

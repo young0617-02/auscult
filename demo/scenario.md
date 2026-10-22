@@ -31,15 +31,19 @@
 ### 触发输入（`demo/data/alarms.json` → S1）
 
 ```
-device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
+device_id = "PUMP-C-01"  metric = "vib_rms"  value = 6.2  severity = "high"
 ```
+
+> **2026-10-22 更新**：`device_id` 随编号迁移改为**规范编号** `PUMP-C-01`（原 `C 0泵` 为台账口径，迁移后库里无此设备）；
+> `severity` 用 `AlarmEvent` 词表 `high`（非 `alerts` 表的 `critical`，经 `_SEV_PG_MAP` 映射，见 `rehearsal-log.md` §二）。
+> 全链已实测跑通并留档：`demo/recording/s1-run-2026-10-22.md`（98.1s，报告 `RPT-dfbf857be97f625e` 定稿）。
 
 ### 步骤
 
 | # | 操作 | 预期演示点 |
 |---|---|---|
-| 1 | POST `/api/diagnose` `{alarm:{device_id:"C 0泵", metric:"vib_rms", value:6.2, severity:"critical"}}` | 返回 `thread_id`，`status=running` |
-| 2 | 轮询 GET `/api/threads/{thread_id}` 或前端看 `diagnosis:progress` | 节点推进：parse_alarm → analyze_sensor → retrieve_evidence → diagnose |
+| 1 | POST `/api/diagnose` `{alarm:{device_id:"PUMP-C-01", metric:"vib_rms", value:6.2, severity:"high"}}` | 返回 `thread_id`，`status=running` |
+| 2 | 轮询 GET `/api/threads/{thread_id}` 或前端看 `diagnosis:progress` | 节点推进：**parse_alarm → diagnose**（P7 agent 化后，传感器/检索/图谱/工单四类证据在 `diagnose` 内部以工具循环取得，不再各占一个图节点）→ `human_review` → `finalize` |
 | 3 | 观察证据 | 检索召回**振动判据 / 离心泵手册 / 轴承磨损故障案例**（Milvus 混检 + 图谱 ≤2 跳；图谱已预置 **105 节点 / 127 关系 / 11 类受控关系**，见 `docs/pitch.md` A1 —— 数据来自合成语料，规模有限） |
 | 4 | 等待 `diagnosis:done` | 出结构化报告：结论 + **带出处引用** + 置信度 |
 | 5 | 审核 | `risk=high` 命中 → `review:required` → **强制中断**，报告不自动定稿 |
@@ -49,16 +53,17 @@ device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
 ### 验收点
 
 - 引用正确率口径：报告引用均指向语料 chunk（`citations` 字段，见 `docs/prj-spec-api.md` §2.4.3）；
-- **引用硬校验（2026-10-14 起）**：引用无效（不在本次 evidence 的 chunk_id 集合内）时 `finalize` **不产出 `report_id`** → 报告不落库，thread 带 `E_INVALID_CITATION` 与 `degrade_reason=invalid_citation_blocked`。**演示若遇此态属"正确地拒绝"，不可绕过**；
+- **引用硬校验（2026-10-14 起，2026-10-22 补强）**：① 引用无效（不在本次 evidence 的 chunk_id 集合内）→ `E_INVALID_CITATION`；② **零引用**（根因/建议都没给引用）→ `E_NO_CITATION`。两者都**不产出 `report_id`**、报告不落库，thread 带 `degrade_reason=invalid_citation_blocked`。降级/拒答路径不受 ② 限制。**演示若遇此态属"正确地拒绝"，不可绕过**；
 - 高风险覆盖率 100%：`risk=high` 必进审核（五档路由第 4 档，`docs/prj-design-architecture.md` §5.1）；
 - 职责分离：提交人不得自审（ISS-039 旁证：`validate_submitter`，`docs/prj-spec-data-dictionary.md`）；
 - **时序数据降级（预期内）**：`deploy/up.ps1` 自 2026-10-14 起默认启用 TDengine，`init.ps1` 会建 `iot` 库与 3 个超级表；但**时序样本数据不在初始化范围内**（需另跑 `scripts/gen_sparkplug.py` + 自研解码器灌入）。未灌数时 `analyze_sensor` 走降级：`sensor_report=null` + `E_TD_TIMEOUT`，报告仍可生成（证据驱动不依赖传感器数据）—— 演示时如需完整传感器分析，须先灌数。
+- **实测质量披露（2026-10-22，必读）**：全链跑通的同时，本地 7B 首次跑出**零引用 + 结论含糊**（`citations=[]`、`confidence=0.625`、`query_sensor` 首轮失败）。已核实**不是编号迁移导致**（同参数手动复跑 `PUMP-C-01.vib_rms` / `PUMP-C.vib_rms` / `vib_rms` 三种前缀全部 ok），属模型侧传参/早停（ISS-060）。现场建议：预跑 2 次选优，或切云端后端（`AUSCULT_LLM_BACKEND=cloud`，指标见 `docs/p6-metrics-canonical-2026-10-22.md`）。
 
 ---
 
 ## 三、备用场景 S2 —— 高风险强制审核 + 审核超时降级
 
-**触发输入**：S2 `{device_id:"C 0泵", metric:"bearing_temp", value:92.0, severity:"critical"}`
+**触发输入**：S2 `{device_id:"PUMP-C-01", metric:"bearing_temp", value:92.0, severity:"critical"}`
 
 | # | 操作 | 预期 |
 |---|---|---|
@@ -72,7 +77,7 @@ device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
 
 ## 四、备用场景 S3 —— 低置信度降级显式化
 
-**触发输入**：S3 `{device_id:"C 0泵", metric:"motor_current", value:16.8, severity:"warning"}`
+**触发输入**：S3 `{device_id:"PUMP-C-01", metric:"motor_current", value:16.8, severity:"warning"}`
 
 | # | 操作 | 预期 |
 |---|---|---|
@@ -84,13 +89,19 @@ device_id = "C 0泵"  metric = "vib_rms"  value = 6.2  severity = "critical"
 
 ## 五、备用场景 S4 —— 云端兜底不可用降级
 
-**触发输入**：S4 `{device_id:"C 0泵", metric:"vib_rms", value:5.1, severity:"warning"}`
+**触发输入**：S4 `{device_id:"PUMP-C-01", metric:"vib_rms", value:5.1, severity:"warning"}`
+
+> ⚠️ **2026-10-22 路由调整（Must#9 修复①）**：`vib_rms=5.1 > 4.5` → `risk=high`，而新规则下
+> **高风险优先于置信度分流**（`build.py::_route_condition`），因此本场景现在**直接进人工审核**，
+> 不再走 `escalate_cloud`。云端兜底改由"参数被拒 ≥2 次 / 步数未收敛"（E2/E5）演示，
+> 或临时把告警换成不触发 high 的指标（如 `bearing_temp=82`，阈值 85）。
 
 | # | 操作 | 预期 |
 |---|---|---|
-| 1 | 触发 S4，强制模拟云端不可用 | 置信度 ∈ [0.50,0.75) 走 `escalate_cloud` |
-| 2 | 超时/失败 | 云端 20s 超时或失败 → `degrade_reason="cloud_unavailable"` |
+| 1 | 触发 S4 | `risk=high` → **直接 `review:required`**（原预期为 `escalate_cloud`，已按新路由修正） |
+| 2 | 若要演示云端兜底 | 用 `bearing_temp=82`（medium）或制造参数拒绝 ≥2 次 → `escalate_cloud` |
 | 3 | 验证脱敏与预算 | 送云端前 `device_id`→`设备#<sha256[:6]>` 脱敏；`budget:cloud:` 按天计数（340/天） |
+| 4 | 云端失败 | 20s 超时/失败 → `degrade_reason="cloud_unavailable"`；**升级后的 high 结论仍会补审**（`_route_after_cloud`） |
 
 > 备用场景为「能力证明」，非每场必演；S3/S4 依赖模型置信度随机性，演示前建议预跑一次确认路径。
 

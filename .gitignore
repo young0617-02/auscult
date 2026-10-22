@@ -49,3 +49,10 @@ Material/
 # 运行期 LangGraph trace（每次 E2E / 演示运行自动生成，属可再生运行产物，不入库）
 # 注：P1–P5 期间已入库的 thr-*.jsonl 不受影响（gitignore 不追溯已跟踪文件）
 reports/traces/thr-*.jsonl
+
+# 交付包产物（deploy/package.ps1 生成，可随时重打，不入库）
+dist/
+
+# 演示/接口进程重定向日志（运行产物，不入库；正文结论见 reports/*.md）
+*.err.log
+*.out.log

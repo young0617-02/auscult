@@ -18,7 +18,7 @@ Schema（在 V2 的 `chunk_id/text/dense/sparse` 基础上补保有 meta 标量�
 用法：
     .venv\\Scripts\\python.exe scripts\\build_milvus_v1.py --selftest
     .venv\\Scripts\\python.exe scripts\\build_milvus_v1.py \
-        --chunks chunks/chunks_v1.jsonl --collection kb_p1_v1 --uri http://127.0.0.1:19530
+        --chunks chunks/chunks_v1.jsonl --collection kb_p1_v1 --uri http://127.0.0.1:19531
 
 依赖：pymilvus、sentence-transformers（`docs/prj-ledger-version-lock.md` §二.2.8）
 """
@@ -32,8 +32,13 @@ from pathlib import Path
 from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "scripts"))
+
+from milvus_endpoint import milvus_uri  # noqa: E402
+
 DEFAULT_CHUNKS = PROJECT_ROOT / "chunks" / "chunks_v1.jsonl"
-DEFAULT_URI = "http://127.0.0.1:19530"
+# ISS-042：默认端点跟 deploy 栈走（19531）；不再硬编码 Phase-0 基线 19530
+DEFAULT_URI = milvus_uri()
 DEFAULT_COLLECTION = "kb_p1_v1"
 EMBED_DIM = 1024
 RRF_K = 60

@@ -110,6 +110,22 @@ def _absorb_refusal(rec: ThreadRecord | None, node: str, update: Any) -> None:
         rec.refusal = refusal
 
 
+def _absorb_needs_human(rec: ThreadRecord | None, node: str, update: Any) -> None:
+    """E4（2026-10-22）：归集 diagnose 增量里的主动求助标记（needs_human）。
+
+    求助会走 human_review 挂起，payload 里本就带 human_reason；但**线程状态查询**
+    此前只有 refusal 没有求助语义 —— 调用方（前端/运维）无法回答"这条为什么
+    转人工"，只能靠解析 payload。与 refusal 同口径单独暴露。
+    """
+    if rec is None or node != "diagnose" or not isinstance(update, dict):
+        return
+    if update.get("needs_human"):
+        rec.needs_human = True
+        reason = update.get("human_reason")
+        if isinstance(reason, str) and reason:
+            rec.human_reason = reason        # 有原因才覆盖，不清除已有值
+
+
 # ---------------------------------------------------------------- 线程注册表（内存态）
 
 class ThreadRecord:
@@ -129,6 +145,9 @@ class ThreadRecord:
         self.agent_steps: list[dict] = []  # P7：Agent 循环工具调用轨迹（diagnose 增量归集）
         # P7：合规拒答/澄清标记（规则 6a/6b）——{"kind": clarification|refusal, "reason": ...}
         self.refusal: dict | None = None
+        # E4：主动求助标记（模型 needs_human）——求助原因 human_reason 原样带给调用方
+        self.needs_human: bool = False
+        self.human_reason: str | None = None
         self.error: str | None = None
         self.notified_4h: bool = False   # 4h 备用审核人通知已触发
         self.started_at = time.time()
@@ -185,6 +204,7 @@ def _execute_graph(thread_id: str, alarm: AlarmEvent) -> None:
                         _progress(node)
                         _absorb_agent_steps(rec, node, chunk[node])
                         _absorb_refusal(rec, node, chunk[node])
+                        _absorb_needs_human(rec, node, chunk[node])
 
             snap = graph.get_state(config)
             next_nodes = tuple(snap.next or ())
@@ -516,6 +536,8 @@ def thread_status(thread_id: str) -> dict:
             "nodes_done": list(rec.nodes_done),
             "agent_steps": list(rec.agent_steps),
             "refusal": rec.refusal,
+            "needs_human": rec.needs_human,
+            "human_reason": rec.human_reason,
             "report_id": rec.report_id,
             "review_payload": rec.review_payload,
             "degrade_reason": rec.degrade_reason,
@@ -560,6 +582,8 @@ def thread_status(thread_id: str) -> dict:
                   "review_payload": payload, "qa_log": [],
                   "nodes_done": [], "agent_steps": agent_steps,
                   "refusal": values.get("refusal"),
+                  "needs_human": bool(values.get("needs_human")),
+                  "human_reason": values.get("human_reason"),
                   "report_id": None,
                   "degrade_reason": values.get("degrade_reason"),
                   "submitter": None, "alarm": None, "error": None,
@@ -573,6 +597,8 @@ def thread_status(thread_id: str) -> dict:
               "review_payload": None, "qa_log": [], "nodes_done": [],
               "agent_steps": agent_steps,
               "refusal": values.get("refusal"),
+              "needs_human": bool(values.get("needs_human")),
+              "human_reason": values.get("human_reason"),
               "submitter": None, "alarm": None, "error": None,
               "started_at": None, "finished_at": None}
     cache_set_state(thread_id, result)

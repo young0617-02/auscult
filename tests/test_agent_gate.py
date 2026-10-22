@@ -8,7 +8,26 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 import run_agent_gate as rg
+
+
+@pytest.fixture(autouse=True)
+def _isolate_executors():
+    """隔离 `install_stubs()` 的全局副作用（2026-10-22 发现）。
+
+    `rg.install_stubs()` 实现是 `tr._EXECUTORS.update(STUBS)` —— **直接改写模块级
+    执行体字典、无回滚**。本文件有两个用例会真的安装打桩（覆盖率 + `--selftest`），
+    泄漏后同进程后续测试的 `execute_tool()` 全部走 STUB（实测：让
+    `test_device_id_migration` 的工具调用静默返回固定结果）。此处按用例快照/恢复。
+    """
+    snapshot = dict(rg.tr._EXECUTORS)
+    try:
+        yield
+    finally:
+        rg.tr._EXECUTORS.clear()
+        rg.tr._EXECUTORS.update(snapshot)
 
 
 def test_install_stubs_covers_every_product_tool():

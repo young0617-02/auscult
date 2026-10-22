@@ -52,12 +52,13 @@
 | 6 | `tdengine/tsdb` | `3.3.8.0` | `sha256:36e2bf82f151e8013d39a929aadc41bfcd5c46564866635cee1a02693d2256bf` | 1.68 GB | **V3 时序库（OSS，T1.9 已定稿自研解码器路线）** | **实测 2026-09-24**（`docker images --digests`） |
 | 7 | `eclipse-mosquitto` | `2` | `sha256:38c0da4f2ef84284d47b3b3eeea1cb3bdeabe81ee10caf0cd5c5ff61ee3ea408` | 41.8 MB | **V3 时序链路 MQTT Broker（Sparkplug B 传输层）** | **实测 2026-09-24**（D4–D5 拉取） |
 | 8 | `neo4j` | `5-community` | `sha256:ab3aafb0020e6fed65bb2b59f7db1fabd7ee0568c4da46f3cc3b8fad77801d61` | 约 1.0 GB | **图谱库（社区版）** | **实测 2026-09-24**（V4b 压测拉取，V4b 内存实测 ≈871MiB） |
-| 9 | `prom/prometheus` | `latest`（锚 digest） | `sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e` | 381 MB | **P5 监控栈（临时，压测期起、测后销毁）** | **实测 2026-10-10**（D14 压测拉取，`reports/p5-perf.md` §七） |
+| 9 | `prom/prometheus` | `latest`（锚 digest，**临时栈显式豁免**） | `sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e` | 381 MB | **P5 监控栈（临时，压测期起、测后销毁）** | **实测 2026-10-10**（D14 压测拉取，`reports/p5-perf.md` §七） |
 | 10 | `grafana/grafana` | `11.1.0` | `sha256:079600c9517b678c10cda6006b4487d3174512fd4c6cface37df7822756ed7a5` | 604 MB | **P5 监控栈看板（临时，同上）** | **实测 2026-10-10**（本地已有镜像锚 digest） |
 
 > ⚠️ **镜像总数 / 占用**：**10 个（本项目）/ 约 8.8 GB**（仍以 `env-baseline-v2.md` §7.1 为唯一镜像基线；宿主上其他项目镜像如 nacos/mysql/mongodb 已从本表移除，但本机容器仍在，**禁止** `docker system prune` 或停止非本项目容器，见 `docs/prj-ledger-risk-register.md` R-V3-7 / R-V4b-8）。
 > ⚠️ **BGE-M3 经 ModelScope 本地加载**（`D:\modelscope\hub\models\BAAI--bge-m3`，非 Docker 镜像、非 Ollama 模型，见 §2.2.1）；Neo4j 已在本表第 8 行锁定。D6/D7 新增镜像拉取后必须立即回填本表并锁 digest。
 > ✅ `milvusdb/milvus:v3.0.0` 与上游计划 §二 Q3 裁决一致（v3.0.0 + 服务端 `FunctionType.BM25`），无偏差。
+> ✅ **`latest` 豁免口径（2026-10-22 明确）**：纪律 1「禁止裸 tag」针对**交付运行态**的镜像（§2.1 第 1–8、10 行全部为精确 tag **且** digest）。第 9 行 prometheus 为 P5 压测期**临时观测栈**、测后即销毁、不参与交付，且 digest 已锚定 → 记 **显式豁免**，不再计作"裸 tag 残留"。
 > ✅ `tdengine/tsdb:3.3.8.0` 的 tag 与 digest 已实测锁定；其镜像名相对上游 `tdengine/tdengine` 的变更与授权判定见 `reports/p0-report-v3-ingest-license.md` §〇/§四.1（T1.9 需降级 = OSS + 自研解码器）。
 
 ### 2.2 Ollama 生成模型（2 个，实测 digest）
@@ -575,6 +576,27 @@
 | `reports/p2-summary.md` | 引用 §二.2.21（Phase 2 总结报告 / 四项里程碑 / 关键决策 / 遗留） | §二.2.21 第 1–3 行 |
 | `requirements.txt` | **反向依赖**：其头部「版本唯一来源」逐条指向 §二.2.7 / §2.8 / §2.9 / §2.10 / §2.24；正文「本文件与本机实装不一致即视为环境漂移」即本文件 §一 纪律 | `requirements.txt` 头部注释；本文件 §一 纪律、§二.2.24 |
 
+### 4.2 P3–P7 报告登记（2026-10-22 补齐）
+
+> 原表只覆盖 P0–P2，P3–P7 的报告未登记 → 交付验收"版本锁定清单与各报告 digest 一致"无法核对。本次按同一格式补齐。
+
+| 报告 / 文档 | 引用方式 | 具体引用位置 |
+|---|---|---|
+| `reports/p3-reliability.md` | 引用 §二.2.9（LangGraph / PG checkpointer / redis 依赖）、§二.2.4（硬件与 WSL 配额） | A1–A4 / B1–B4 可靠性用例的环境章节；§五 遗留 |
+| `reports/p3-summary.md` | 引用 §二.2.9、§二.2.21（Phase 2 移交项） | §三 里程碑表；§六 残余风险 |
+| `reports/p5-eval.md` | 引用 §二.2.1（Milvus）、§二.2.2（BGE-M3 / 本地 7B digest）、§二.2.24（评测工具链） | 首部「评测口径」；§一 指标对照表；§三 局限 |
+| `reports/p5-perf.md` | 引用 §二.2.1 第 9/10 行（prometheus / grafana 临时栈）、§二.2.4（资源门禁 24GB） | §二 压测环境；§七 监控栈；§八 遗留 |
+| `reports/p5-security.md` | 引用 §二.2.1（镜像 digest）、§二.2.9（`audit_logs` 所在 PG 版本） | §二 审计不可篡改实测；§四 JSONL 轮转 |
+| `reports/p5-backup.md` | 引用 §二.2.1 第 4 行（`postgres:18` digest） | §三 RTO/RPO 演练环境 |
+| `reports/p5-kappa.md` | 引用 §二.2.2（双标注所用模型 digest） | §二 标注流程 |
+| `reports/p5-hallucination.md` | 引用 §二.2.2（判定器模型）、§二.2.24（RAGAS 工具链） | §二 A/B/C 三组判定 |
+| `reports/p1-corpus-stats-2026-10-22.md` | 引用 §二.2.2（BGE-M3）、§二.2.23（语料文件版本） | §一 规模表；§四 盲区与语料边界 |
+| `reports/p6-readiness-must-chain-2026-10-22.md` | 引用 §四 全表 + `docs/p6-metrics-canonical-2026-10-22.md`（指标口径单一事实源） | §二 停止条件；§五 缺口 |
+| `docs/p6-gate-closure-2026-10-10.md` | 引用 §二 已锁定清单与 §三 待锁定清单 | §二 里程碑；§五 局限声明 |
+| `docs/p7-runbook-device-id-migration-2026-10-22.md` | 引用 §二.2.8（Milvus 端口 19531）、§二.2.1 第 6 行（TDengine digest） | §二 影响面；§七 验收清单 |
+| `docs/p7-design-agent-diagnosis-2026-10-19.md` / `p7-design-redis-cache-layer-2026-10-16.md` / `p7-design-gate-product-agent-2026-10-20.md` | 引用 §二.2.1 第 5 行（redis digest）、§二.2.9（LLM 客户端依赖）、§二.2.2（云端 baseline 模型） | 各文档「环境与依赖」节 |
+| `docs/p7-review-u1-sanitization-scope-2026-10-21.md` / `p7-change-agent-param-guidance-2026-10-21.md` / `p7-decision-async-diagnosis-2026-10-20.md` | 引用 §二.2.2（模型 digest）、§二.2.24（工具链） | 变更影响评估节 |
+
 ---
 
 ## 五、修订记录
@@ -609,6 +631,7 @@
 | 2026-10-09 | 单人（本人） | **D7 重排消融**：更新 **§二.2.20** 第 6-7 行 + 裁定口径；`scripts/d7_ablation.py` 逐题对比 RRF-only vs rerank：rerank ΔMRR=**-0.0417（净负）**，RRF-only **MRR=0.7569≥0.75 达标** + P95=86.1ms；`RetrievalService` 增 `use_rerank` 开关，`eval_m2.py` 增 `--no-rerank`。**M2.3 四项指标全部达标**（Recall=1.0/MRR=0.7569/NDCG=1.0/P95=86ms） | 更新 §二.2.20；retrieve_knowledge.py；eval_m2.py；d7_ablation.py |
 | 2026-10-09 | 单人（本人） | **Phase 2 收尾（M2.4 达成）**：新增 **§二.2.21**（`docs/p2-handover-p3.md` + `reports/p2-summary.md`）；M2.4 三项通过条件全部达成（P95=86.1ms / retrieve_knowledge 可用 / 移交 P3）；**M2.1–M2.4 四项里程碑全部达成**；§四 补 handover/summary 交叉引用。遗留转 P3：golden 50 题、Redis 缓存、引用正确率、rerank 重评 | 新增 §二.2.21；§四 |
 | 2026-10-09 | 单人（本人） | **Phase 4 前端工程锁版（D1–D5）**：新增 **§二.2.23**（Next 16.4.0 / React 19.3.0 / Tailwind 4.3.3 / radix-ui 1.7.0 单包 / shadcn CLI 4.21.4 nova 预设 / react-query 5.104.1 / socket.io-client 4.8.4 / zustand 5.0.15 / vitest 5.0.3 / playwright 1.64.0 / Node v24.19.0+pnpm 11.7.0）；实测依据：next build 通过 + 单测 30/30 PASS + `pnpm list --depth=0` | 新增 §二.2.23 |
+| 2026-10-22 | 单人（本人） | **P6 交付验收补齐（停止条件 S3「版本锁定清单定稿」）**：新增 **§4.2 P3–P7 报告登记**（13 份报告的引用方式与落点，此前只登记 P0–P2 → 验收"报告 digest 一致"无法核对）；**`latest` 豁免口径明确**（§2.1 第 9 行 prometheus 为压测期临时栈、测后销毁、digest 已锚定 → 记显式豁免，不计"裸 tag 残留"）。**未改任何 digest、未升版 `env-baseline-v2.md`** | 新增 §4.2；更新 §2.1 第 9 行及其说明 |
 | 2026-10-10 | 单人（本人） | **uv 环境口径统一（P5 收尾方案 A）**：§二.2.3 工具链表新增 **uv 0.11.31** 行；补 4 条说明（`.python-version`=3.12 为解释器唯一锚定、**不升版 `env-baseline-v2.md`** 的 5 条触发条件依据、`uv pip sync` 口径）。**未改正文快照指纹、未升版** | 更新 §二.2.3 |
 | 2026-10-10 | 单人（本人） | **环境实装漂移补声明（用户批准）**：新增 **§二.2.24**（`sentence-transformers` 6.1.0 / `ragas` 0.4.3 / `locust` 2.46.7 / `prometheus-client` 0.26.0 / `numpy` 2.5.3 —— 均已被代码 import 且已实装、此前未进 `requirements.txt`）；同步 `requirements.txt`（新增「环境实装漂移补声明」段）。**当日实测纠正**：`uv pip sync` **不解析传递依赖**（`--dry-run` 计划移除 **136 包**）→ §二.2.3 口径定为「**禁止直接 sync**，须先 `uv pip compile` 出锁文件」（纠正同日早前「dry-run 后可选」的错误表述）；§2.3 的【待补声明】→【已补声明】；§四 补 `requirements.txt` 反向依赖行。`.venv` 未变动，回归 **183 passed**；**未升版 `env-baseline-v2.md`** | 新增 §二.2.24；更新 §二.2.3、§四；`requirements.txt` |
 | 2026-10-10 | 单人（本人） | **langchain 残留漂移处置（用户裁定选项①「以实装为真」）**：`langchain-core` 由 **1.6.4 回填为 1.6.9**（更新 **§二.2.9** 第 9 行）；**§二.2.24** 补第 6/7 行（`langchain` **1.4.4** / `langchain-openai` **1.7.0**，按实装**显式钉住**，目的 = 阻止解析器再次静默升/降 `langchain-core`），🔴 待裁决 → ✅ 已处置；同步 `requirements.txt`。验证：`uv pip install -r requirements.txt --dry-run` = **Would make no changes**；回归 **183 passed**。**未做 live V5 重跑**（`scripts/run_v5.py` 会改写 `experiments/v5/raw/` 冻结数据，违「只增不改」纪律）；`.venv` 未做任何装/卸。**不升版 `env-baseline-v2.md`**（5 条触发条件不含 Python 包版本） | 更新 §二.2.9、§二.2.24；`requirements.txt` |

@@ -111,6 +111,26 @@ class DiagnosisState(BaseModel):
     # 追加语义，dict 载荷对 PostgresSaver msgpack 友好，见 p7 设计文档 §五）
     agent_steps: Annotated[list[dict], add] = Field(default_factory=list)
 
+    # 主动求助契约（2026-10-22 · 评审增量 E4）：Agent 收口 JSON 可置 needs_human 并
+    # 给出 human_reason（如证据互相矛盾/关键测点缺失/需现场确认）。语义 = 「结论需人定夺」，
+    # 一旦置真：risk_level 强制 high → 复用既有 human_review interrupt（不新增中断类型），
+    # 路由也在 confidence 判定之前直达 human_review（低置信度另有 degrade/escalate 语义）。
+    needs_human: bool = False
+    human_reason: str | None = None
+
+    # 未收敛标记（2026-10-22 · 评审增量 E5）：Agent 烧完 max_steps 仍在调工具、被强制收口。
+    # 语义 = 模型在本任务上**没有自主收敛**（与低置信度不同：它可能给出了一个看着不错的
+    # 结论，但是"拖"出来的）。与 E2 同型思路：把失败信号前移成路由信号，不等 confidence
+    # 被磨下去——提前升级云端做二次裁决（云端会拿到完整轨迹，见 E1）。
+    not_converged: bool = False
+
+    # 参数/白名单拦截计数（2026-10-22 · 评审增量 E2）：Agent 循环内工具调用被
+    # `validate_tool_args` 或白名单拒绝的次数（**不含**写操作护栏——那是安全拒绝，
+    # 不是"模型不懂领域语义"）。≥2 说明模型对当前任务域存在系统性理解偏差，
+    # 路由据此**提前**升级云端兜底，不必等 confidence 掉到阈值（外部评审建议，
+    # 见 Material/05-评审回应.md）。
+    tool_arg_rejections: int = 0
+
     # 产出
     report_id: str | None = None
     errors: Annotated[list[dict], add] = Field(default_factory=list)

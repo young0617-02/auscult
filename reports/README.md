@@ -95,6 +95,7 @@
 | `reports/p5-backup.md` | p5 | W3/D11 备份恢复演练 | P5-D11 | M5.3 | 单人（本人） | ✅ **Pass**：PG RTO ≈**3.1 s**、Neo4j/Milvus 冷备窗口 16 s / 5.3 s；**RPO 定时化未落地**，挂 P6 运维待办 |
 | `reports/p5-summary-phase5-2026-10-10.md` | p5 | **Phase 5 验收汇总（阶段权威）** | P5-D15 | **M5.4** | 单人（本人） | ✅ **`M5.1`–`M5.4` 全达成 + 停止条件 3/3**；2026-10-10 由 `reports/P5-summary.md` 按命名规范**正名**（正文结论一字未改，见该文件修订记录） |
 
+| `reports/p6-readiness-must-chain-2026-10-22.md` | p6 | **交付就绪核对**：Must 链 13 项 / 停止条件 3 条 / 验收清单 8 项（逐项挂证据） | P6-D10 复核 | **M6.4 前置** | 单人（本人） | ✅ **已核对（2026-10-22）**：Must 链 9 项硬证据 + 4 项带缺口；停止条件第 3 条不成立（风险册未定稿）→ 判定**尚未达 M6.4**。同步回填 `plan/Phase 6` §7.1–7.3 |
 | *(已移出)* `archive/personal/g2-measured-data-form-2026-10-05.md`、`job-questionnaire-49-backfill-2026-10-05.md`、`draft-questionnaire-review-2026-10-05.md` | — | **非项目技术产物** | — | — | 单人（本人） | 求职素材 3 份，2026-10-08 移出 `reports/` 并改名；用途与阅读须知见 `archive/README.md` |
 
 > V4a 的产出落在 `env/hardware.json`、`env/ports.md`、`env/wslconfig.*`，不单独出 report；V6/V7 的产出落在 `docs/p0-spec-scope-mvp.md`、`evals/golden_set_v1.jsonl`、`docs/prj-spec-labeling.md`。

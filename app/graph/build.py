@@ -26,6 +26,8 @@ D1 产出：骨架可编译 + Checkpointer 可连接 PG
   1. retry_count ≥ 3 → degrade
   2. confidence < 0.50 → degrade
   3. confidence < 0.75 → escalate_cloud；云端失败 → degrade
+  3.5 needs_human（模型主动求助，E4）→ human_review（risk 已强制 high，先于 confidence 判定）
+  3.6 参数被拒 ≥2（local）或步数用尽未收敛（E5）→ escalate_cloud（失败信号前移）
   4. risk_level == "high" → human_review（interrupt）
   5. else → finalize
 """
@@ -52,6 +54,12 @@ from .nodes.finalize import finalize
 
 # ---------------------------------------------------------------- 条件路由
 
+#: 参数/白名单拦截的提前兜底阈值（2026-10-22 · 外部评审增量 E2）：
+#: 模型对领域语义的系统性偏差**最早**体现在参数被 `validate_tool_args` 拒绝，
+#: 而不是等 `confidence` 一路掉到 0.75 —— 后者要再烧几轮无效工具调用与云端额度。
+_REJECTION_ESCALATE_THRESHOLD = 2
+
+
 def _should_fallback_to_cloud(state: DiagnosisState) -> bool:
     """本地主通道失败（重试耗尽且无结论）→ 是否升级云端兜底。
 
@@ -68,6 +76,35 @@ def _should_fallback_to_cloud(state: DiagnosisState) -> bool:
             and llm_config.llm_backend() == "local"
             and not state.escalate_cloud
             and state.diagnosis is None)
+
+
+def _should_early_escalate(state: DiagnosisState) -> bool:
+    """参数/白名单被拒达阈值 → 提前升级云端（评审增量 E2，2026-10-22）。
+
+    触发条件（全部满足）：
+      1. `AUSCULT_CLOUD_FALLBACK` 未关闭（与"本地失败兜底"共用开关）；
+      2. 当前后端是 `local`（后端即云端时 escalate 空转，且会形成自我触发）；
+      3. 本次流程尚未升级过（`escalate_cloud` 为假）；
+      4. `state.tool_arg_rejections >= 2`（仅统计 whitelist/arg 两类，
+         写操作护栏是**正确行为**，不计入 —— 见 `agent_diagnose` 主循环注释）。
+    """
+    return (llm_config.cloud_fallback_enabled()
+            and llm_config.llm_backend() == "local"
+            and not state.escalate_cloud
+            and state.tool_arg_rejections >= _REJECTION_ESCALATE_THRESHOLD)
+
+
+def _should_escalate_not_converged(state: DiagnosisState) -> bool:
+    """步数用尽仍未收敛（评审增量 E5，2026-10-22）→ 提前升级云端。
+
+    与 E2 同型：`forced_final`（模型烧完 max_steps 还在调工具、被无工具截停）是比
+    confidence 更早的"未收敛"信号——结论是拖出来的，不是收敛出来的。护栏口径与
+    E2 完全一致（开关 / local 后端 / 未升级过），云端侧凭 E1 的本地轨迹做二次裁决。
+    """
+    return (llm_config.cloud_fallback_enabled()
+            and llm_config.llm_backend() == "local"
+            and not state.escalate_cloud
+            and state.not_converged)
 
 
 def _route_condition(state: DiagnosisState) -> str:
@@ -90,12 +127,50 @@ def _route_condition(state: DiagnosisState) -> str:
         if _should_fallback_to_cloud(state):
             return "escalate_cloud"
         return "degrade"
+    # E4（2026-10-22）：模型主动求助 → 直接人工审核（risk 已强制 high）。
+    # 放在 confidence 判定**之前**：求助语义是「结论需人定夺」，不是因为置信度低；
+    # 否则会被 escalate_cloud/degrade 吞掉，interrupt 永远走不到。
+    if state.needs_human:
+        return "human_review"
+    # 评审增量 E2（2026-10-22）：参数/白名单被拒 ≥2 次 = 模型对当前任务域存在
+    # 系统性理解偏差（如设备号口径不认、测点名不存在）——这是比 confidence 更早
+    # 的失败信号，提前升级云端，别等它再烧几轮无效调用把置信度磨下去。
+    # 评审增量 E5（2026-10-22）：步数用尽未收敛（not_converged）同理。
+    if _should_early_escalate(state) or _should_escalate_not_converged(state):
+        return "escalate_cloud"
+    # 2026-10-22（Must#9 绕过路径①）：**高风险优先于置信度分流**。
+    # 原顺序下 `high + confidence<0.50` 直接走 `degrade`，报告照样落库但
+    # `review_status=NULL` 且不在 `waiting_review` 态 —— 既不审核、也永远无法补审，
+    # 与"高风险审核覆盖率 100%"直接矛盾。已有先例：E4 的 `needs_human` 同样前置。
+    if state.risk_level == "high":
+        return "human_review"
     if state.confidence < 0.50:
         return "degrade"
     if state.confidence < 0.75:
         return "escalate_cloud"
-    if state.risk_level == "high":
+    return "finalize"
+
+
+def _route_after_cloud(state: DiagnosisState) -> str:
+    """云端升级后的分流（2026-10-22 修复 Must#9 绕过路径②）。
+
+    原实现 `escalate_cloud → finalize` **直连**：云端回来的结论即使 `risk=high` 也不经审核，
+    等于"换个后端就能绕过强制审核"。
+
+    故意**不复用** `_route_condition`：那里的 escalate 分支以 `not state.escalate_cloud`
+    为前提，复用会形成升级环回/二次计费。此处只做"升级后收口"：
+
+    - 拒答 → 直接定稿（产出是"无法作答"，无结论可审）
+    - 高风险 / 主动求助 → **补人工审核**
+    - 云端仍低置信（<0.50）→ 降级为初步判断
+    - 其余 → 定稿
+    """
+    if state.refusal:
+        return "finalize"
+    if state.risk_level == "high" or state.needs_human:
         return "human_review"
+    if state.confidence < 0.50:
+        return "degrade"
     return "finalize"
 
 
@@ -159,9 +234,9 @@ def build_graph(checkpointer: Any) -> Any:
     # 条件路由（diagnose 后按优先级分流）
     graph.add_conditional_edges("diagnose", _route_condition)
 
-    # 汇聚到 finalize
+    # 汇聚到 finalize（云端升级后需二次分流，见 `_route_after_cloud`）
     graph.add_edge("degrade", "finalize")
-    graph.add_edge("escalate_cloud", "finalize")
+    graph.add_conditional_edges("escalate_cloud", _route_after_cloud)
     graph.add_edge("human_review", "finalize")
     graph.add_edge("finalize", END)
 

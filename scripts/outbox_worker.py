@@ -37,9 +37,11 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))   # 保证 import run_v2
 
+from milvus_endpoint import milvus_uri  # noqa: E402
+
 # ---------------- 核对后的连接常量（勿自行猜测） ----------------
 PG_DSN = "postgresql://root:123456@127.0.0.1:5433/auscult_v2"
-MILVUS_URI = f"http://127.0.0.1:{os.environ.get('MILVUS_PORT', '19531')}"   # 读环境变量，默认 19531（v2 业务栈）；P5 复现 kee-milvus 口径设 MILVUS_PORT=39530
+MILVUS_URI = milvus_uri()   # ISS-042：端点单一事实源（默认 19531；kee-milvus 复现设 MILVUS_PORT=39530）
 MILVUS_COLLECTION = "kb_p1_v1"
 NEO4J_URI = "http://127.0.0.1:7474"
 NEO4J_USER = "neo4j"
