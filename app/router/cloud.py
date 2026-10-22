@@ -38,12 +38,13 @@ from ..graph.nodes.diagnose import (
 from ..graph.state import DiagnosisState, RootCause, Suggestion
 from ..llm import config as llm_config
 from ..llm.client import get_cloud_client
+from ..observability.paths import reports_file
 
 # ---------------------------------------------------------------- 路径与常量
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CLOUD_CONFIG_PATH = PROJECT_ROOT / "env" / "cloud.json"
-AUDIT_LOG_PATH = PROJECT_ROOT / "reports" / "cloud_audit.jsonl"
+AUDIT_LOG_PATH = reports_file("cloud_audit.jsonl")   # AUSCULT_REPORTS_DIR 可覆盖
 
 #: 云端升级单次调用超时**不再写死**（ISS-058，2026-10-21）。
 #: 原值 20.0（plan §六.4）与云端实测单轮 5.5–37s 不匹配 → 兜底必然超时降级，

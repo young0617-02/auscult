@@ -67,9 +67,18 @@ def test_selftest_passes_offline():
 
 
 def test_audit_redirected_out_of_reports():
-    """实验审计必须落在 experiments/，不得污染生产审计文件。"""
-    assert "experiments" in str(rg.AUDIT_PATH).replace("\\", "/")
-    assert not str(rg.AUDIT_PATH).endswith("reports/security_audit.jsonl")
+    """实验审计不得污染**生产审计文件**。
+
+    2026-10-22：断言意图而非字面目录 —— 默认路径在 `experiments/v1/raw/`，
+    但 pytest 根 conftest 会用 `AUSCULT_AGENT_GATE_AUDIT_PATH` 把它重定向到临时目录
+    （回归不能把已跟踪的实验产物写长）。判据统一为"不在 reports/ 生产审计路径上"。
+    """
+    path = str(rg.AUDIT_PATH).replace("\\", "/")
+    assert "/reports/" not in path, f"gate 审计不得落生产 reports/：{path}"
+    # 且 `main()` 必须跑完即还原全局（否则会污染同进程内其它审计调用方）
+    rg.main(["--selftest"])
+    assert str(rg.sanitizer.AUDIT_LOG_PATH).replace("\\", "/") != path, \
+        "main() 退出后未还原 sanitizer.AUDIT_LOG_PATH"
 
 
 def test_infer_alarm_covers_real_cases_without_leaking_expected():

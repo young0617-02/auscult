@@ -123,9 +123,10 @@ def test_a1_pg_checkpoint_persisted() -> None:
         assert st.next and "human_review" in st.next, \
             f"应挂起在 human_review（next={st.next}）"
 
-        # 查 PG checkpoint 表
-        conn = psycopg.connect(
-            "postgresql://root:123456@127.0.0.1:5433/auscult_v2")
+        # 查 PG checkpoint 表（DSN 随 API_PG_URL 走，避免绕开集成测试隔离）
+        from app.api.config import POSTGRES_URL  # noqa: PLC0415
+
+        conn = psycopg.connect(POSTGRES_URL)
         try:
             with conn.cursor() as cur:
                 cur.execute(
@@ -330,8 +331,9 @@ def test_b4_no_duplicate_reports() -> None:
     generate_report(state)
     result3 = generate_report(state)
 
-    conn = psycopg.connect(
-        "postgresql://root:123456@127.0.0.1:5433/auscult_v2")
+    from app.api.config import POSTGRES_URL  # noqa: PLC0415
+
+    conn = psycopg.connect(POSTGRES_URL)
     try:
         with conn.cursor() as cur:
             cur.execute(

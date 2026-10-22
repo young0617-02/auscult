@@ -25,10 +25,11 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from . import paths as _paths
+
 # ---------------------------------------------------------------- 常量
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-METRICS_DIR = PROJECT_ROOT / "reports" / "metrics"
+METRICS_DIR = _paths.METRICS_DIR      # AUSCULT_REPORTS_DIR 可覆盖（默认 <repo>/reports/metrics）
 
 CONFIDENCE_BINS = ("low", "medium", "high")   # <0.50, 0.50–0.75, ≥0.75
 ROUTE_TARGETS = ("finalize", "degrade", "escalate_cloud", "human_review")

@@ -21,10 +21,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ..observability.paths import reports_file
+
 # ---------------------------------------------------------------- 常量
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-AUDIT_LOG_PATH = PROJECT_ROOT / "reports" / "security_audit.jsonl"
+# 产物路径统一由 app.observability.paths 提供：`AUSCULT_REPORTS_DIR` 可覆盖，
+# 集成回归跑在临时目录里，不再往仓库已跟踪的 reports/*.jsonl 追加（2026-10-22）。
+AUDIT_LOG_PATH = reports_file("security_audit.jsonl")
 
 # 工具白名单（对应 schemas/tools_v2.json 中定义的 5 个工具）
 TOOL_WHITELIST: frozenset[str] = frozenset({

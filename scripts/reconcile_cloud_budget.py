@@ -35,7 +35,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-AUDIT_PATH = PROJECT_ROOT / "reports" / "cloud_audit.jsonl"
+AUDIT_PATH = _paths.reports_file("cloud_audit.jsonl")
 
 
 def _redis_used(day: str) -> int | None:

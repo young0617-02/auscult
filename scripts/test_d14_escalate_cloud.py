@@ -152,7 +152,9 @@ def test_cloud_json_parse_fail() -> None:
 
 def test_audit_written() -> None:
     """5. 审计记录写入 reports/cloud_audit.jsonl。"""
-    audit_path = PROJECT_ROOT / "reports" / "cloud_audit.jsonl"
+    from app.observability.paths import reports_file  # noqa: PLC0415
+
+    audit_path = reports_file("cloud_audit.jsonl")   # 随 AUSCULT_REPORTS_DIR 走（测试用临时目录）
     count_before = 0
     if audit_path.exists():
         count_before = sum(1 for _ in audit_path.open(encoding="utf-8"))

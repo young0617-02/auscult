@@ -22,7 +22,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.api.main import create_app  # noqa: E402
 from scripts.seed_users import DEFAULT_PASSWORD, seed  # noqa: E402
 
-PG_DSN = "postgresql://root:123456@127.0.0.1:5433/auscult_v2"
+# 2026-10-22：随 API_PG_URL 走（集成测试隔离到临时库时需要），不再写死
+from app.api.config import POSTGRES_URL  # noqa: E402
+
+PG_DSN = POSTGRES_URL
 client = TestClient(create_app())
 _results: list[tuple[bool, str, str]] = []
 _cleanup_docs: list[str] = []

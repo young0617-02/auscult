@@ -33,9 +33,13 @@ from app.graph.nodes import diagnose as diagnose_node_mod  # noqa: E402
 from scripts.seed_users import DEFAULT_PASSWORD, seed  # noqa: E402
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-TRACE_DIR = PROJECT_ROOT / "reports" / "traces"
-AUDIT_LOG = PROJECT_ROOT / "reports" / "review_audit.jsonl"
-PG_DSN = "postgresql://root:123456@127.0.0.1:5433/auscult_v2"
+from app.observability import paths as _paths  # noqa: E402
+from app.api.config import POSTGRES_URL  # noqa: E402
+
+TRACE_DIR = _paths.TRACE_DIR
+AUDIT_LOG = _paths.reports_file("review_audit.jsonl")
+# 2026-10-22：不再写死 DSN —— 否则集成测试隔离（API_PG_URL）对这个脚本失效
+PG_DSN = POSTGRES_URL
 
 client = TestClient(create_app())
 _results: list[tuple[bool, str, str]] = []

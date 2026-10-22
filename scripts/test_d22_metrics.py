@@ -145,7 +145,9 @@ def test_flush_jsonl() -> None:
     mc.record_node_duration("test_node", 10)
     mc.record_route("finalize")
     # 写入临时文件
-    tmp = PROJECT_ROOT / "reports" / "metrics" / "d22-test.jsonl"
+    from app.observability.paths import METRICS_DIR  # noqa: PLC0415
+
+    tmp = METRICS_DIR / "d22-test.jsonl"
     if tmp.exists():
         tmp.unlink()
     path = mc.flush(tmp)

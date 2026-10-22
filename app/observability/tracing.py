@@ -26,10 +26,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
+from . import paths as _paths
+
 # ---------------------------------------------------------------- 常量
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-TRACE_DIR = PROJECT_ROOT / "reports" / "traces"
+TRACE_DIR = _paths.TRACE_DIR          # AUSCULT_REPORTS_DIR 可覆盖（默认 <repo>/reports/traces）
 
 _MAX_SUMMARY_LEN = 200   # 日志摘要截断长度
 

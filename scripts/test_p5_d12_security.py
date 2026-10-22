@@ -93,7 +93,9 @@ def test_tool_whitelist() -> None:
 
     # JSONL：取**本用例刚写入的那条**（`delete_all_data`），而不是全文件尾行 ——
     # 2026-10-22：审计文件是进程级共享，全量跑时可能有其它用例/后台线程后写入。
-    jsonl = PROJECT_ROOT / "reports" / "security_audit.jsonl"
+    from app.observability.paths import reports_file  # noqa: PLC0415
+
+    jsonl = reports_file("security_audit.jsonl")
     lines = jsonl.read_text(encoding="utf-8").strip().splitlines()
     mine = [ln for ln in lines if '"delete_all_data"' in ln]
     assert mine, "未找到本用例的审计记录"

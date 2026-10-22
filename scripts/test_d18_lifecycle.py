@@ -115,7 +115,9 @@ def test_timeout_24h() -> None:
 
 def test_notify_backup() -> None:
     """9. 通知备用审核人写审计。"""
-    audit_path = PROJECT_ROOT / "reports" / "review_audit.jsonl"
+    from app.observability.paths import reports_file  # noqa: PLC0415
+
+    audit_path = reports_file("review_audit.jsonl")
     count_before = 0
     if audit_path.exists():
         count_before = sum(1 for _ in audit_path.open(encoding="utf-8"))

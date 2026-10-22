@@ -112,7 +112,7 @@
 | 1 | **endpoint 校验硬化** | ✅ 已完成 | `app/llm/client.py` 新增 `_normalize_cloud_endpoint()`：`…/v1`、`…/v1beta`、`…/compatible-mode/v1` 等 base URL 自动补 `/chat/completions` 并记 `WARNING`；形态不明（`…/openai`、`…/v1/messages`）**直接 `RuntimeError`** 并给出可照抄写法；补 4 例回归锁。API 已用新代码重启，`/api/health` 正常 |
 | 2 | **集成断言修复** | ✅ 已完成 | 全量 `pytest`：**566 passed / 0 failed（98 s）**；离线 `pytest tests/`：**400 passed（32 s）**。详见 §5.1 |
 | 3 | 密钥扫描白名单 | ✅ 已完成 | `run_demo_s1.py` 口令改读 `AUSCULT_SEED_PASSWORD`；`retrieve_knowledge.py` 的 `"unknown"` 哨兵值进白名单 |
-| 4 | 集成测试隔离（直写生产库） | ⏳ **未做** | 跑一次仍会向 `reports` 表注入测试报告、并追加 `reports/*.jsonl`、`experiments/v1/raw/*.jsonl` 等**已跟踪**产物（本次已手工 `git checkout --` 还原）。建议独立 schema + 跑后清理 |
+| 4 | **集成测试隔离（直写生产库/产物）** | ✅ 已完成（同日单独一轮） | 见 §5.2：产物目录 + 数据库双隔离，回归跑完 `git status` 在 `reports/`、`experiments/` 下**零变化** |
 | 5 | 配置回滚 | — | `env/cloud.json.bak-20261022` 保留；回滚 DashScope 只需改回完整 endpoint |
 
 ### 5.1 断言修复清单（对应 §四.1 的 28 个失败）
@@ -128,3 +128,38 @@
 | 共享文件尾行（d24 审计 / p5_d12 工具白名单） | 审计 JSONL 是进程级共享，全量跑时尾行可能属于别的用例 | 改为按本用例标识过滤（`"d24-audit"` / `"delete_all_data"`） |
 | 全局注册表精确增量（p5_d06） | Prometheus 注册表进程级共享，`==2.0` 易被其它用例/后台线程干扰 | `==` 改 `>=`（仍能抓「根本没接上」=0 的真回归） |
 | 客户端工厂缓存（`test_factory_cloud_backend`） | `get_client` 按 `(backend, model)` 缓存，全量跑时拿到前序用例的旧实例 | 补 `reset_client_cache()` |
+
+### 5.2 集成测试隔离（2026-10-22 单独一轮）
+
+**问题**：`scripts/test_*.py` 打真栈 → 直接写**生产库**；审计/轨迹/指标又往**仓库内已跟踪**的
+`reports/*.jsonl`、`experiments/v1/raw/*.jsonl` 追加 —— 跑一次回归脏一片，diff 无法评审。
+
+**做法**（根 `conftest.py`；全部在 import app **之前**生效 —— 路径与 DSN 都是 import 时常量，
+fixture 阶段根本改不动）：
+
+1. **产物目录**：`AUSCULT_REPORTS_DIR` 指向临时目录。新增 `app/observability/paths.py` 作为
+   `REPORTS_DIR / TRACE_DIR / METRICS_DIR` 的**单一来源**，5 个写点（security / cloud / review
+   审计、trace 轨迹、metrics 指标）全部改为引用它，不再各自拼 `PROJECT_ROOT/"reports"`。
+2. **数据库**：一次性临时库 `auscult_it_<uuid>`（跑 `db/migrations` 6 个 + 种子 4 角色 +
+   2 条最小工单样本，供 `test_query_real` 这类"已知设备必有台账"的断言），
+   `API_PG_URL` / `LANGGRAPH_PG_URL`（app 内同源）切过去，会话结束 `DROP DATABASE … WITH (FORCE)`。
+3. **gate 实验审计**：`scripts/run_agent_gate.py` 的 `AUDIT_PATH` 加 `AUSCULT_AGENT_GATE_AUDIT_PATH`
+   覆盖，pytest 下同样落临时目录（否则它继续写长那份已跟踪的实验产物）。
+4. **兜底**：临时库建不起来（无 CREATEDB / 实例不可达）→ 回退生产库并打
+   `[it-isolation][WARN]`，**不静默**。
+5. **拔掉 3 处绕过隔离的硬编码 DSN**：`test_p4_d05` / `test_p4_d06` / `test_d20`×2 里写死的
+   `postgresql://…/auscult_v2` 改为 `app.api.config.POSTGRES_URL`。
+
+**顺带修掉的真实缺陷**：`run_agent_gate.py` 原先在**模块级**就把 `sanitizer.AUDIT_LOG_PATH`
+改到实验路径 —— 任何人 `import` 它（`tests/test_agent_gate.py` 就会），同进程后续用例
+（`test_d24_security::test_audit_logging`、`test_p5_d12_security::test_tool_whitelist`）
+就写到"自己读不到"的文件里而失败。现改为 `main()` 内 `try/finally` 临时重定向、退出即还原，
+并加了"退出后必须还原"的回归锁。
+
+**结果**：`pytest` **566 passed / 0 failed（97 s）**；跑完 `git status` 在 `reports/`、
+`experiments/` 下**零变化**；临时库自动 DROP，`pg_database` 无残留。
+开关：`AUSCULT_IT_DB=off` 只隔离产物目录（排查"是不是隔离导致"时用）。
+
+**遗留（需单独授权）**：生产库 `auscult_v2` 里仍有 **52 份历史测试报告**（总量 82 份，
+`thread_id` 形如 `d19-*` / `d20-*` / `d24-*`）是隔离落地前跑出来的，属历史脏数据；
+清理要 `DELETE FROM reports …` + 对应 checkpoint/audit 行，属破坏性操作，待批准后单独执行。

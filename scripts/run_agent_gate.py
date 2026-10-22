@@ -73,10 +73,23 @@ from app.security import sanitizer                                     # noqa: E
 
 HARNESS = "agent_gate_v1"
 DEFAULT_SCHEMA = PROJECT_ROOT / "schemas" / "tools_v4_agent.json"
-AUDIT_PATH = PROJECT_ROOT / "experiments" / "v1" / "raw" / "EXP-P7-GATE-D.security_audit.jsonl"
+# 实验审计路径：`AUSCULT_AGENT_GATE_AUDIT_PATH` 可覆盖 —— pytest 根 conftest 会把它指到
+# 临时目录，避免回归跑一次就把这份**已跟踪**的实验产物写长（2026-10-22 集成测试隔离）。
+AUDIT_PATH = Path(os.environ.get("AUSCULT_AGENT_GATE_AUDIT_PATH")
+                  or (PROJECT_ROOT / "experiments" / "v1" / "raw"
+                      / "EXP-P7-GATE-D.security_audit.jsonl"))
 
-# 审计重定向：实验不得污染 `reports/security_audit.jsonl`（生产审计路径）
-sanitizer.AUDIT_LOG_PATH = AUDIT_PATH
+def apply_audit_redirect() -> None:
+    """把审计改写到实验目录（**只在真正跑 gate 时调用**）。
+
+    2026-10-22 修复：这行原先是**模块级副作用** —— 只要有人 `import run_agent_gate`
+    （例如 `tests/test_agent_gate.py::test_audit_not_pollute_reports`），进程内的全局
+    `sanitizer.AUDIT_LOG_PATH` 就被永久改到 `experiments/v1/raw/…`，于是同一轮回归里
+    后续用例（`test_d24_security::test_audit_logging`、
+    `test_p5_d12_security::test_tool_whitelist`）写到"自己读不到"的文件里而失败，
+    同时把 `experiments/v1/raw/EXP-P7-GATE-D.security_audit.jsonl` 这种**已跟踪产物**越写越长。
+    """
+    sanitizer.AUDIT_LOG_PATH = AUDIT_PATH
 
 
 # ---------------------------------------------------------------- 中性打桩
@@ -306,6 +319,16 @@ def _sha(path: Path) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    """入口：临时重定向实验审计，跑完**必须还原**（否则污染同进程其它调用方）。"""
+    prev_audit = sanitizer.AUDIT_LOG_PATH
+    try:
+        apply_audit_redirect()
+        return _main_impl(argv)
+    finally:
+        sanitizer.AUDIT_LOG_PATH = prev_audit
+
+
+def _main_impl(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="路径 D：产品 Agent 本体跑 V1 判据集")
     ap.add_argument("--cases", action="append", default=None, help="用例文件（可多次）")
     ap.add_argument("--schema", default=str(DEFAULT_SCHEMA), help="判分用 schema（默认只读 4 工具面）")
@@ -442,6 +465,7 @@ class _FakeCall:
 
 
 def _selftest() -> int:
+    apply_audit_redirect()      # 自检同样断言"审计落实验路径"，需先重定向
     failures: list[str] = []
     install_stubs()
     case = {"case_id": "t-001", "type": "多轮", "difficulty": "中", "expect_reject": False,

@@ -23,6 +23,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from ..observability.paths import reports_file
+
 # ---------------------------------------------------------------- 常量
 
 REDIS_URL = "redis://:auscult-dev-redis@127.0.0.1:6379/0"
@@ -32,8 +34,7 @@ LOCK_TTL_SECONDS = 25 * 3600          # 25h（24h 超时 + 1h 缓冲）
 NOTIFY_AFTER_SECONDS = 4 * 3600       # 4h → 通知备用审核人
 TIMEOUT_AFTER_SECONDS = 24 * 3600    # 24h → 超时降级
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-AUDIT_LOG_PATH = PROJECT_ROOT / "reports" / "review_audit.jsonl"
+AUDIT_LOG_PATH = reports_file("review_audit.jsonl")   # AUSCULT_REPORTS_DIR 可覆盖
 
 # Lua 脚本：校验 value 后删除（防止误释放他人锁）
 _RELEASE_SCRIPT = """
