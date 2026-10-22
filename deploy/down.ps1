@@ -34,6 +34,11 @@ function Invoke-DockerQuiet {
     }
 }
 
+# ⚠️ 陷阱（ISS-063，2026-10-22 干净环境演练实测）：up.ps1 自 2026-10-14 起默认带
+#   `--profile tdengine` 起栈，而 down 原先**不带 profile** → `down` 后 auscult-tdengine
+#   仍在运行，并持续占用 auscult-net（`docker compose down` 只打一行
+#   "Network ... Resource is still in use" 的非致命提示，脚本仍 exit 0 报 [OK]，
+#   属静默"半停"）。故两条路径都必须带同一 profile，与 up 口径对齐。
 if ($Volumes) {
     Write-Host "[WARN] Destroying volumes - ALL DATA WILL BE LOST" -ForegroundColor Red
     $confirm = Read-Host "Type 'yes' to confirm"
@@ -42,10 +47,10 @@ if ($Volumes) {
         exit 0
     }
     Write-Host "[STEP] Stopping services + destroying volumes..." -ForegroundColor Cyan
-    $downExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "down", "-v")
+    $downExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "--profile", "tdengine", "down", "-v")
 } else {
     Write-Host "[STEP] Stopping services (volumes preserved)..." -ForegroundColor Cyan
-    $downExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "down")
+    $downExit = Invoke-DockerQuiet @("compose", "-f", $ComposeFile, "--profile", "tdengine", "down")
 }
 
 if ($downExit -eq 0) {

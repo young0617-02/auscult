@@ -26,6 +26,22 @@
 
 ---
 
+## 2026-10-22（维护期 · **§7.3 全绿：干净环境清空卷演练留档**）
+
+> 最后一项 `[~]` 的真实原因不是"起不来"，而是**"全新目录 ≠ 空卷"**：`deploy/docker-compose.yml`
+> 写死 `name: auscult-deploy`，解压到新目录起的栈照旧挂宿主那套已有数据的卷 —— 从未真正验证过零数据引导。
+
+- **演练口径**：`dist\auscult-v1.0.0.zip`（sha256 `7986af94…647680` / 3,112,006 B）解压到空目录（557 文件 / 6.5 MB），以 `COMPOSE_PROJECT_NAME=auscult-clean` 起 8 个全新命名卷（实测 `-p` 与 env 均覆盖 `name:`；`docker inspect auscult-pg` 确认挂的是 `auscult-clean_pg-data`）→ 既走真实一键入口、又是真空卷，**原 8 个数据卷零接触**。
+- **结果**：包内 `up.ps1` **exit 0**（9 镜像 @sha256 全 Pulled，digest 校验通过）；**8 基建 11 s 全 healthy**（milvus 冷启 11 s 达标）；`smoke.ps1` **6/6 PASS**（空库仅 5 表）；包内 6 个迁移在空卷 **0 失败**（5 → 14 表：业务表 9 + 扩展视图 5）。
+- **差异核对（避免误判为缺口）**：与原栈 18 表的差集 = `checkpoints / checkpoint_writes / checkpoint_blobs / checkpoint_migrations`，系 LangGraph checkpointer 应用启动时 `setup()` 自建，**非迁移集缺陷**。
+- **演练发现**：① ISS-057 守卫按设计生效 —— 宿主 `mosquitto.exe` 占 1883 时 `up.ps1` 立即 `exit 1` 并打印 PID/处置命令（停宿主 broker 后映射正常建立）；② **新登记 ISS-063**：`down.ps1` 未带 `--profile tdengine` → `down` 后 tdengine 容器与 `auscult-net` 残留，而脚本仍打印 `[OK]`，属静默"半停"。
+- **代码**：`deploy/down.ps1` 两条路径（`down` / `down -v`）补 `--profile tdengine`，与 `up.ps1` 口径对齐。
+- **环境恢复**：演练卷 `down -v` 全部 Removed；原栈重起后 `db=23 MB / tables=18 / audit_logs=2319 / reports=32` 与基线一致；宿主 mosquitto 按原命令行恢复（1883 仍归 Palpation，属演练前既有冲突，非本次引入）。
+- **回填**：`plan/Phase 6` §7.3 → **8 项全 `[x]`、`[~]` 归零**；留档 `docs/p6-clean-env-drill-2026-10-22.md`。
+- **版本**：本次改动重打交付包为 **`v1.0.1`**（`dist\auscult-v1.0.1.zip`）—— `v1.0.0` 包内 `down.ps1` 仍是旧版；另 `package.ps1` 补 staging 失败清理兜底（`trap`，2026-10-22 两次踩到 `client\node_modules` 超长路径残留无法用 `Remove-Item` 清掉）。
+
+---
+
 ## 2026-10-22（维护期 · **Must#9 封堵：高风险审核三条绕过路径**）
 
 > "高风险必审"此前只在**正常路径**成立。核对发现三条绕过，其中最严重的一条会让

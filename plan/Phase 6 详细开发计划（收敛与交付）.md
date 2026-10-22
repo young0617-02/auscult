@@ -276,21 +276,21 @@ Step 8  追溯：报告内每条结论可点回原文；Trace 时间线展示全
 > **三条同时满足 → 项目正式完成（M6.4）。** 若未满足，只允许修复缺陷，不得扩范围。
 > 2026-10-22 判定：**三条全部闭合 → M6.4 达成**（第 1 条 S1 全链实测 98.1s、第 2 条三处口径误标已修正并统一到
 > `docs/p6-metrics-canonical-2026-10-22.md`、第 3 条风险册 v2 与版本锁 §4.2 定稿）。
-> 录屏与"干净环境清空卷"演练留档属**交付形态补档**，不阻塞判定。
+> 录屏属**交付形态补档**，不阻塞判定（"干净环境清空卷"演练已于 2026-10-22 留档，见 §7.3 第 1 项）。
 
 ### 7.3 交付验收清单
 
-- [~] 干净环境 `docker compose up` 一键启动，全服务健康（本机 8 容器 up / 7 基建 healthy；**无"全新目录+清空卷"演练留档**，该场景历史上曾 100% 崩，见 ISS-044/057）
+- [x] 干净环境 `docker compose up` 一键启动，全服务健康——**2026-10-22 全新目录 + 全空卷演练通过**（`docs/p6-clean-env-drill-2026-10-22.md`）：`dist\auscult-v1.0.0.zip` 解压到空目录（557 文件），以 `COMPOSE_PROJECT_NAME=auscult-clean` 起 8 个全新空卷（`docker inspect` 确认未挂原卷），交付包内 `up.ps1` exit 0、9 镜像 digest 校验通过、**8 基建 11s 全 healthy**、`smoke.ps1` **6/6 PASS**、包内 6 个迁移在空库 0 失败（5→14 表）；原数据卷零接触（23 MB / 18 表 / audit_logs 2319 演练前后一致）。演练暴露 2 项：ISS-057 守卫按设计拦截宿主 1883 占用、**新登记 ISS-063**（`down.ps1` 缺 `--profile tdengine`，已修）
 - [x] 冒烟通过（**实际入口 `deploy\smoke.ps1`；仓库无 Makefile，`make smoke` 口径弃用**）：2026-10-22 复跑 **6/6 PASS**
 - [x] 主场景演示全程复现（2026-10-22 全链 **98.1s** 跑通至定稿；留档 `demo/recording/s1-run-2026-10-22.md`；**录屏仍待人工补**，但脚本留档 + `report_id` 可复现）
 - [x] 六类文档齐备（README / 架构 / 部署 / 运维 / API / 数据字典 + ADR-001..009）
 - [x] 版本锁定清单与各报告 digest 一致（10 镜像 digest + 2 模型齐全；**§4.2 已补 P3–P7 共 13 份报告登记**；prometheus `latest` 记「临时栈显式豁免」）
 - [x] 风险册定稿（剩余风险已显式接受）——**v2 定稿**：11 条关闭（挂实测证据）、R4/R15/R21 显式接受并写明代价、R17/R22 降级为已知缺陷、新增 R17–R23 覆盖 P6/P7
 - [x] 指标报告可查（含局限声明）——`reports/p5-eval.md` 局限 + 未达标处置、p2 评测集约束
-- [x] 交付包封版（tag/压缩包）——**tag `v1.0.0` + `dist\auscult-v1.0.0.zip`**；入口 `deploy\package.ps1`（556 文件 / 压缩 3 MB / 解压 6.5 MB；包内 `PACKAGE-MANIFEST.txt` 记录 git HEAD、体积、已排除清单与逐文件字节）
+- [x] 交付包封版（tag/压缩包）——**tag `v1.0.0` + `dist\auscult-v1.0.0.zip`**；入口 `deploy\package.ps1`（556 文件 / 压缩 3 MB / 解压 6.5 MB；包内 `PACKAGE-MANIFEST.txt` 记录 git HEAD、体积、已排除清单与逐文件字节）。**追加 `v1.0.1`**（2026-10-22，随干净环境演练）：`down.ps1` 补 `--profile tdengine`（ISS-063）、`package.ps1` staging 失败清理兜底 → `dist\auscult-v1.0.1.zip`
 
-**合计**：`[x]` 7 项 · `[~]` 1 项（干净环境演练留档）
-（核对报告：`reports/p6-readiness-must-chain-2026-10-22.md`；指标口径：`docs/p6-metrics-canonical-2026-10-22.md`）。
+**合计**：`[x]` **8 项 · `[~]` 0**（§7.3 交付验收清单全绿）
+（核对报告：`reports/p6-readiness-must-chain-2026-10-22.md`；指标口径：`docs/p6-metrics-canonical-2026-10-22.md`；干净环境演练：`docs/p6-clean-env-drill-2026-10-22.md`）。
 
 ---
 

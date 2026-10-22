@@ -28,6 +28,17 @@ $stage = Join-Path $env:TEMP ("auscult-pkg-" + [guid]::NewGuid().ToString("N").S
 $outDir = Join-Path $root $Out
 $zip = Join-Path $outDir ("auscult-" + $Version + ".zip")
 
+# 清理兜底：staging 在**失败路径**也必须删掉。
+# 2026-10-22 实测踩到两次：关键件自检 throw 后 staging 留在 %TEMP%，其中 client\node_modules
+# 路径超 260 字符，`Remove-Item -Recurse` 报"未能找到路径"，只能靠 robocopy 空目录镜像清掉。
+# trap 在任意终止性错误时执行，清理后原样抛出（退出码仍非零，不掩盖失败）。
+trap {
+    if ($stage -and (Test-Path $stage)) {
+        Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    throw $_
+}
+
 Write-Host ("=== auscult 交付包打包 " + $Version + " ===") -ForegroundColor Cyan
 
 # 版本一致性检查：git tag 与参数应一致（无 tag 时提示但不阻断）
