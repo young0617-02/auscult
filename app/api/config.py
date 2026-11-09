@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import os
+import secrets
 from pathlib import Path
 
 # ---------------- 数据库 ----------------
@@ -18,8 +19,11 @@ POSTGRES_URL = os.environ.get(
 )
 
 # ---------------- JWT ----------------
-# 开发默认密钥 ≥32 字节（RFC 7518 对 HS256 的建议下限）；生产必须环境变量注入
-JWT_SECRET = os.environ.get("JWT_SECRET", "<REDACTED_DEV_SECRET>")
+# 2026-11-09 脱敏：**不再内置固定密钥**。未注入 JWT_SECRET 时每次启动随机生成
+# （长度 ≥32 字节，满足 RFC 7518 对 HS256 的下限）——本地开发可直接跑，重启后旧
+# token 失效；生产/云端必须由环境变量注入稳定密钥。
+JWT_SECRET = os.environ.get("JWT_SECRET") or secrets.token_urlsafe(32)
+IS_DEV_SECRET = not os.environ.get("JWT_SECRET")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = int(os.environ.get("JWT_EXPIRE_MINUTES", "480"))  # 8h（一个班次）
 

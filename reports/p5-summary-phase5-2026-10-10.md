@@ -19,9 +19,9 @@
 
 | 项 | 口径 | 实测 | 报告 |
 |---|---|---|---|
-| RAGAS 四指标 | faithfulness / answer relevancy / context precision / context recall | context_precision **0.9861**（引用正确率代理） | [p5-eval.md](file:///d:/DSHproject/auscult/reports/p5-eval.md) |
-| 双人标注 κ | Cohen's Kappa ≥0.7 | **0.8344**（第二标注者 = 本地 LLM，同一 labeling-spec） | [p5-kappa.md](file:///d:/DSHproject/auscult/reports/p5-kappa.md) |
-| 幻觉率 | 3 级评分（无依据/部分/充分），判据 ≤10% | **0.0%**（A=10 / B=2 / C=0；B 级 2 条根因为语料数值冲突非编造） | [p5-hallucination.md](file:///d:/DSHproject/auscult/reports/p5-hallucination.md) |
+| RAGAS 四指标 | faithfulness / answer relevancy / context precision / context recall | context_precision **0.9861**（引用正确率代理） | [p5-eval.md](file:///<REPO>/reports/p5-eval.md) |
+| 双人标注 κ | Cohen's Kappa ≥0.7 | **0.8344**（第二标注者 = 本地 LLM，同一 labeling-spec） | [p5-kappa.md](file:///<REPO>/reports/p5-kappa.md) |
+| 幻觉率 | 3 级评分（无依据/部分/充分），判据 ≤10% | **0.0%**（A=10 / B=2 / C=0；B 级 2 条根因为语料数值冲突非编造） | [p5-hallucination.md](file:///<REPO>/reports/p5-hallucination.md) |
 | 端到端指标 | P95 检索 / P95 端到端 / 工具首次成功率 / ECE | 检索 **159.4ms** ✅；端到端 **9248.8ms** ❌（P50=1539.6ms ✅）；工具 **1.0**(12/12) ✅；ECE 0.0（零方差局限已声明） | p5-eval.md §三 |
 
 ### 2.2 可观测硬化（W2 / D6–D10）
@@ -36,13 +36,13 @@
 
 ### 2.3 运维硬化（W3 / D11）
 
-- Compose 全服务 healthcheck + 资源限额；备份恢复演练 **Pass**：[p5-backup.md](file:///d:/DSHproject/auscult/reports/p5-backup.md)
+- Compose 全服务 healthcheck + 资源限额；备份恢复演练 **Pass**：[p5-backup.md](file:///<REPO>/reports/p5-backup.md)
 - RTO：PG **3.1s**（dump 1.0s + restore 2.1s + 校验）；Neo4j 冷备 16s（105 节点完好）；Milvus 5.3s；语料 SHA256 留痕
 - RPO：演练 Pass；「≤24h 持续达成」依赖每日定时备份任务（挂 P6）
 
 ### 2.4 安全与权限硬化（W4 / D12–D13）
 
-八项回归全通过（[p5-security.md](file:///d:/DSHproject/auscult/reports/p5-security.md)）：
+八项回归全通过（[p5-security.md](file:///<REPO>/reports/p5-security.md)）：
 
 | # | 项 | 实测 |
 |---|---|---|
@@ -59,7 +59,7 @@
 
 ### 2.5 性能硬化（W5 / D14–D15）
 
-[p5-perf.md](file:///d:/DSHproject/auscult/reports/p5-perf.md)：
+[p5-perf.md](file:///<REPO>/reports/p5-perf.md)：
 
 | 档位 | 请求数 | req/s | 错误率 | P50 | P95 | P99 |
 |---|---|---|---|---|---|---|
@@ -156,14 +156,14 @@
 
 | 项 | 计划 | 实际 | 说明 |
 |---|---|---|---|
-| `reports/p5-ops.md` | W3 运维硬化报告 | 未单独出件 | 内容并入 [p5-backup.md](file:///d:/DSHproject/auscult/reports/p5-backup.md)（备份/RTO/RPO）+ Compose 硬化自测（`test_p5_d10_compose.py` 5/5） |
+| `reports/p5-ops.md` | W3 运维硬化报告 | 未单独出件 | 内容并入 [p5-backup.md](file:///<REPO>/reports/p5-backup.md)（备份/RTO/RPO）+ Compose 硬化自测（`test_p5_d10_compose.py` 5/5） |
 | Grafana 面板 | 4 个专项（检索/推理/审核/资源） | 1 个总览看板 12 面板 | 四域内容等价，合并组织 |
 
 ## 七、环境与复现
 
 - **常驻**：v2-pg(5433) / redis(6379) / neo4j(7687) / milvus(39530) / nginx(9763)；**tdengine 停**（Phase 5 基线口径）
 - **后端**：`.venv\Scripts\python.exe -m uvicorn app.api.main:socket_app --host 127.0.0.1 --port 8000`（**须设 `MILVUS_PORT=39530`**，配置默认 19531 与实际映射不一致 → 记 P6 环境项）
-- **监控栈**：临时件，测后 `docker compose -f docker/compose.monitoring.yml down -v` 销毁；digest 见 [prj-ledger-version-lock.md](file:///d:/DSHproject/auscult/docs/prj-ledger-version-lock.md) §二.2.1 第 9/10 行
+- **监控栈**：临时件，测后 `docker compose -f docker/compose.monitoring.yml down -v` 销毁；digest 见 [prj-ledger-version-lock.md](file:///<REPO>/docs/prj-ledger-version-lock.md) §二.2.1 第 9/10 行
 - **复现命令**：见 p5-perf.md §八 / p5-backup.md §三 / p5-security.md §三
 
 ## 八、Phase 5 技术栈

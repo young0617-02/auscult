@@ -21,7 +21,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 
-from app.api.config import JWT_SECRET
+from app.api.config import IS_DEV_SECRET
 from app.api.auto_trigger import start_auto_trigger_watcher
 from app.api.errors import ApiError, ERROR_STATUS, fail, get_trace_id, ok, set_trace_id
 from app.api.routes import alarms, auth, diagnose, graph, health, knowledge, reports, review
@@ -45,10 +45,10 @@ def create_app() -> FastAPI:
     app = FastAPI(title="auscult-diagnosis-api", version="0.1.0",
                   lifespan=lifespan)
 
-    if JWT_SECRET == "<REDACTED_DEV_SECRET>":  # 开发环境提醒，不中断启动
+    if IS_DEV_SECRET:  # 开发环境提醒，不中断启动
         import logging
         logging.getLogger("uvicorn.warning").warning(
-            "JWT_SECRET 使用开发默认值——仅限本机开发，禁止用于任何外部环境")
+            "JWT_SECRET 未注入——本次启动使用随机密钥（重启后旧 token 失效），禁止用于任何外部环境")
 
     # ---------------- 中间件：trace_id + 统一成功包络 + Prometheus 打点（D6） ----------------
     @app.middleware("http")

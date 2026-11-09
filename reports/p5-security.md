@@ -21,21 +21,21 @@
 
 1. **真实 bug**：`check_rate_limit` 原为同步函数，而 `main.py trace_and_envelope` 以 `await` 调用 → 端到端首次触发即 `TypeError`。**修复**：改为 `async def`（app/security/rate_limit.py）；此前自测未覆盖 POST 链路，本次 ⑦ 端到端项抓出。
 2. **硬编码凭证 5 处**（⑥ 扫描发现）→ 全部改 `os.environ.get` 形式（dev 默认保留、可 env 覆盖）：
-   - [query_sensor.py](file:///d:/DSHproject/auscult/app/tools/query_sensor.py)：`TDENGINE_PASSWORD`
-   - [outbox_worker.py](file:///d:/DSHproject/auscult/scripts/outbox_worker.py) / [reconcile.py](file:///d:/DSHproject/auscult/scripts/reconcile.py) / [retrieval_base.py](file:///d:/DSHproject/auscult/scripts/retrieval_base.py)：`NEO4J_PASSWORD`
-   - [seed_users.py](file:///d:/DSHproject/auscult/scripts/seed_users.py)：`AUSCULT_SEED_PASSWORD`
-3. **扫描误报 1 处**：[llm_adapter.py](file:///d:/DSHproject/auscult/scripts/llm_adapter.py) 的 `R1_END_TOKEN`（DeepSeek-R1 特殊 token 字面量，非凭证）→ 白名单豁免并留注释。
+   - [query_sensor.py](file:///<REPO>/app/tools/query_sensor.py)：`TDENGINE_PASSWORD`
+   - [outbox_worker.py](file:///<REPO>/scripts/outbox_worker.py) / [reconcile.py](file:///<REPO>/scripts/reconcile.py) / [retrieval_base.py](file:///<REPO>/scripts/retrieval_base.py)：`NEO4J_PASSWORD`
+   - [seed_users.py](file:///<REPO>/scripts/seed_users.py)：`AUSCULT_SEED_PASSWORD`
+3. **扫描误报 1 处**：[llm_adapter.py](file:///<REPO>/scripts/llm_adapter.py) 的 `R1_END_TOKEN`（DeepSeek-R1 特殊 token 字面量，非凭证）→ 白名单豁免并留注释。
 4. ③ 断言校准：注释中「不依赖 LLM」字样会误报，改为检测真实模型调用引用（`llm_adapter/ollama/openai/requests.post`）。
 
 ## 三、新增资产（D12~D13）
 
 | 资产 | 说明 |
 |---|---|
-| [db/migrations/0006_audit_logs.sql](file:///d:/DSHproject/auscult/db/migrations/0006_audit_logs.sql) | audit_logs 表 + 3 个 append-only 触发器（行级 UPDATE/DELETE + 语句级 TRUNCATE，ERRCODE 42501），已应用至 auscult_v2 |
-| [app/security/pg_audit.py](file:///d:/DSHproject/auscult/app/security/pg_audit.py) | `append_audit()`：PG 审计持久化（失败 warning+False 不阻断业务） |
-| [app/security/rate_limit.py](file:///d:/DSHproject/auscult/app/security/rate_limit.py) | Redis Lua 原子令牌桶；`consume()`（fail-open + 审计）+ `check_rate_limit()`（async）；参数 env `AUSCULT_RATE_LIMIT="capacity:refill"`（默认 10 : 10/60s）；429 走统一包络 + Retry-After + Prometheus 打点 |
-| [scripts/test_p5_d12_security.py](file:///d:/DSHproject/auscult/scripts/test_p5_d12_security.py) | 八项回归自测脚本 |
-| 修改 | [main.py](file:///d:/DSHproject/auscult/app/api/main.py)（call_next 前限流分支）；[errors.py](file:///d:/DSHproject/auscult/app/api/errors.py)（E_RATE_LIMITED→429）；[sanitizer.py](file:///d:/DSHproject/auscult/app/security/sanitizer.py)（安全事件 PG 双写） |
+| [db/migrations/0006_audit_logs.sql](file:///<REPO>/db/migrations/0006_audit_logs.sql) | audit_logs 表 + 3 个 append-only 触发器（行级 UPDATE/DELETE + 语句级 TRUNCATE，ERRCODE 42501），已应用至 auscult_v2 |
+| [app/security/pg_audit.py](file:///<REPO>/app/security/pg_audit.py) | `append_audit()`：PG 审计持久化（失败 warning+False 不阻断业务） |
+| [app/security/rate_limit.py](file:///<REPO>/app/security/rate_limit.py) | Redis Lua 原子令牌桶；`consume()`（fail-open + 审计）+ `check_rate_limit()`（async）；参数 env `AUSCULT_RATE_LIMIT="capacity:refill"`（默认 10 : 10/60s）；429 走统一包络 + Retry-After + Prometheus 打点 |
+| [scripts/test_p5_d12_security.py](file:///<REPO>/scripts/test_p5_d12_security.py) | 八项回归自测脚本 |
+| 修改 | [main.py](file:///<REPO>/app/api/main.py)（call_next 前限流分支）；[errors.py](file:///<REPO>/app/api/errors.py)（E_RATE_LIMITED→429）；[sanitizer.py](file:///<REPO>/app/security/sanitizer.py)（安全事件 PG 双写） |
 
 ## 四、边界与遗留
 
@@ -46,4 +46,4 @@
 ## 五、判定
 
 M5.3（D11 备份 + D12 审计 + D13 限流/安全回归）判据全部实测通过 → **M5.3 收口**。
-配套：备份演练见 [p5-backup.md](file:///d:/DSHproject/auscult/reports/p5-backup.md)（Pass，TDengine/定时备份挂 P6）。
+配套：备份演练见 [p5-backup.md](file:///<REPO>/reports/p5-backup.md)（Pass，TDengine/定时备份挂 P6）。

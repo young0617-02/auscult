@@ -94,7 +94,7 @@ set MINERU_MODEL_SOURCE=local
 - **表格型（工单/判据/拓扑）**：`criteria_1.json` 校验 `content.format=markdown`、`content.content` 非空、页范围正确；判据表 `<` 转义为 `&lt;` 现象符合 Spike §六.3。
 - **JSON 关键字段**：`parse.sha256`（可溯源）/`parse.tier=basic`/`content.page_range`/`content_ranges`（供 B2 引用）均正确落盘。
 
-> **D4 分块前置预处理（承接 Spike §七）**：对 `parsed/*.md + *.json` 在分块前做两处归一化 —— ① 数字-单位空格合并（`m m`→`mm` 等）；② HTML 实体反解（`&lt;`→`<`、`&gt;`→`>`）。见 [chunk_docs.py 设计](file:///d:\DSHproject\auscult\plan\p1-plan-detailed.md) §5.5。
+> **D4 分块前置预处理（承接 Spike §七）**：对 `parsed/*.md + *.json` 在分块前做两处归一化 —— ① 数字-单位空格合并（`m m`→`mm` 等）；② HTML 实体反解（`&lt;`→`<`、`&gt;`→`>`）。见 [chunk_docs.py 设计](file:///<REPO>\plan\p1-plan-detailed.md) §5.5。
 
 ---
 

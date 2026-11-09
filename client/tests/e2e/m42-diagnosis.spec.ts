@@ -7,8 +7,8 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "node:child_process";
 
-const PY = "d:\\DSHproject\\auscult\\.venv\\Scripts\\python.exe";
-const INSERT_SCRIPT = "d:\\DSHproject\\auscult\\scripts\\insert_test_alarm.py";
+const PY = "<REPO>\\.venv\\Scripts\\python.exe";
+const INSERT_SCRIPT = "<REPO>\\scripts\\insert_test_alarm.py";
 
 async function login(page: import("@playwright/test").Page, username = "eng_dev") {
   await page.goto("/login");
@@ -34,7 +34,7 @@ test("D6-D10：发起诊断 → 实时节点进度 → 终态消息 → 追问�
   const out = execSync(`"${PY}" "${INSERT_SCRIPT}" --severity critical --metric e2e_diag_test`, {
     encoding: "utf-8",
     timeout: 15_000,
-    cwd: "d:\\DSHproject\\auscult",
+    cwd: "<REPO>",
   });
   const alarmId = out.match(/alarm_id=(\S+)/)?.[1] ?? "";
   expect(alarmId).toContain("e2e-");

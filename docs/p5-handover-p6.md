@@ -8,11 +8,11 @@
 
 | 里程碑 | 出口判据 | 实测结果 | 报告 |
 |---|---|---|---|
-| **M5.1** 评测硬化 | 全量指标报告 + Kappa 结论 | 十二项指标：8 项达标、1 项未达标（P95 端到端 9248.8ms，处置已记录）、1 项代理口径（引用正确率 0.9861）、κ=**0.8344** ≥0.7；幻觉率 **0.0%**；ECE=0.0（零方差局限已声明） | [p5-eval.md](file:///d:/DSHproject/auscult/reports/p5-eval.md)、[p5-kappa.md](file:///d:/DSHproject/auscult/reports/p5-kappa.md) |
+| **M5.1** 评测硬化 | 全量指标报告 + Kappa 结论 | 十二项指标：8 项达标、1 项未达标（P95 端到端 9248.8ms，处置已记录）、1 项代理口径（引用正确率 0.9861）、κ=**0.8344** ≥0.7；幻觉率 **0.0%**；ECE=0.0（零方差局限已声明） | [p5-eval.md](file:///<REPO>/reports/p5-eval.md)、[p5-kappa.md](file:///<REPO>/reports/p5-kappa.md) |
 | **M5.2** 可观测 | 指标/日志/告警齐备 + Compose healthcheck | Prometheus 指标 6/6 + Grafana 面板 6/6 + 日志 5/5 + 告警 6/6 + Compose 硬化 5/5 自测全过 | `monitoring/`（alerts.yml + grafana/dashboards）+ `configs/logging.yml` |
-| **M5.3** 安全硬化 | 八项安全回归全通过 | 注入 10/10 检出、工具白名单+双轨审计、高风险纯规则 1.4ms、audit_logs append-only（UPDATE/DELETE/TRUNCATE 全拒）、SoD、secret_scan 141 文件、限流 [401,401,401,429]、预算熔断 340 | [p5-security.md](file:///d:/DSHproject/auscult/reports/p5-security.md) |
-| **M5.3** 备份演练 | RTO ≤30min / RPO ≤24h | PG RTO 3.1s、Neo4j/Milvus 冷备 16s/5.3s、语料 SHA256 留痕；RPO 持续达成依赖定时备份（P6） | [p5-backup.md](file:///d:/DSHproject/auscult/reports/p5-backup.md) |
-| **M5.4** 压测收敛 | 三档压测 + 资源 ≤24GB + 稳定性 | 10/20/50 三档 0% 错误（P95=100/190/940ms）；50 并发 30min：59,593 请求、P95=940ms 零漂移、6×502（0.01%）自愈；宿主峰值 **20.73GB** ≤24GB；限流 4,548 次 429 精确削峰 | [p5-perf.md](file:///d:/DSHproject/auscult/reports/p5-perf.md) |
+| **M5.3** 安全硬化 | 八项安全回归全通过 | 注入 10/10 检出、工具白名单+双轨审计、高风险纯规则 1.4ms、audit_logs append-only（UPDATE/DELETE/TRUNCATE 全拒）、SoD、secret_scan 141 文件、限流 [401,401,401,429]、预算熔断 340 | [p5-security.md](file:///<REPO>/reports/p5-security.md) |
+| **M5.3** 备份演练 | RTO ≤30min / RPO ≤24h | PG RTO 3.1s、Neo4j/Milvus 冷备 16s/5.3s、语料 SHA256 留痕；RPO 持续达成依赖定时备份（P6） | [p5-backup.md](file:///<REPO>/reports/p5-backup.md) |
+| **M5.4** 压测收敛 | 三档压测 + 资源 ≤24GB + 稳定性 | 10/20/50 三档 0% 错误（P95=100/190/940ms）；50 并发 30min：59,593 请求、P95=940ms 零漂移、6×502（0.01%）自愈；宿主峰值 **20.73GB** ≤24GB；限流 4,548 次 429 精确削峰 | [p5-perf.md](file:///<REPO>/reports/p5-perf.md) |
 
 ## 二、§7.1 全量指标终值（Phase 6 验收输入）
 
@@ -40,7 +40,7 @@
 |---|---|---|---|
 | 1 | Must 链 13 项端到端可演示（告警→报告→审核一次完整跑通） | ✅ | Phase 4 M4.2/M4.4 真实链路：告警→诊断→证据卡片→报告→审核→追问闭环，E2E 9/9（m41+m42+m43）；M5.1–M5.4 各项回归未破坏 |
 | 2 | ≥3 项量化指标达标（Recall@5≥85% + P95 检索<800ms + 工具首次成功率≥90%） | ✅ | 1.0 / 159.4ms / **98.67%（74/75）**，三项同时达标。**口径注（2026-10-22）**：原写 `1.0（12/12）` 实为「12 题检索执行口径」，误标为工具调用成功率；第三项真实口径见 `docs/p6-metrics-canonical-2026-10-22.md` |
-| 3 | 版本锁定清单 + 风险登记册定稿 | ✅ | [prj-ledger-version-lock.md](file:///d:/DSHproject/auscult/docs/prj-ledger-version-lock.md)（10 镜像 digest 锁定，P5 新增 prom/grafana 第 9/10 行）、[prj-ledger-risk-register.md](file:///d:/DSHproject/auscult/docs/prj-ledger-risk-register.md) 持续维护 |
+| 3 | 版本锁定清单 + 风险登记册定稿 | ✅ | [prj-ledger-version-lock.md](file:///<REPO>/docs/prj-ledger-version-lock.md)（10 镜像 digest 锁定，P5 新增 prom/grafana 第 9/10 行）、[prj-ledger-risk-register.md](file:///<REPO>/docs/prj-ledger-risk-register.md) 持续维护 |
 
 **结论：三条同时满足 → 停止扩展范围，Phase 6 转入收敛交付。**
 

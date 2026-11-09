@@ -56,3 +56,10 @@ dist/
 # 演示/接口进程重定向日志（运行产物，不入库；正文结论见 reports/*.md）
 *.err.log
 *.out.log
+
+# --- 脱敏/产物排除（2026-11-09 推送前加固） ---
+_private_excluded/
+blobs/
+chunks/
+archive/personal/
+.env.local

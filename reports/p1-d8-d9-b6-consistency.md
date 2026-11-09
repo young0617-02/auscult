@@ -64,9 +64,9 @@ PG=36 / Milvus=36 / Neo4j(有关系的chunk)=22
 | C 全「处置为」→ 未入图（3块+1） | fault_case_4 / workorders_A/B/E | v2 只抽到处置为，按 B4 决策「处置为」不入结构图 → source 无归属 | 本次一并入库（映射 `处置为:HANDLED_BY`），全量重导入不排除 | 33 条 HANDLED_BY 关系入库，source 归零 |
 
 **专项代码改动**（3 脚本）：
-- [extract_triples.py](file:///d:/DSHproject/auscult/scripts/extract_triples.py) `import_neo4j`：关系 source 由单值改数组 `source_chunk_ids` + `source_count`，支持一关系多 source；保留 `source_chunk_id` 兼容旧查询。
-- [reconcile.py](file:///d:/DSHproject/auscult/scripts/reconcile.py) `neo4j_chunk_ids`：同时读 `source_chunk_id` 与 `source_chunk_ids`；新增 `KNOWLEDGE_NO_RELATION_CHUNKS` 豁免 A 类。
-- [outbox_worker.py](file:///d:/DSHproject/auscult/scripts/outbox_worker.py) `_consume_neo4j`：CQL 兼容数组；同豁免清单，避免 A 类 verify 无限重试。
+- [extract_triples.py](file:///<REPO>/scripts/extract_triples.py) `import_neo4j`：关系 source 由单值改数组 `source_chunk_ids` + `source_count`，支持一关系多 source；保留 `source_chunk_id` 兼容旧查询。
+- [reconcile.py](file:///<REPO>/scripts/reconcile.py) `neo4j_chunk_ids`：同时读 `source_chunk_id` 与 `source_chunk_ids`；新增 `KNOWLEDGE_NO_RELATION_CHUNKS` 豁免 A 类。
+- [outbox_worker.py](file:///<REPO>/scripts/outbox_worker.py) `_consume_neo4j`：CQL 兼容数组；同豁免清单，避免 A 类 verify 无限重试。
 
 **专项后终态**：reconcile **对账零差异**；Neo4j 127 系（含 HANDLED_BY 33）、31 条多 source 归因、105 节点、约束 `triple_entity_id` 就绪；outbox pending 清零；三脚本 selftest 全绿。
 

@@ -3,8 +3,8 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "node:child_process";
 
-const PY = "d:\\DSHproject\\auscult\\.venv\\Scripts\\python.exe";
-const INSERT_SCRIPT = "d:\\DSHproject\\auscult\\scripts\\insert_test_alarm.py";
+const PY = "<REPO>\\.venv\\Scripts\\python.exe";
+const INSERT_SCRIPT = "<REPO>\\scripts\\insert_test_alarm.py";
 
 async function login(page: import("@playwright/test").Page, username = "eng_dev") {
   await page.goto("/login");
@@ -45,7 +45,7 @@ test("D5：PG 插入告警 → alarm:new 实时插入看板 + 铃铛未读徽标
   const out = execSync(`"${PY}" "${INSERT_SCRIPT}" --severity critical`, {
     encoding: "utf-8",
     timeout: 15_000,
-    cwd: "d:\\DSHproject\\auscult", // sys.path 需项目根才能 import app.api.db
+    cwd: "<REPO>", // sys.path 需项目根才能 import app.api.db
   });
   const metric = out.match(/metric=(\S+)/)?.[1] ?? "";
   expect(metric).toContain("e2e_test_");

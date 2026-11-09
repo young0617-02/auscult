@@ -3,7 +3,7 @@
 import { test, expect } from "@playwright/test";
 import { execSync } from "node:child_process";
 
-const PY = "d:\\DSHproject\\auscult\\.venv\\Scripts\\python.exe";
+const PY = "<REPO>\\.venv\\Scripts\\python.exe";
 
 async function login(page: import("@playwright/test").Page, username = "eng_dev") {
   await page.goto("/login");

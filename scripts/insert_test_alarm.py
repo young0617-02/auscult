@@ -1,7 +1,7 @@
 """插入一条测试告警到 alerts 表（D5 E2E 用：验证前端 alarm:new 实时插入链路）。
 
 用法：
-  d:/DSHproject/auscult/.venv/Scripts/python.exe scripts/insert_test_alarm.py [--severity critical] [--device "C 0泵"]
+  <REPO>/.venv/Scripts/python.exe scripts/insert_test_alarm.py [--severity critical] [--device "C 0泵"]
 
 说明：
   - 后端 Socket.IO alarm:new 由 2s PG 轮询桥接，插入后 ≤2s 内前端应收到广播。

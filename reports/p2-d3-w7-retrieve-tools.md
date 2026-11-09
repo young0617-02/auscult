@@ -29,7 +29,7 @@
 - **问题**：初版 2 条冒烟工具名全对，但 `FAIL_PARAM_VALUE`——定位为**判据缺口**而非模型能力：
   `judge_tools` 仅对 `search_knowledge.query` 做语义匹配，而 `retrieve_knowledge.question` 走逐字比较，几乎必差。
 - **修复（用户批准方案 1）**：`compare_arguments` 对 `("retrieve_knowledge","question")`
-  复用既有 `_query_semantic_match`（关键概念命中 + bigram 交叠），对齐 V1 R-2/R-3 语义口径（[judge_tools.py](file:///d:/DSHproject/auscult/scripts/judge_tools.py#L462-L467)）。
+  复用既有 `_query_semantic_match`（关键概念命中 + bigram 交叠），对齐 V1 R-2/R-3 语义口径（[judge_tools.py](file:///<REPO>/scripts/judge_tools.py#L462-L467)）。
 
 ## 三、评测结果
 

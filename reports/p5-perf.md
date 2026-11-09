@@ -1,7 +1,7 @@
 # P5-W5/D14 端到端压测报告
 
 - **日期**：2026-10-10
-- **工具**：Locust 2.46.7（[scripts/locustfile.py](file:///d:/DSHproject/auscult/scripts/locustfile.py)，headless 直跑本机）
+- **工具**：Locust 2.46.7（[scripts/locustfile.py](file:///<REPO>/scripts/locustfile.py)，headless 直跑本机）
 - **判据**（plan/Phase 5 §5.5 W5/D14）：并发 10/20/50 三档延迟分位 + 错误率 + 资源峰值；宿主内存峰值 ≤ 24 GB（V4b 门禁）；50 并发 30 min 稳定性
 - **结论**：**Pass** —— 三档 + 30 min 稳定性全程 0% 服务器错误（稳定性档 0.01% 瞬时 502 见 §六）；u10/u20 P95 < 200 ms，u50 P95 = 940 ms；宿主峰值 20.73 GB ≤ 24 GB；限流熔断行为与令牌桶数学精确吻合
 - **环境口径**：完整栈（v2-pg 5433 / redis 6379 / milvus 39530 / neo4j 7687 / **tdengine 6041** / kee-prometheus / kee-grafana）+ uvicorn 单进程 127.0.0.1:8000；压测期另有 Phase 5 评测后台任务（D4/D5）低负载并行（实测 CPU ≈10%，已计入资源峰值口径）
@@ -59,13 +59,13 @@
 ### F-1 tdengine 不可达时 health 同步探测阻塞事件循环（已定位根因）
 
 - **现象**：TDengine 未启动（Phase 5 默认 profile 关闭）时，空载单次 `GET /api/health` 即 **1,163 ms**；u10 档实测聚合 P50 从 24 ms 恶化至 **940 ms**、health P50=1,700 ms，全端点被拖累（health 的 TCP 探测同步等满 `HEALTH_TIMEOUT_S=1.0s`，且在 `async def` 内阻塞事件循环，weight=2 → 事件循环约 70% 时间被占）。
-- **根因**：[health.py](file:///d:/DSHproject/auscult/app/api/routes/health.py) 探测为同步 IO（socket/psycopg/redis）且未线程池化；任一下游 down 时放大为 1 s/次的整循环阻塞。
+- **根因**：[health.py](file:///<REPO>/app/api/routes/health.py) 探测为同步 IO（socket/psycopg/redis）且未线程池化；任一下游 down 时放大为 1 s/次的整循环阻塞。
 - **处置**：本次压测以**完整栈**（启动 tdengine）为基线；该韧性场景建议修复方向 = 探测改 anyio.to_thread / 缩短 down 探测超时 / health 结果 5 s 缓存，列 **P6 待办**。
 
 ### F-2 u50 排队放大：每请求 PG 短连接 + async def 内同步 IO
 
 - **现象**：u10→u20→u50 吞吐 9.5→18.6→32.6 req/s（未随并发线性扩展），u50 各端点 P50 统一抬升至 ~460-500 ms（典型排队特征而非单端点瓶颈）；30 min 稳定性档出现 **6 次（0.01%）瞬时 502 E_UPSTREAM**（psycopg 建连间歇失败，服务端 /metrics 计数逐条对上，发生于窗口中段 00:43-00:49，自恢复、后 20 min 零复发）。
-- **根因**：[db.py](file:///d:/DSHproject/auscult/app/api/db.py) 按请求 `psycopg.connect` 短连接（文档字符串预留「压测成瓶颈再升 psycopg_pool」——**本次即触发点**：约 6.4 万次建连 / 40 min，瞬时建连失败率 0.01%）；且全部路由 `async def` + 同步 DB 调用，事件循环串行化。
+- **根因**：[db.py](file:///<REPO>/app/api/db.py) 按请求 `psycopg.connect` 短连接（文档字符串预留「压测成瓶颈再升 psycopg_pool」——**本次即触发点**：约 6.4 万次建连 / 40 min，瞬时建连失败率 0.01%）；且全部路由 `async def` + 同步 DB 调用，事件循环串行化。
 - **处置**：P6 建议 ①切换 `psycopg_pool`（依赖已锁定）②读路径路由改 `def`（FastAPI 自动线程池化）。当前量级（监盘值班场景 ≤50 并发）P95=940 ms、错误率 0.01% 自愈，不构成 Phase 5 出口阻塞。
 
 ## 五、资源峰值与 24 GB 门禁

@@ -5,7 +5,7 @@
 | 任务 | D20：可靠性测试（杀进程恢复、重复 resume、Redis 驱逐防护） |
 | 里程碑 | M3.4（审核与可靠性） |
 | 执行日期 | 2026-10-09 |
-| 测试脚本 | [test_d20_reliability.py](file:///d:/DSHproject/auscult/scripts/test_d20_reliability.py) |
+| 测试脚本 | [test_d20_reliability.py](file:///<REPO>/scripts/test_d20_reliability.py) |
 | 结果 | **12/12 PASS** |
 | 判定 | **M3.4 ✅ 达成**（重启恢复 + 无重复副作用 + 并发安全） |
 
