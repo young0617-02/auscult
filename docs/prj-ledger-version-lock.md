@@ -160,11 +160,12 @@
 
 ### 2.6 已冻结 Schema
 
-> 当前活动版本 = **v4**（2026-10-06 修正；此前本节误标为 v2）。v1 / v2 / v3 冻结快照保留不删，v5 为负结果快照。
+> 当前活动版本 = **v6**（2026-10-30，`P7 Agent 工具面`）｜**V1 判分基准仍为 v4**（冻结快照，判分链路未迁移）。v1 / v2 / v3 / v4 冻结快照保留不删，v5 为负结果快照。
 
 | 版本 | 文件 | `status` | `frozen_at` | 冻结依据 / 变化 |
 |---|---|---|---|---|
-| **v4（活动）** | `schemas/tools_v4.json` | FROZEN | 2026-09-30 | **V1 复审 v3 · F2**：仅扩写 `query_sensor.sensor_ids` 的 description（内嵌 5 测点目录），**未动结构**；本地 +28.3pp / 云端 +30pp 双向印证 |
+| **v6（活动 · Agent 工具面）** | `schemas/tools_v6.json` | FROZEN | 2026-10-30 | **P7 工具面 · 测点分页与上界重构**：`query_sensor` 新增可选形参 `cursor`（分页续拉 token）；`sensor_ids.maxItems` 8→200 与执行侧「由工具调用 SLO 反推的安全上界」对齐；单条回灌的渲染预算改由服务端 `_SENSOR_PAGE_SIZE` 控制，超出部分用 `next_cursor` 续拉、**不丢弃**。**未改动 required / enum / 既有字段语义**，判分语义不变。消费者：`app/agent/tool_registry.py`（`SCHEMA_PATH`）。⚠️ V1 判分/用例（`judge_tools.py`、`tests/test_judge_tools.py`）仍指 **v4**，未迁移 |
+| **v4（V1 判分基准）** | `schemas/tools_v4.json` | FROZEN | 2026-09-30 | **V1 复审 v3 · F2**：仅扩写 `query_sensor.sensor_ids` 的 description（内嵌 5 测点目录），**未动结构**；本地 +28.3pp / 云端 +30pp 双向印证。**冻结保留：V1 结论与判分脚本依赖此版本** |
 | v5（负结果快照，未采纳） | `schemas/tools_v5.json` | RETIRED_NEGATIVE_RESULT | 2026-10-05 | **H3**：仅扩写 `aggregation.description` → 同日对照下全面劣化（参数校验 75%→25%、多工具 75%→33%、格式退化 8→15）、且目标 `v1-007` 仍 0/3；**未采纳**（`experiments/v1/EXP-M02-013-014.md`） |
 | v2 | `schemas/tools_v2.json` | FROZEN（快照） | 2026-09-30 | 判分口径复审（P3）：D1–D5 + `conventions` 归一化注释 |
 | v3（负结果快照） | `schemas/tools_v3.json` | RETIRED_NEGATIVE_RESULT | 2026-09-30 | **P5 Schema 简化（缩描述 + 可选降级）经 EXP-V1-008 实测为负结果**（对照 EXP-V1-007 双模型整体回退，deepseek 参数校验 87%→60%），**已回退不启用** |

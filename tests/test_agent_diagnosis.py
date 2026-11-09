@@ -335,37 +335,139 @@ def test_resolve_window_anchors_on_alarm_ts():
     assert end4 == tr.parse_timestamp("2026-09-18T06:00:00Z", now_ms=now)
 
 
-def test_execute_query_sensor_reports_truncation(monkeypatch):
-    """回归锁：sensor_ids 超限**不再静默截断**，必须回灌 notices（2026-10-22 修复）。
+def test_execute_query_sensor_paging_and_bound(monkeypatch):
+    """2026-10-30 重构：**上界显式拒绝** + **服务端游标分页**（不再截断丢弃）。
 
-    缺陷现象：传 5 个测点只查 3 个且无提示，模型把"没查温度"说成"温度测点无数据"。
+    旧行为（2026-10-22 修复）是「截断 + notices」——不再静默，但仍有两个问题：
+    ① 每批要重付一轮 LLM 往返；② 「补齐」依赖模型自觉，清单一长就漏。
+    新行为：页偏移由服务端算，未查清单由服务端签发，模型不续拉 = 显式放弃。
     """
-    queried: list[str] = []
+    calls: list[list[str]] = []
 
-    def _fake_query_sensor(device_id, metric, start_ts, end_ts, *, timeout=0.5):
-        queried.append(metric)
-        return {"rows": [{"ts": 1, "value": 4.0}], "count": 1}
+    def _fake_columns(device_id, columns, start_ts, end_ts, *, timeout=0.5):
+        calls.append(list(columns))
+        return {c: [{"ts": 1, "value": 4.0}] for c in columns}
 
-    monkeypatch.setattr("app.tools.query_sensor.query_sensor", _fake_query_sensor)
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor_columns", _fake_columns)
+    monkeypatch.setattr(tr, "_SENSOR_PAGE_SIZE", 5)          # 缩小页便于构造多页
 
-    # 告警的 5 个常用测点应一次查完，不产生截断提示
-    five = [f"PUMP-A-01.{m}" for m in ("vib_x", "vib_y", "vib_z",
-                                       "temp_bearing_de", "temp_bearing_nde")]
+    sensors = [f"PUMP-A-01.{m}" for m in (
+        "vib_x", "vib_y", "vib_z", "temp_bearing_de", "temp_bearing_nde",
+        "vib_rms", "vib_peak", "vib_kurtosis", "bearing_temp",
+        "motor_current", "pump_speed")]
+
+    # 第 1 页：5 个；剩余 6 个由服务端签发，并给出游标
     out = tr.execute_tool("query_sensor", {"device_id": "PUMP-A-01",
-                                          "sensor_ids": five}, alarm=_alarm())
+                                          "sensor_ids": sensors}, alarm=_alarm())
     assert out["ok"] is True
+    cov = out["result"]["coverage"]
+    assert cov["queried"] == sensors[:5]
+    assert cov["remaining"] == sensors[5:]
+    assert cov["done"] is False
     assert len(out["result"]["series"]) == 5
-    assert "notices" not in out["result"]
+    assert any("未查询" in n for n in out["result"]["notices"])
 
-    # 超限 → 截断必须可见，且列出未查询的测点
-    seven = five + ["PUMP-A-01.vib_peak", "PUMP-A-01.motor_current"]
-    out2 = tr.execute_tool("query_sensor", {"device_id": "PUMP-A-01",
-                                           "sensor_ids": seven}, alarm=_alarm())
-    assert len(out2["result"]["series"]) == tr._MAX_SENSORS_PER_CALL
-    notices = out2["result"]["notices"]
-    assert any("上限" in n for n in notices)
-    assert any("PUMP-A-01.vib_peak" in n and "PUMP-A-01.motor_current" in n
-               for n in notices)
+    # 第 2 页：带游标续拉，偏移由服务端计算
+    out2 = tr.execute_tool("query_sensor", {
+        "device_id": "PUMP-A-01", "sensor_ids": sensors,
+        "cursor": cov["next_cursor"]}, alarm=_alarm())
+    assert out2["ok"] is True
+    assert out2["result"]["coverage"]["queried"] == sensors[5:10]
+    assert out2["result"]["coverage"]["remaining"] == sensors[10:]
+
+    # 第 3 页：查完 → done=True 且不再发游标
+    out3 = tr.execute_tool("query_sensor", {
+        "device_id": "PUMP-A-01", "sensor_ids": sensors,
+        "cursor": out2["result"]["coverage"]["next_cursor"]}, alarm=_alarm())
+    assert out3["result"]["coverage"]["done"] is True
+    assert "next_cursor" not in out3["result"]["coverage"]
+    assert "notices" not in out3["result"]
+
+    # 游标与清单绑定：中途改清单 → 显式拒绝（否则页边界错位会静默跳过测点）
+    bad = tr.execute_tool("query_sensor", {
+        "device_id": "PUMP-A-01", "sensor_ids": sensors[:-1],
+        "cursor": cov["next_cursor"]}, alarm=_alarm())
+    assert bad["ok"] is False and "不匹配" in bad["error"]
+
+    # 超过安全上界 → 显式拒绝（不截断、不静默缩小覆盖面）
+    too_many = [f"PUMP-A-01.s{i}" for i in range(tr._MAX_SENSORS_PER_CALL + 1)]
+    over = tr.execute_tool("query_sensor", {"device_id": "PUMP-A-01",
+                                            "sensor_ids": too_many}, alarm=_alarm())
+    assert over["ok"] is False and "安全上界" in over["error"]
+    assert calls, "分页路径必须真正执行查询"
+
+
+def test_execute_query_sensor_dedupes_columns(monkeypatch):
+    """vib_x/vib_y/vib_z 同映射 vib_rms → 同页只查一次，不重复占页额度。"""
+    calls: list[list[str]] = []
+
+    def _fake_columns(device_id, columns, start_ts, end_ts, *, timeout=0.5):
+        calls.append(list(columns))
+        return {c: [{"ts": 1, "value": 4.0}] for c in columns}
+
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor_columns", _fake_columns)
+    out = tr.execute_tool("query_sensor", {
+        "device_id": "PUMP-A-01",
+        "sensor_ids": ["PUMP-A-01.vib_x", "PUMP-A-01.vib_y", "PUMP-A-01.vib_z"],
+    }, alarm=_alarm())
+    assert out["ok"] is True
+    assert calls == [["vib_rms"]]                 # 三向 → 一列，一次查询
+    assert len(out["result"]["series"]) == 3      # 但每个测点仍各给一条统计
+
+
+def test_paging_covers_full_list_without_gap(monkeypatch):
+    """游标链必须能**完整枚举**：遍历所有页恰好覆盖全部测点一次（无遗漏、无重复）。
+
+    这是「覆盖面由系统负责」的核心保证 —— 不依赖模型记忆自己查过哪些。
+    """
+    monkeypatch.setattr(
+        "app.tools.query_sensor.query_sensor_columns",
+        lambda device_id, columns, start_ts, end_ts, *, timeout=0.5:
+        {c: [{"ts": 1, "value": 1.0}] for c in columns})
+    monkeypatch.setattr(tr, "_SENSOR_PAGE_SIZE", 3)
+
+    names = ["vib_x", "vib_y", "vib_z", "temp_bearing_de", "temp_bearing_nde",
+             "vib_rms", "vib_peak", "vib_kurtosis", "bearing_temp",
+             "motor_current", "pump_speed"]
+    sensors = [f"PUMP-A-01.{n}" for n in names]
+
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(10):                       # 11 个 / 每页 3 → 4 页；上限兜死循环
+        args: dict[str, Any] = {"device_id": "PUMP-A-01", "sensor_ids": sensors}
+        if cursor:
+            args["cursor"] = cursor
+        out = tr.execute_tool("query_sensor", args, alarm=_alarm())
+        assert out["ok"] is True
+        seen.extend(out["result"]["coverage"]["queried"])
+        cursor = out["result"]["coverage"].get("next_cursor")
+        if not cursor:
+            break
+    assert seen == sensors                     # 顺序一致、无重复、无遗漏
+    assert cursor is None
+
+
+def test_tool_result_message_truncates_to_valid_json():
+    """2026-10-30：超长结果**不得硬切 JSON**（会产生无法解析的残串），且必须保留游标。"""
+    huge = {"ok": True, "result": {"series": ["x" * 200 for _ in range(50)],
+                                   "coverage": {"done": False,
+                                                "next_cursor": "abc123"}}}
+    msg = tr.tool_result_message("c1", "query_sensor", huge)
+    payload = json.loads(msg["content"])          # 必须是合法 JSON
+    assert payload["truncated"] is True
+    assert payload["coverage"]["next_cursor"] == "abc123"
+    assert len(msg["content"]) <= tr._TOOL_RESULT_CHAR_LIMIT + 400
+
+
+def test_tool_result_message_keeps_diagnostics_on_error():
+    """失败路径同样保留 empty_reason / coverage —— 否则模型分不清「设备不存在」与「清单没查完」。"""
+    out = {"ok": False, "error": "时序查询失败",
+           "empty_reason": "device_not_found",
+           "coverage": {"done": False, "next_cursor": "abc123"}}
+    payload = json.loads(tr.tool_result_message("c2", "query_sensor", out)["content"])
+    assert payload["error"] == "时序查询失败"
+    assert payload["empty_reason"] == "device_not_found"
+    assert payload["coverage"]["next_cursor"] == "abc123"
 
 
 def test_execute_query_sensor_maps_short_names(monkeypatch):
@@ -755,11 +857,11 @@ def test_empty_result_distinguishes_no_data_in_window(monkeypatch):
 
 def test_partial_empty_keeps_series_with_classified_reason(monkeypatch):
     """部分测点有数据、部分空 → 仍 ok=True，但空的原因要写进 partial_errors。"""
-    def _fake_query_sensor(*, device_id, metric, start_ts, end_ts, timeout=0.5):
-        rows = ([{"ts": 1, "value": 4.8}] if metric == "vib_rms" else [])
-        return {"device_id": device_id, "metric": metric, "count": len(rows),
-                "rows": rows}
-    monkeypatch.setattr("app.tools.query_sensor.query_sensor", _fake_query_sensor)
+    def _fake_columns(device_id, columns, start_ts, end_ts, *, timeout=0.5):
+        return {c: ([{"ts": 1, "value": 4.8}] if c == "vib_rms" else [])
+                for c in columns}
+    # 两个测点 → 两列 → 走批量接口（单列时委托 query_sensor，见 query_sensor_columns）
+    monkeypatch.setattr("app.tools.query_sensor.query_sensor_columns", _fake_columns)
     monkeypatch.setattr(tr, "_device_has_any_data", lambda d, **kw: True)
 
     out = tr._exec_query_sensor(
@@ -1134,6 +1236,26 @@ def test_cloud_timeout_is_role_scoped_and_env_overridable(monkeypatch):
     monkeypatch.setenv("AUSCULT_CLOUD_TIMEOUT_SEC", "-1")
     with pytest.raises(RuntimeError):
         llm_config.cloud_timeout()
+
+
+def test_deterministic_diagnose_timeout_follows_backend(monkeypatch):
+    """ISS-066 回归锁：确定性诊断的单轮超时必须跟随后端。
+
+    2026-10-27 启动核查实证：`deterministic + cloud` 下 diagnose 沿用本地 30s 预算，
+    云端单轮 27–37s → 三次 `E_LLM_UNREACHABLE` → `degrade`（"低置信度或重试超限"），
+    回退档实际不可用。云端必须取 `cloud_timeout()`（90s），本地保持 diagnose 角色预算。
+    """
+    from app.graph.nodes import diagnose as diagnose_mod
+
+    monkeypatch.delenv("AUSCULT_CLOUD_TIMEOUT_SEC", raising=False)
+    monkeypatch.delenv("AUSCULT_LLM_TIMEOUT_SEC", raising=False)
+    monkeypatch.delenv("AUSCULT_LLM_TIMEOUT_AGENT_SEC", raising=False)
+
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "cloud")
+    assert diagnose_mod.effective_timeout() == llm_config.cloud_timeout() == 90.0 > 30.0
+
+    monkeypatch.setenv("AUSCULT_LLM_BACKEND", "local")
+    assert diagnose_mod.effective_timeout() == 30.0
 
 
 def test_escalate_passes_role_timeout_to_cloud(monkeypatch):

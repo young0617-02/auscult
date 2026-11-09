@@ -1,7 +1,7 @@
 """Agent 工具注册与执行（P7 · Agent 化）。
 
 职责：
-1. **工具面**：从 `schemas/tools_v4.json` 程序化加载**只读子集**（4 个）
+1. **工具面**：从 `schemas/tools_v6.json` 程序化加载**只读子集**（4 个）
    转 OpenAI 兼容 tools 数组（llm_adapter.load_tools 同结构，禁手抄）；
    `generate_report` 按 ADR-007（写操作移出图内）**不进 Agent 工具面**。
 2. **执行**：schema 形参 → 产品工具实现（app/tools/*）的适配层。
@@ -21,7 +21,10 @@ TDengine 无分向列（仅 vib_rms），按 SENSOR_COLUMN_MAP 归一并显式�
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
+import os
 import re
 import time
 from datetime import datetime
@@ -33,7 +36,10 @@ from ..observability import prom_metrics as pm
 from ..security.sanitizer import audit_tool_call, validate_tool_args, validate_tool_call
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SCHEMA_PATH = PROJECT_ROOT / "schemas" / "tools_v4.json"
+#: v6（2026-10-30）：query_sensor 增 `cursor` 形参（分页续拉）。v4/v5 冻结快照保留，
+#: 判分链路（judge_tools / V1 用例）仍指向 v4，不受影响 —— 依据
+#: `docs/prj-ledger-version-lock.md` §一 纪律 4「Schema 变更必须升版」。
+SCHEMA_PATH = PROJECT_ROOT / "schemas" / "tools_v6.json"
 
 # ---------------------------------------------------------------- 常量
 
@@ -65,7 +71,57 @@ SENSOR_COLUMN_MAP: dict[str, str] = {
 #: 图纸/台账口径（`A 0泵`、客户号），候选①对其**无迁移对象**，见 `app/device_ids` 头注。
 DEVICE_ALIAS_MAP: dict[str, str] = CANONICAL_TO_LEGACY
 
-_MAX_SENSORS_PER_CALL = 5      # 单次工具调用最多查 5 个测点（延迟护栏；超限必回灌 notices）
+# ---------------------------------------------------------------- 测点数上限（2026-10-30 重构）
+#
+# 原实现只有一个常数 `_MAX_SENSORS_PER_CALL = 5`，同时承担了四件互相冲突的事：
+# 「单次调用墙钟上限」「单条结果体积上限」「覆盖完整性」「故障隔离」。四者的最优
+# 方向不同，任何一个数字都会在某个维度上出错；测点越多错得越明显。
+#
+# 现拆成两个**语义不同**的量：
+#   _MAX_SENSORS_PER_CALL —— **请求上界（防护）**：模型一次能列多少测点。超过即
+#       显式拒绝（不是截断）。数值由 SLO 反推，不为「延迟省时间」服务 —— 查询
+#       成本已由批量 SQL 压成 O(1) 往返，与测点数几乎无关。
+#   _SENSOR_PAGE_SIZE —— **单页渲染预算**：一条 tool result 回灌多少个测点。由
+#       回灌体积预算推导，超出部分用 `next_cursor` 续拉，**丢弃永不发生**。
+#
+# 覆盖完整性的责任随之从「模型自觉」移到「服务端游标」：offset 由服务端计算，
+# 每页都回灌权威的 `coverage.remaining`，模型不续拉就是显式放弃，而不是不知道。
+_TOOL_CALL_BUDGET_MS = 1_500      # 端到端 P95 目标 3s 中留给单次工具调用的份额
+_BATCH_FIXED_COST_MS = 60         # 一条多列 SQL 的固定开销（传输 + 解析 + 序列化）
+_PER_COLUMN_COST_MS = 4           # 每增加一列的解析/统计边际开销
+_HARD_CAP = 200                   # 与 schema `sensor_ids.maxItems` 对齐的硬帽
+
+_RESULT_CHAR_BUDGET = 2_000       # 单条 tool result 回灌预算（硬截断线 4000 的一半，留余量）
+_CHARS_PER_SERIES = 160           # 单测点 series 条目序列化长度（sensor_id+column+6 统计量）
+
+
+def _env_int(name: str, default: int) -> int:
+    """环境变量覆盖（非法值回落默认，不抛异常——护栏不因配置写错而失效）。"""
+    try:
+        val = int(str(os.environ.get(name, "")).strip())
+        return val if val > 0 else default
+    except (TypeError, ValueError):
+        return default
+
+
+def _derive_max_sensors() -> int:
+    """从 SLO 反推单次请求的测点数**安全上界**。
+
+    推导：`(单次工具调用预算 - 单次 SQL 固定成本) / 每列边际成本`。
+    该值只用于「防打爆」（一次请求不得产生超预算的墙钟），**不是**功能边界 ——
+    模型真有更多测点要查，靠 cursor 分页而不是被砍掉。
+    """
+    derived = max(1, (_TOOL_CALL_BUDGET_MS - _BATCH_FIXED_COST_MS) // _PER_COLUMN_COST_MS)
+    return min(derived, _HARD_CAP)
+
+
+_MAX_SENSORS_PER_CALL = _env_int("AUSCULT_SENSOR_MAX_PER_CALL", _derive_max_sensors())
+
+#: 单页测点数：由回灌体积预算反推（12 ≈ 2000/160）。上界本身不作为页大小 ——
+#: 一次回灌 200 个测点会撞上 tool_result 的字符上限。
+_SENSOR_PAGE_SIZE = max(
+    1, min(_RESULT_CHAR_BUDGET // _CHARS_PER_SERIES, _MAX_SENSORS_PER_CALL))
+
 _MAX_WINDOW_MS = 24 * 3_600_000   # 缺省回看窗口（自锚点起算）
 _MAX_TEXT_CHARS = 300          # 单条知识块注入 LLM 的最大字符数
 _MAX_ROWS = 20                 # 工单/图谱命中注入 LLM 的最大条数
@@ -171,6 +227,57 @@ def _resolve_window(time_range: Any, *, now_ms: int,
     return start, end
 
 
+# ---------------------------------------------------------------- 测点分页游标（2026-10-30）
+
+_CURSOR_VERSION = 1
+
+
+def _coverage_fingerprint(device_id: str, requested: list[str],
+                          time_range: Any) -> str:
+    """分页上下文的指纹：设备 + 完整测点清单 + **time_range 原始入参**。
+
+    作用：cursor 只携带「页偏移」，清单由模型按原样重复传入，二者用指纹绑定。
+    清单一旦被改动（增删测点），指纹不匹配 → **显式拒绝续拉**；否则服务端会按
+    新清单继续切页，导致某些测点被静默跳过或重复查询。
+
+    ⚠️ 指纹刻意**不使用解析后的绝对毫秒窗口**：缺省/相对时间（"24h"）以 now 为
+    锚点，两页之间必然漂移几秒 —— 用毫秒做指纹会让"正常续拉"也永远被拒。
+    页边界错位的真实风险来自**清单**变化，而不是滚动窗口的秒级漂移。
+    """
+    if isinstance(time_range, dict):
+        norm = json.dumps(time_range, sort_keys=True, ensure_ascii=False)
+    else:
+        norm = str(time_range or "")
+    raw = f"{device_id}|{','.join(requested)}|{norm}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:10]
+
+
+def _encode_cursor(offset: int, fingerprint: str) -> str:
+    """页偏移 → 不透明 token（约 40 字符，避免把整份清单塞进上下文）。"""
+    raw = json.dumps({"v": _CURSOR_VERSION, "o": offset, "f": fingerprint},
+                     separators=(",", ":"))
+    return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii").rstrip("=")
+
+
+def _decode_cursor(token: str) -> tuple[int, str] | None:
+    """token → (offset, fingerprint)；非法/跨版本返回 None（调用方显式报错）。"""
+    if not token:
+        return None
+    try:
+        padded = token + "=" * (-len(token) % 4)
+        obj = json.loads(base64.urlsafe_b64decode(padded.encode("ascii")))
+    except Exception:                                        # noqa: BLE001 - 任何畸形都按失效处理
+        return None
+    if not isinstance(obj, dict) or obj.get("v") != _CURSOR_VERSION:
+        return None
+    offset, fp = obj.get("o"), obj.get("f")
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:
+        return None
+    if not isinstance(fp, str) or not fp:
+        return None
+    return offset, fp
+
+
 # ---------------------------------------------------------------- 各工具执行体
 
 def _device_has_any_data(device_id: str, *, timeout: float = 1.0) -> bool:
@@ -214,7 +321,9 @@ def _storage_id(device_id: str) -> str:
 
 def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     from ..graph.nodes.analyze_sensor import _compute_stats   # noqa: PLC0415
-    from ..tools.query_sensor import query_sensor             # noqa: PLC0415
+    # 2026-10-30：改走批量多列接口 —— 本页所有列一条 SQL 查完（原来每列一次往返，
+    # 单次工具调用墙钟随测点数线性增长，这才是"必须限 N"的真实原因）。
+    from ..tools.query_sensor import query_sensor_columns     # noqa: PLC0415
 
     device_id = str(args.get("device_id") or "").strip()
     if not device_id:
@@ -225,22 +334,23 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     # 不会被这张表伪装成有数据。
     resolved_id = _storage_id(device_id)
 
-    sensor_ids = args.get("sensor_ids") or []
-    if not sensor_ids and alarm is not None and alarm.metric:
-        sensor_ids = [f"{alarm.device_id}.{alarm.metric}"]
-    requested = [str(s) for s in sensor_ids]
-    sensor_ids = requested[:_MAX_SENSORS_PER_CALL]
-    if not sensor_ids:
+    raw_ids = args.get("sensor_ids") or []
+    if not raw_ids and alarm is not None and alarm.metric:
+        raw_ids = [f"{alarm.device_id}.{alarm.metric}"]
+    # 去重保序：vib_x/vib_y/vib_z 同映射 vib_rms，重复项只会重复查询并白占分页额度
+    requested = list(dict.fromkeys(str(s).strip() for s in raw_ids if str(s).strip()))
+    if not requested:
         return {"ok": False, "error": "缺少参数 sensor_ids 且无法从告警推断测点"}
 
-    # 超限**必须显式回灌**（2026-10-22 修复）：此前静默截断，模型把"没查"当成
-    # "无数据"，于是 human_reason 里出现"温度测点无数据"的错误归因。
-    notices: list[str] = []
-    dropped = requested[_MAX_SENSORS_PER_CALL:]
-    if dropped:
-        notices.append(
-            f"sensor_ids 超过单次上限 {_MAX_SENSORS_PER_CALL}，本次只查 "
-            f"{sensor_ids}；未查询：{dropped}（它们**没有**结论，需另调用一次补齐）")
+    # 安全上界：**显式拒绝**而非截断（2026-10-30）。
+    # 上界的作用是让"单次工具调用的最坏墙钟"可计算（防打爆）；截断则会让模型把
+    # "没查"当成"没问题"（2026-10-22 已因此产生"温度测点无数据"的错误归因）。
+    if len(requested) > _MAX_SENSORS_PER_CALL:
+        return {"ok": False,
+                "error": (f"sensor_ids 共 {len(requested)} 个，超过单次请求安全上界 "
+                          f"{_MAX_SENSORS_PER_CALL}（由工具调用 SLO 反推，非功能边界）。"
+                          f"请按诊断优先级拆分：先查最相关的 ≤{_SENSOR_PAGE_SIZE} 个，"
+                          f"再用返回的 next_cursor 续拉；不要一次列全。")}
 
     now_ms = int(time.time() * 1000)
     # 窗口锚在告警时刻（历史/回放告警不再查到与告警无关的 now 窗口）
@@ -248,27 +358,83 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
     start_ts, end_ts = _resolve_window(args.get("time_range"), now_ms=now_ms,
                                        anchor_ms=anchor_ms)
     baseline = getattr(alarm, "baseline", None)
+    window = {"start_ms": start_ts, "end_ms": end_ts}
+    fingerprint = _coverage_fingerprint(resolved_id, requested,
+                                        args.get("time_range"))
 
-    series: list[dict[str, Any]] = []
+    # ---- 分页：页偏移由**服务端**计算，模型只回传不透明 token ----
+    # 覆盖完整性因此不再依赖"模型记得还有几个没查"，而是由系统保证可枚举。
+    offset = 0
+    if args.get("cursor"):
+        decoded = _decode_cursor(str(args.get("cursor")))
+        if decoded is None:
+            return {"ok": False,
+                    "error": ("cursor 无法解析（已失效或非本工具签发）。请去掉 cursor，"
+                              "用与上一页完全相同的 device_id / sensor_ids / time_range "
+                              "重新请求，从第一页开始。")}
+        offset, cursor_fp = decoded
+        if cursor_fp != fingerprint:
+            return {"ok": False,
+                    "error": ("cursor 与本次请求的 device_id / sensor_ids / time_range "
+                              "不匹配 —— 续拉必须原样重复上一页的参数。清单或窗口一旦"
+                              "变化，页边界即不可信，系统拒绝在错位处继续（否则会有测点"
+                              "被静默跳过或重复查询）。")}
+        if offset >= len(requested):
+            return {"ok": False,
+                    "error": (f"cursor 偏移 {offset} 已到达清单末尾（共 {len(requested)} "
+                              f"个），该清单已全部查完，无需续拉。")}
+
+    page = requested[offset:offset + _SENSOR_PAGE_SIZE]
+    next_offset = offset + len(page)
+    remaining = requested[next_offset:]
+    coverage: dict[str, Any] = {
+        "requested": len(requested),
+        "page": {"from": offset, "to": next_offset, "size": _SENSOR_PAGE_SIZE},
+        "queried": list(page),
+        "done": not remaining,
+    }
+    if remaining:
+        coverage["remaining"] = list(remaining)
+        coverage["next_cursor"] = _encode_cursor(next_offset, fingerprint)
+
+    # ---- 短名 → 列；未登记显式报错（不进 SQL，避免一个坏名字拖垮整页） ----
     errors: list[str] = []
-    empty_reason: str | None = None
-    for sensor in sensor_ids:
+    column_of: dict[str, str] = {}
+    for sensor in page:
         short = sensor.split(".")[-1] if "." in sensor else sensor
         column = SENSOR_COLUMN_MAP.get(short)
         if column is None:
             errors.append(f"测点 {sensor} 未登记（无对应时序列）")
             continue
+        column_of[sensor] = column
+
+    unique_cols = list(dict.fromkeys(column_of.values()))
+    data: dict[str, list[dict[str, Any]]] = {}
+    if unique_cols:
         try:
-            rows = query_sensor(device_id=resolved_id, metric=column,
-                                start_ts=start_ts, end_ts=end_ts,
-                                timeout=1.0)["rows"]
+            # 本页所有列一条 SQL（列已去重：vib_x/y/z 同列只查一次）
+            data = query_sensor_columns(resolved_id, unique_cols,
+                                        start_ts, end_ts, timeout=1.0)
         except (TimeoutError, ConnectionError, RuntimeError) as exc:
-            errors.append(f"{sensor} 查询失败: {exc}")
-            continue
+            return {"ok": False,
+                    "error": f"时序查询失败（本页 {len(unique_cols)} 列一次 SQL）: {exc}",
+                    "window": window,
+                    "coverage": coverage}       # 查询失败也带游标：下一轮可重试同一页
+
+    # 空结果分类：整页都空才探测一次设备是否存在
+    # （原实现每个测点探测一次，N 个测点额外 N 次 count 查询）
+    device_exists: bool | None = True if any(data.get(c) for c in unique_cols) else None
+
+    series: list[dict[str, Any]] = []
+    empty_reason: str | None = None
+    for sensor, column in column_of.items():
+        rows = data.get(column) or []
         if not rows:
             # ISS-056：不再把"查不到"静默包装成 count=0 的有效证据 —— 必须告诉
             # 模型是"设备号不存在"还是"窗口内无数据"，它才能自我纠正。
-            if _device_has_any_data(resolved_id):
+            if device_exists is None:
+                device_exists = _device_has_any_data(resolved_id)
+            if device_exists:
                 errors.append(f"测点 {sensor}（列 {column}）在查询窗口内无数据")
                 empty_reason = empty_reason or "no_data_in_window"
             else:
@@ -286,12 +452,12 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
                                "error": "; ".join(errors) or "无可用测点数据"}
         if empty_reason:
             out["empty_reason"] = empty_reason
-        if notices:
-            out["notices"] = notices
-        out["window"] = {"start_ms": start_ts, "end_ms": end_ts}
+        out["window"] = window
+        out["coverage"] = coverage          # 本页为空 ≠ 清单查完，游标照给
         return out
+
     result: dict[str, Any] = {"device_id": resolved_id, "series": series,
-                              "window": {"start_ms": start_ts, "end_ms": end_ts}}
+                              "window": window, "coverage": coverage}
     if device_id != resolved_id:
         # 透明度：让模型与审计都看到发生了编号归一（ISS-056）
         result["device_id_resolved"] = {"requested": device_id, "used": resolved_id}
@@ -299,8 +465,12 @@ def _exec_query_sensor(args: dict[str, Any], alarm: Any) -> dict[str, Any]:
         result["partial_errors"] = errors
     if empty_reason:
         result["empty_reason"] = empty_reason
-    if notices:
-        result["notices"] = notices
+    if remaining:
+        # 未查清单是模型判断"这轮证据完整吗"的唯一依据，也是它不能拿未查测点
+        # 说事的边界 —— 由服务端签发，不是模型自述。
+        result["notices"] = [
+            f"本次只查了 {page}；未查询：{remaining}"
+            f"（它们**没有**结论，需带 next_cursor 再调一次补齐）"]
     if any(s["column"] == "vib_rms" and s["sensor_id"].endswith(("vib_x", "vib_y", "vib_z"))
            for s in series):
         result["note"] = ("三向振动（vib_x/vib_y/vib_z）当前存储未分向，"
@@ -476,11 +646,44 @@ def execute_tool(name: str, arguments: dict[str, Any], *,
     return out
 
 
+#: 单条 tool result 回灌字符上限（避免一条结果吃掉整个上下文窗口）
+_TOOL_RESULT_CHAR_LIMIT = 4_000
+
+#: 失败路径也**必须**保留的诊断字段（2026-10-30）：
+#: 原实现 ok=False 时只回 `{"error": ...}`，把 `empty_reason` / `notices` /
+#: `coverage` / `window` 全丢了 —— 模型因此分不清「设备不存在」「窗口无数据」
+#: 「本页查完但清单没完」，是同一族"静默缩小信息"的缺陷。
+_ERROR_KEEP_KEYS = ("error", "rejected", "reject_kind", "empty_reason",
+                    "notices", "window", "coverage")
+
+
 def tool_result_message(call_id: str, name: str, out: dict[str, Any]) -> dict[str, Any]:
-    """工具结果 → OpenAI 兼容 role=tool 消息（回灌模型）。"""
-    payload = out if out.get("ok") else {"error": out.get("error")}
-    return {"role": "tool", "tool_call_id": call_id, "name": name,
-            "content": json.dumps(payload, ensure_ascii=False)[:4000]}
+    """工具结果 → OpenAI 兼容 role=tool 消息（回灌模型）。
+
+    长度超限时返回**合法 JSON**，而不是把 JSON 字符串硬切一半（2026-10-30）：
+    硬切会产生无法解析的残串，模型侧表现为"工具返回损坏"，且丢失是静默的。
+    这里改为显式截断对象：保留 coverage/next_cursor，提示模型续拉。
+    """
+    if out.get("ok"):
+        payload: dict[str, Any] = out
+    else:
+        payload = {k: v for k, v in out.items() if k in _ERROR_KEEP_KEYS}
+    text = json.dumps(payload, ensure_ascii=False)
+    if len(text) > _TOOL_RESULT_CHAR_LIMIT:
+        coverage = (out.get("result") or {}).get("coverage") or out.get("coverage") or {}
+        payload = {
+            "ok": bool(out.get("ok")),
+            "truncated": True,
+            "char_limit": _TOOL_RESULT_CHAR_LIMIT,
+            "note": ("结果超出单条回灌上限已省略部分内容。**不要据此认为未展示的测点/"
+                     "条目正常**；需要完整数据请按 next_cursor 续拉，或缩小 sensor_ids。"),
+        }
+        if coverage:
+            payload["coverage"] = coverage
+        if not out.get("ok"):
+            payload["error"] = out.get("error")
+        text = json.dumps(payload, ensure_ascii=False)
+    return {"role": "tool", "tool_call_id": call_id, "name": name, "content": text}
 
 
 def assistant_tool_calls_message(content: str,

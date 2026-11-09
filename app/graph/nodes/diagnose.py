@@ -38,6 +38,23 @@ OLLAMA_URL = "http://127.0.0.1:11434/v1/chat/completions"
 OLLAMA_MODEL = "deepseek-r1:7b"
 TIMEOUT_SEC = 30.0
 
+
+def effective_timeout() -> float:
+    """单轮诊断调用的实际超时（按后端取，ISS-066）。
+
+    本地 Ollama 单轮远快于 30s，`TIMEOUT_SEC` 口径成立；但 **cloud 后端单轮实测
+    27–37s**（工具面/证据注入后 prompt 更长），沿用 30s 会让确定性形态的每次
+    `diagnose` 都超时 → 重试 3 次后 `degrade`（2026-10-27 启动核查实证：
+    `deterministic + cloud` 三次 `E_LLM_UNREACHABLE` → 降级报告）。
+    故 cloud 后端复用 `cloud_timeout()`（默认 = agent 角色 90s，env
+    `AUSCULT_CLOUD_TIMEOUT_SEC` 可覆盖），与 escalate 兜底同一个预算口径（ISS-058）。
+    """
+    from ...llm import config as llm_config                   # noqa: PLC0415
+
+    if llm_config.llm_backend() == "cloud":
+        return llm_config.cloud_timeout()
+    return llm_config.llm_timeout(llm_config.ROLE_DIAGNOSE)
+
 # ---------------------------------------------------------------- think 剥离（复用 llm_adapter 正则模式）
 
 _T_OPEN = "<" + "think" + ">"
@@ -305,7 +322,7 @@ def diagnose(state: DiagnosisState) -> dict[str, Any]:
         {"role": "user", "content": _build_user_prompt(state)},
     ]
     try:
-        raw_content = _call_ollama(messages, timeout=TIMEOUT_SEC)
+        raw_content = _call_ollama(messages, timeout=effective_timeout())
     except (TimeoutError, ConnectionError) as exc:
         return {
             "retry_count": state.retry_count + 1,

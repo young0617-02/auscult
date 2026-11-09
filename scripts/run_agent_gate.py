@@ -72,7 +72,10 @@ from app.llm.client import get_client                                  # noqa: E
 from app.security import sanitizer                                     # noqa: E402
 
 HARNESS = "agent_gate_v1"
-DEFAULT_SCHEMA = PROJECT_ROOT / "schemas" / "tools_v4_agent.json"
+# 判据被测工具面 = 产品工具面（ISS-052 处置先例）。2026-10-30 随产品侧升 v6
+# （query_sensor 增加分页形参 cursor）派生 `tools_v6_agent.json`；v4_agent 保留为
+# EXP-P7-GATE3 等历史实验的可复现快照，不删不改。
+DEFAULT_SCHEMA = PROJECT_ROOT / "schemas" / "tools_v6_agent.json"
 # 实验审计路径：`AUSCULT_AGENT_GATE_AUDIT_PATH` 可覆盖 —— pytest 根 conftest 会把它指到
 # 临时目录，避免回归跑一次就把这份**已跟踪**的实验产物写长（2026-10-22 集成测试隔离）。
 AUDIT_PATH = Path(os.environ.get("AUSCULT_AGENT_GATE_AUDIT_PATH")

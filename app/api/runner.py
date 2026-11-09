@@ -28,10 +28,10 @@ from app.graph.build import build_graph
 from app.graph.checkpointer import build_checkpointer
 from app.graph.nodes.diagnose import (
     OLLAMA_MODEL,
-    TIMEOUT_SEC,
     _call_ollama,
     _extract_json,
     _strip_think,
+    effective_timeout,
 )
 from app.graph.state import AlarmEvent
 from app.observability.metrics import MetricsCollector
@@ -501,9 +501,9 @@ def ask_question(thread_id: str, question: str, user: str) -> dict:
         {"role": "user", "content": _ask_user_prompt(rec, values, question)},
     ]
     try:
-        raw = _call_ollama(messages, timeout=TIMEOUT_SEC)
+        raw = _call_ollama(messages, timeout=effective_timeout())
     except (TimeoutError, ConnectionError, RuntimeError) as exc:
-        raise ApiError("E_UPSTREAM", f"本地推理暂不可用：{exc}") from exc
+        raise ApiError("E_UPSTREAM", f"推理后端暂不可用：{exc}") from exc
 
     clean = _strip_think(raw)
     parsed = _extract_json(clean)

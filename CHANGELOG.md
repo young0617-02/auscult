@@ -8,6 +8,76 @@
 
 ---
 
+## 2026-10-30（维护期 · **工具取证层重构：测点安全上界 + 批量多列 SQL + 服务端游标分页**）
+
+> 起因：复核「单次最多 5 个测点」这条护栏时发现它把**延迟问题错解成了参数配额** ——
+> 分两批查与一次查完的 DB 成本完全相同（都是 N 次串行往返），分批只多付一轮 LLM；
+> 且超限后的"补齐"仍靠模型自觉，清单一长就漏。登记 `ISS-068`（承接 `ISS-065`）。
+
+- **代码**：`app/tools/query_sensor.py` 新增 `query_sensor_columns()` —— 一条
+  `SELECT ts, c1, c2…` 查多列，往返 **O(N)→O(1)**；列去重（`vib_x/y/z → vib_rms` 只查一次），
+  NULL 行跳过不当 0；单列时委托 `query_sensor`，行为与改造前逐字节一致。
+- **代码**：`app/agent/tool_registry.py::_exec_query_sensor` 重写：
+  ① 上界**由 SLO 反推** —— `(1500ms 工具预算 − 60ms 单条 SQL 固定开销) / 4ms 每列边际成本`，
+  与硬帽 200 取小 → **200**（`AUSCULT_SENSOR_MAX_PER_CALL` 可覆盖），超限**显式拒绝**而非截断；
+  ② **服务端游标分页**：`coverage{requested,page,queried,remaining,next_cursor,done}`，
+  单页 12（由回灌体积预算 `2000/160` 反推），偏移由服务端算，cursor 携带
+  `device_id + sensor_ids + time_range 原始入参` 的指纹 —— 改清单即拒绝续拉（防页边界错位漏测点）；
+  ③ 设备存在性探测由「每测点一次」降为「整页一次」；④ 失败路径同样带 `coverage`（本页空 ≠ 清单查完）。
+  ⚠️ 指纹**刻意不含解析后的绝对毫秒窗口**：缺省/相对时间以 now 为锚，两页必然漂移几秒，
+  用毫秒做指纹会让正常续拉永远被拒（实现时实际踩到并修正）。
+- **代码**：`tool_result_message` 两处修复（同族「静默缩小信息」）——① 超长不再
+  `json.dumps(...)[:4000]` **硬切成非法 JSON 残串**，改为返回合法 JSON + `truncated` +
+  `coverage.next_cursor`；② `ok=False` 时按 `_ERROR_KEEP_KEYS` 保留
+  `empty_reason`/`notices`/`coverage`/`window`（原实现只回 `{"error"}`）。
+- **配置**：Schema 升 **v6**（`schemas/tools_v6.json` = v4 + `query_sensor.cursor` +
+  `sensor_ids.maxItems` 8→200，未动 required/enum）；派生 `schemas/tools_v6_agent.json`
+  （去写操作，**判据工具面 = 产品工具面**，ISS-052 口径）；`run_agent_gate.DEFAULT_SCHEMA`
+  与 `tests/test_cases_integrity.py` 指向派生件；v4 / v4_agent 冻结快照保留（V1 判分基准未迁移）。
+  `docs/prj-ledger-version-lock.md` §2.6 同步。
+- **代码**：`app/agent/prompt.py` 新增工作规则 8 —— 必须核对 `coverage`：`done=false` 即续拉、
+  `queried` 之外的测点**没有任何结论**、确实不查时须在结论里声明未覆盖并降 confidence / 置 needs_human。
+  （模板受 `test_prompt_size_bounded` < 2600 字符约束，首版超 66 字符已压缩。）
+- **测试**：新增/改写 5 例 —— `test_execute_query_sensor_paging_and_bound`（三页翻完 + 改清单被拒 +
+  超上界被拒）、`test_paging_covers_full_list_without_gap`（遍历游标链**恰好覆盖全部测点一次**）、
+  `test_execute_query_sensor_dedupes_columns`、`test_tool_result_message_truncates_to_valid_json`、
+  `test_tool_result_message_keeps_diagnostics_on_error`。受影响 5 个测试文件 **174 passed**；全量回归未重跑。
+- **文档**：`docs/prj-ledger-known-issues.md` 登记 `ISS-068`；`Material/` 01/02/03/04/05/07
+  同步上界与分页口径（含一条「取证覆盖面完整性 = 第五个面」的结论增量）。
+- **未完成（显式声明）**：① `query_sensor_columns` 依赖 TDengine REST `column_meta` 列序，
+  测试全部打桩，**未在真库验证**（解析失败会表现为"该测点无数据"）；② 单页 12 与每测点 160 字符
+  均为经验反推值，真跑后需按实测调整；③ 批量 SQL 之外的并发化未做（当前一条 SQL 已覆盖）。
+
+---
+
+## 2026-10-27（维护期 · **冷启动全链路核查：修复回退档必降级 + 追问问 502**）
+
+> 从关机状态重跑 `up → init → smoke → 后端 → 前端`，逐端点/逐角色/双形态实测。
+> 架构侧全部成立；暴露 2 个"超时预算跨后端复用"同源缺陷（ISS-066/067），另登记 11 处文档口径漂移。
+> 核查原始记录：`Material/06-启动核查记录-2026-10-27.md`。
+
+- **代码**：`app/graph/nodes/diagnose.py` 新增 `effective_timeout()` —— `cloud` 后端取
+  `llm_config.cloud_timeout()`（默认 90s，`AUSCULT_CLOUD_TIMEOUT_SEC` 覆盖），`local` 取
+  diagnose 角色预算（30s）；`diagnose()` 与 `app/api/runner.py::ask_question()` 均改走该出口。
+  修复前：`deterministic + cloud` 每次诊断 3× `E_LLM_UNREACHABLE(>30s)` → `degrade`（回退档实际不可用）；
+  追问约 50% 概率 30s 超时 502。
+- **代码**：追问失败文案由「本地推理暂不可用」改为「推理后端暂不可用」（后端可能是 cloud）。
+- **测试**：`tests/test_agent_diagnosis.py` 新增 `test_deterministic_diagnose_timeout_follows_backend`；
+  全量离线回归 **392 passed**（391→392）。
+- **实测**：① 确定性形态修复后 **55s** 跑通（`parse_alarm → analyze_sensor → retrieve_evidence →
+  get_history → diagnose → escalate_cloud → finalize`，`RPT-228eab2e88519ce7`，confidence 0.695 / medium / 无降级，
+  escalate 因后端已是 cloud 空转跳过、不重复计费）；② 追问 23.7s / 15.1s 均成功且带 3–5 条 `citations`；
+  ③ Agent 形态一次诊断 165s → `waiting_review`（`needs_human`，理由=窗口内无数据）→ 审核通过 → 报告；
+  ④ 驳回路径 → `degrade_reason=review_rejected`；⑤ 限流第 11 次 429；⑥ Socket.IO 收到 progress×2 + review:required。
+- **文档**：缺陷清单登记 ISS-066 / ISS-067；`docs/prj-ledger-known-issues.md` 复现记录区待回填。
+  `Material/` 五份对外文档按实测重写，并新增 `06-启动核查记录-2026-10-27.md`（事实底稿 + 复跑命令）。
+- **未解决（登记）**：Playwright `m42 D6-D10` 终态预算 100s < 实测 55–165s（本轮 8/9，改预算须先定判据）；
+  图谱无设备编号实体（`query_graph(PUMP-A-01)` → 404）；审计前端仍为空壳；`env/cloud.json._meta` 自述
+  "已切 DashScope"与实际 ModelScope 配置不符；时序数据止于 2026-10-21T08:00Z（复测前须复灌）。
+
+---
+
+
 ## 2026-10-22（维护期 · **Agent 时序取证修复：窗口锚在告警时刻 + 测点截断可见**）
 
 > 全链路 e2e 复测（`docs/e2e-verification-2026-10-22.md`）暴露：历史告警的取证窗口

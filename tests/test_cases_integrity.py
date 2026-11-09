@@ -110,11 +110,17 @@ def test_forbidden_semantics_retained_in_judge():
 
 
 def test_expected_tools_exist_in_agent_tool_face():
-    """路径 C：用例期望的工具必须都在**只读工具面**（`tools_v4_agent.json`）内。
+    """路径 C：用例期望的工具必须都在**只读工具面**（`tools_v6_agent.json`）内。
 
     否则判据会要求模型调用一个产品里不存在的工具 → 又变成「测非所测」（ISS-052 复发）。
+    2026-10-30：随产品工具面升 v6（`query_sensor` 增分页形参 `cursor`）同步派生件；
+    `tools_v4_agent.json` 保留为历史实验快照。
     """
-    agent_schemas = jt.load_tool_schemas(ROOT / "schemas" / "tools_v4_agent.json")
+    agent_schemas = jt.load_tool_schemas(ROOT / "schemas" / "tools_v6_agent.json")
+    # 派生件必须与产品工具面同名同集：判据=产品 是 ISS-052 的处置结论
+    product_schemas = jt.load_tool_schemas(ROOT / "schemas" / "tools_v6.json")
+    assert set(agent_schemas) | {"generate_report"} == set(product_schemas), \
+        "只读工具面必须是产品工具面去掉 generate_report 的派生件"
     assert "generate_report" not in agent_schemas, "只读工具面不得含写操作"
     for c in CASES:
         for call in c["expected_tool_calls"]:

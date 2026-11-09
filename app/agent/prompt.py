@@ -12,8 +12,8 @@
 - `generate_report` 为**写操作**，按 ADR-007 移出图内：**不出现在 Agent 的
   工具列表中**；模型若幻觉调用该名，由 tool_registry 的写操作护栏拦截。
 
-工具定义由 `schemas/tools_v4.json` 程序化注入（{{TOOLS_JSON_SCHEMA}}），
-不做人工删改（冻结纪律）。
+工具定义由 `schemas/tools_v6.json` 程序化注入（{{TOOLS_JSON_SCHEMA}}），
+不做人工删改（冻结纪律）。v6 = v4 + `query_sensor.cursor`（分页续拉，2026-10-30）。
 
 参数取值约定（P1，2026-10-21）：
 - 来源 = V1 判据的**五类参数失败簇**（`window` / `time_range` / `aggregation` /`fault_keywords`
@@ -45,6 +45,9 @@ _AGENT_SYSTEM_TEMPLATE = """你是工业设备诊断系统的诊断 Agent。你�
    b. 如果请求超出系统职责（修改/删除数据、执行现场操作、预测寿命/失效时间），绝不调用任何工具"凑答案"，直接说明超出范围。
    c. 当你决定不调用任何工具时，回复必须是一段向用户解释的文字（说明缺什么信息或为何不支持），而不是空输出、不是 JSON。
 7. 报告生成（写操作）不在你的工具范围内：诊断结论经人工审核通过后由系统统一落库，你不要尝试生成报告。
+8. ★分页：`coverage` 是服务端签发的权威覆盖面。`done=false` 说明还有测点**没查**（`remaining`）→ 带 `next_cursor` 续拉，\
+且 device_id/sensor_ids/time_range 必须与上一页完全一致（指纹校验，改了会被拒）。`queried` 之外的测点**没有任何结论**，\
+不得当成正常或"无数据"；确实不查时须在结论里写明未覆盖，并降低 confidence 或置 needs_human。
 
 ## 参数取值约定（可选参数：用户没明确要求就不要传）
 为什么：工具的**必填**参数（如 `query_sensor` 的 `device_id` / `time_range`）必须具体可执行；\

@@ -88,6 +88,74 @@ def profile(values: list[float]) -> dict[str, float]:
     }
 
 
+def query_sensor_columns(
+    device_id: str,
+    columns: list[str],
+    start_ts: int,
+    end_ts: int,
+    *,
+    timeout: float = 0.5,
+) -> dict[str, list[dict[str, Any]]]:
+    """**一次 SQL 查多列**（同设备、同窗口），返回 `{column: [{"ts","value"}...]}`。
+
+    为什么需要（2026-10-30）：`query_sensor` 是单列接口，N 个测点 = N 次 REST
+    往返。串行时单次工具调用的最坏墙钟 = N × timeout，测点多就只能靠「限 N」
+    来兜底 —— 而限 N 并没有省时间：它把「一次慢」变成「多次慢」，每批还要多付
+    一轮 LLM 往返（`⌈M/N⌉ × C`）。一条 SELECT 查多列把往返压到 1 次，
+    使「单次请求测点数」的上限由**延迟**决定回归为**防护**决定。
+
+    口径：
+      - `columns` 去重保序（`vib_x/vib_y/vib_z` 同映射 `vib_rms`，重复列只会白查）；
+      - 该列为 NULL 的行**跳过**（不把 NULL 当 0 计入统计）；
+      - 列名非法/不存在 → 整条 SQL 报错，由调用方按「未登记」分类，不静默返回空。
+    """
+    uniq = list(dict.fromkeys(c for c in columns if c))
+    if not uniq:
+        return {}
+    for name, val in [("device_id", device_id), *[("column", c) for c in uniq]]:
+        if not _SAFE_ID.match(val):
+            raise ValueError(f"非法 {name}: {val}")
+
+    if len(uniq) == 1:
+        # 单列没有批量收益，直接复用单列接口：行为与改造前**逐字节一致**（回归安全），
+        # 也让既有打桩（patch `query_sensor`）继续生效。
+        rows = query_sensor(device_id=device_id, metric=uniq[0],
+                            start_ts=start_ts, end_ts=end_ts,
+                            timeout=timeout)["rows"]
+        return {uniq[0]: rows}
+
+    sql = (
+        f"SELECT ts, {', '.join(uniq)} "
+        f"FROM iot.st_pump_metrics "
+        f"WHERE device_id = '{device_id}' "
+        f"AND ts >= {start_ts} AND ts < {end_ts} "
+        f"ORDER BY ts ASC"
+    )
+
+    body = _td_query(sql, timeout=timeout)
+    meta = body.get("column_meta") or []
+    # 返回列顺序即 meta 顺序；第 0 列固定是 ts
+    index_of: dict[str, int] = {}
+    for idx, item in enumerate(meta):
+        if isinstance(item, (list, tuple)) and item:
+            index_of[str(item[0])] = idx
+
+    out: dict[str, list[dict[str, Any]]] = {c: [] for c in uniq}
+    for row in body.get("data") or []:
+        if not isinstance(row, (list, tuple)) or not row:
+            continue
+        ts = row[0]
+        for col in uniq:
+            idx = index_of.get(col)
+            if idx is None or idx >= len(row):
+                continue
+            val = row[idx]
+            if val is None:                       # 缺值不当 0（否则均值/最大值全被拉低）
+                continue
+            out[col].append({"ts": ts, "value": val})
+    return out
+
+
 def query_sensor(
     device_id: str,
     metric: str,
